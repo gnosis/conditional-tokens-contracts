@@ -1,6 +1,6 @@
 {
   "name": "@gnosis.pm/hg-contracts",
-  "version": "2.0.0-alpha.3",
+  "version": "0.1.0",
   "description": "Collection of smart contracts for the Gnosis prediction market platform",
   "scripts": {
     "setup-githooks": "git config core.hooksPath .githooks",
