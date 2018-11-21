@@ -3,9 +3,7 @@ Developer Guide
 
 .. warning::
 
-    This document refers to a version of the framework which is under development. Some things may change. You may also be interested in `v1`_ of this framework.
-
-.. _v1: https://gnosis-pm-contracts.readthedocs.io/en/v1/
+    This document refers to an experimental prediction market framework under active development. Some things may change. You may also be interested in the predecessor of this work: the original `Gnosis prediction market contracts <https://gnosis-pm-contracts.readthedocs.io>`_.
 
 Prerequisites
 -------------
@@ -20,7 +18,7 @@ The current state of this smart contract system may be found on `Github`_.
 .. _Truffle: https://truffleframework.com
 .. _web3.js: https://web3js.readthedocs.io/en/1.0/
 .. _TruffleContract: https://github.com/trufflesuite/truffle/tree/next/packages/truffle-contract#truffle-contract
-.. _Github: https://github.com/gnosis/pm-contracts
+.. _Github: https://github.com/gnosis/hg-contracts
 
 Installation
 ------------
@@ -30,7 +28,7 @@ Via NPM
 
 This developmental framework may be installed from Github through NPM by running the following::
 
-    npm i gnosis/pm-contracts
+    npm i '@gnosis.pm/hg-contracts'
 
 
 Preparing a Condition

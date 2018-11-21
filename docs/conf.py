@@ -19,7 +19,7 @@ import os
 
 # -- Project information -----------------------------------------------------
 
-project = 'Gnosis Prediction Market Contracts'
+project = 'Gnosis Mercury'
 copyright = '2018, Gnosis Ltd'
 author = 'Gnosis'
 
@@ -106,7 +106,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'GnosisPredictionMarketContractsdoc'
+htmlhelp_basename = 'GnosisMercurydoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -134,8 +134,8 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc,
-     'GnosisPredictionMarketContracts.tex',
-     'Gnosis Prediction Market Contracts Documentation',
+     'GnosisMercury.tex',
+     'Gnosis Mercury Documentation',
      'Gnosis', 'manual'),
 ]
 
@@ -145,8 +145,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'gnosispredictionmarketcontracts',
-     'Gnosis Prediction Market Contracts Documentation',
+    (master_doc, 'gnosismercury',
+     'Gnosis Mercury Documentation',
      [author], 1)
 ]
 
@@ -157,9 +157,9 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'GnosisPredictionMarketContracts',
-     'Gnosis Prediction Market Contracts Documentation',
-     author, 'GnosisPredictionMarketContracts',
+    (master_doc, 'GnosisMercury',
+     'Gnosis Mercury Documentation',
+     author, 'GnosisMercury',
      'One line description of project.',
      'Miscellaneous'),
 ]

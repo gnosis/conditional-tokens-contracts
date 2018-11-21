@@ -1,16 +1,18 @@
-.. figure:: https://raw.githubusercontent.com/gnosis/pm-contracts/master/assets/logo.png
+.. figure:: https://raw.githubusercontent.com/gnosis/hg-contracts/development/assets/logo.png
    :target: https://gnosis.pm
    :alt: Gnosis Logo
 
 
-Gnosis Prediction Market Contracts
-==================================
+Gnosis Mercury
+==============
+Prediction Market Contracts
+---------------------------
 
-.. image:: https://travis-ci.org/gnosis/pm-contracts.svg?branch=development
-   :target: https://travis-ci.org/gnosis/pm-contracts
+.. image:: https://travis-ci.org/gnosis/hg-contracts.svg?branch=development
+   :target: https://travis-ci.org/gnosis/hg-contracts
    :alt: Build Status
 
-.. image:: https://badges.greenkeeper.io/gnosis/pm-contracts.svg
+.. image:: https://badges.greenkeeper.io/gnosis/hg-contracts.svg
    :target: https://greenkeeper.io/
    :alt: Greenkeeper badge
 
@@ -18,11 +20,11 @@ Gnosis Prediction Market Contracts
    :target: https://slack.gnosis.pm
    :alt: Slack Status
 
-Collection of smart contracts for the `Gnosis`_ prediction market platform.
+Experimental smart contracts for prediction markets.
 
 `→ Online Documentation`_
 
-.. _→ Online Documentation: https://gnosis-pm-contracts.readthedocs.io/en/latest/
+.. _→ Online Documentation: https://gnosis-mercury.readthedocs.io/en/latest/
 .. _Gnosis: https://gnosis.pm
 
 

@@ -3,7 +3,7 @@ Contributing
 
 The source for the contracts can be found on `Github`_.
 
-.. _Github: https://github.com/gnosis/pm-contracts
+.. _Github: https://github.com/gnosis/hg-contracts
 
 .. highlight:: bash
 
