@@ -1,7 +1,7 @@
 Changes from Version 1.x
 ========================
 
-Documentation for the first version of the prediction market contract framework can be found `here <https://gnosis-pm-contracts.readthedocs.io/en/v1/>`_, or via the menu on the sidebar.
+Documentation for the first version of the prediction market contract framework can be found `here <https://gnosis-pm-contracts.readthedocs.io>`_, or via the menu on the sidebar.
 
 
 Modular vs Monolithic
