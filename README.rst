@@ -1,4 +1,4 @@
-.. figure:: https://raw.githubusercontent.com/gnosis/hg-contracts/development/assets/logo.png
+.. figure:: https://raw.githubusercontent.com/gnosis/hg-contracts/master/assets/logo.png
    :target: https://gnosis.pm
    :alt: Gnosis Logo
 
@@ -8,7 +8,7 @@ Gnosis Mercury
 Prediction Market Contracts
 ---------------------------
 
-.. image:: https://travis-ci.org/gnosis/hg-contracts.svg?branch=development
+.. image:: https://travis-ci.org/gnosis/hg-contracts.svg?branch=master
    :target: https://travis-ci.org/gnosis/hg-contracts
    :alt: Build Status
 
