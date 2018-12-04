@@ -24,6 +24,11 @@ const config = {
   mocha: {
     enableTimeouts: false,
     grep: process.env.TEST_GREP
+  },
+  compilers: {
+    solc: {
+      version: "0.5.1"
+    }
   }
 };
 
