@@ -28,7 +28,7 @@
   "dependencies": {
     "@gnosis.pm/util-contracts": "^2.0.0-alpha",
     "erc-1155": "github:cag/erc-1155#sol-0.5",
-    "openzeppelin-solidity": "github:OpenZeppelin/openzeppelin-solidity#solc-nightly"
+    "openzeppelin-solidity": "github:elopio/openzeppelin-solidity#solc-nightly-2.0-update-2"
   },
   "devDependencies": {
     "@gnosis.pm/truffle-nice-tools": "^1.1.3",
