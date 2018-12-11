@@ -2,16 +2,17 @@ const { assertRejects, getParamFromTxEvent } = require("./utils");
 const { toHex, padLeft, keccak256, asciiToHex, toBN, fromWei } = web3.utils;
 
 const PredictionMarketSystem = artifacts.require("PredictionMarketSystem");
-const WETH9 = artifacts.require("WETH9");
+const ERC20Mintable = artifacts.require("ERC20Mintable");
 
 contract("PredictionMarketSystem", function(accounts) {
-  let etherToken;
+  let collateralToken;
+  const minter = accounts[0];
   let oracle, questionId, outcomeSlotCount, predictionMarketSystem;
   let conditionId;
 
   before(async () => {
     predictionMarketSystem = await PredictionMarketSystem.deployed();
-    etherToken = await WETH9.deployed();
+    collateralToken = await ERC20Mintable.new({ from: minter });
 
     // prepare condition
     oracle = accounts[1];
@@ -57,17 +58,17 @@ contract("PredictionMarketSystem", function(accounts) {
 
   it("should split and merge positions on outcome slots", async () => {
     const buyer = 0;
-    const collateralTokenCount = 1e19;
-    await etherToken.deposit({
-      value: collateralTokenCount,
-      from: accounts[buyer]
+    const collateralTokenCount = toBN(1e19);
+    await collateralToken.mint(accounts[buyer], collateralTokenCount, {
+      from: minter
     });
-    assert.equal(
-      await etherToken.balanceOf.call(accounts[buyer]),
-      collateralTokenCount
+    assert(
+      collateralTokenCount.eq(
+        await collateralToken.balanceOf.call(accounts[buyer])
+      )
     );
 
-    await etherToken.approve(
+    await collateralToken.approve(
       predictionMarketSystem.address,
       collateralTokenCount,
       { from: accounts[buyer] }
@@ -75,40 +76,47 @@ contract("PredictionMarketSystem", function(accounts) {
 
     for (let i = 0; i < 10; i++) {
       await predictionMarketSystem.splitPosition(
-        etherToken.address,
+        collateralToken.address,
         asciiToHex(0),
         conditionId,
         [0b01, 0b10],
-        collateralTokenCount / 10,
+        collateralTokenCount.divn(10),
         { from: accounts[buyer] }
       );
     }
 
-    assert.equal(
-      await etherToken.balanceOf.call(predictionMarketSystem.address),
-      collateralTokenCount
+    assert(
+      collateralTokenCount.eq(
+        await collateralToken.balanceOf.call(predictionMarketSystem.address)
+      )
     );
-    assert.equal(await etherToken.balanceOf.call(accounts[buyer]), 0);
+    assert.equal(await collateralToken.balanceOf.call(accounts[buyer]), 0);
 
-    assert.equal(
-      await predictionMarketSystem.balanceOf.call(
-        accounts[buyer],
-        keccak256(
-          etherToken.address +
-            keccak256(conditionId + padLeft(toHex(0b01), 64).slice(2)).slice(2)
+    assert(
+      collateralTokenCount.eq(
+        await predictionMarketSystem.balanceOf.call(
+          accounts[buyer],
+          keccak256(
+            collateralToken.address +
+              keccak256(conditionId + padLeft(toHex(0b01), 64).slice(2)).slice(
+                2
+              )
+          )
         )
-      ),
-      collateralTokenCount
+      )
     );
-    assert.equal(
-      await predictionMarketSystem.balanceOf.call(
-        accounts[buyer],
-        keccak256(
-          etherToken.address +
-            keccak256(conditionId + padLeft(toHex(0b10), 64).slice(2)).slice(2)
+    assert(
+      collateralTokenCount.eq(
+        await predictionMarketSystem.balanceOf.call(
+          accounts[buyer],
+          keccak256(
+            collateralToken.address +
+              keccak256(conditionId + padLeft(toHex(0b10), 64).slice(2)).slice(
+                2
+              )
+          )
         )
-      ),
-      collateralTokenCount
+      )
     );
 
     // Validate getters
@@ -118,19 +126,20 @@ contract("PredictionMarketSystem", function(accounts) {
     );
 
     await predictionMarketSystem.mergePositions(
-      etherToken.address,
+      collateralToken.address,
       asciiToHex(0),
       conditionId,
       [0b01, 0b10],
       collateralTokenCount,
       { from: accounts[buyer] }
     );
-    assert.equal(
-      await etherToken.balanceOf.call(accounts[buyer]),
-      collateralTokenCount
+    assert(
+      collateralTokenCount.eq(
+        await collateralToken.balanceOf.call(accounts[buyer])
+      )
     );
     assert.equal(
-      await etherToken.balanceOf.call(predictionMarketSystem.address),
+      await collateralToken.balanceOf.call(predictionMarketSystem.address),
       0
     );
 
@@ -138,7 +147,7 @@ contract("PredictionMarketSystem", function(accounts) {
       await predictionMarketSystem.balanceOf.call(
         accounts[buyer],
         keccak256(
-          etherToken.address +
+          collateralToken.address +
             keccak256(conditionId + padLeft(toHex(0b01), 64).slice(2)).slice(2)
         )
       ),
@@ -148,7 +157,7 @@ contract("PredictionMarketSystem", function(accounts) {
       await predictionMarketSystem.balanceOf.call(
         accounts[buyer],
         keccak256(
-          etherToken.address +
+          collateralToken.address +
             keccak256(conditionId + padLeft(toHex(0b10), 64).slice(2)).slice(2)
         )
       ),
@@ -161,22 +170,21 @@ contract("PredictionMarketSystem", function(accounts) {
     const buyer = 2;
     const recipient = 7;
     const collateralTokenCount = 10;
-    await etherToken.deposit({
-      value: collateralTokenCount,
-      from: accounts[buyer]
+    await collateralToken.mint(accounts[buyer], collateralTokenCount, {
+      from: minter
     });
     assert.equal(
-      await etherToken.balanceOf.call(accounts[buyer]),
+      await collateralToken.balanceOf.call(accounts[buyer]),
       collateralTokenCount
     );
-    await etherToken.approve(
+    await collateralToken.approve(
       predictionMarketSystem.address,
       collateralTokenCount,
       { from: accounts[buyer] }
     );
 
     await predictionMarketSystem.splitPosition(
-      etherToken.address,
+      collateralToken.address,
       asciiToHex(0),
       conditionId,
       [0b01, 0b10],
@@ -184,18 +192,18 @@ contract("PredictionMarketSystem", function(accounts) {
       { from: accounts[buyer] }
     );
     assert.equal(
-      (await etherToken.balanceOf.call(
+      (await collateralToken.balanceOf.call(
         predictionMarketSystem.address
       )).valueOf(),
       collateralTokenCount
     );
-    assert.equal(await etherToken.balanceOf.call(accounts[buyer]), 0);
+    assert.equal(await collateralToken.balanceOf.call(accounts[buyer]), 0);
 
     assert.equal(
       await predictionMarketSystem.balanceOf.call(
         accounts[buyer],
         keccak256(
-          etherToken.address +
+          collateralToken.address +
             keccak256(conditionId + padLeft(toHex(0b01), 64).slice(2)).slice(2)
         )
       ),
@@ -205,7 +213,7 @@ contract("PredictionMarketSystem", function(accounts) {
       await predictionMarketSystem.balanceOf.call(
         accounts[buyer],
         keccak256(
-          etherToken.address +
+          collateralToken.address +
             keccak256(conditionId + padLeft(toHex(0b10), 64).slice(2)).slice(2)
         )
       ),
@@ -235,7 +243,7 @@ contract("PredictionMarketSystem", function(accounts) {
       accounts[buyer],
       accounts[recipient],
       keccak256(
-        etherToken.address +
+        collateralToken.address +
           keccak256(conditionId + padLeft(toHex(0b01), 64).slice(2)).slice(2)
       ),
       collateralTokenCount,
@@ -245,7 +253,7 @@ contract("PredictionMarketSystem", function(accounts) {
 
     const buyerPayout = getParamFromTxEvent(
       await predictionMarketSystem.redeemPositions(
-        etherToken.address,
+        collateralToken.address,
         asciiToHex(0),
         conditionId,
         [0b10],
@@ -259,7 +267,7 @@ contract("PredictionMarketSystem", function(accounts) {
       await predictionMarketSystem.balanceOf.call(
         accounts[recipient],
         keccak256(
-          etherToken.address +
+          collateralToken.address +
             keccak256(conditionId + padLeft(toHex(0b01), 64).slice(2)).slice(2)
         )
       ),
@@ -269,7 +277,7 @@ contract("PredictionMarketSystem", function(accounts) {
       await predictionMarketSystem.balanceOf.call(
         accounts[buyer],
         keccak256(
-          etherToken.address +
+          collateralToken.address +
             keccak256(conditionId + padLeft(toHex(0b10), 64).slice(2)).slice(2)
         )
       ),
@@ -278,7 +286,7 @@ contract("PredictionMarketSystem", function(accounts) {
 
     const recipientPayout = getParamFromTxEvent(
       await predictionMarketSystem.redeemPositions(
-        etherToken.address,
+        collateralToken.address,
         asciiToHex(0),
         conditionId,
         [0b01],
@@ -288,11 +296,11 @@ contract("PredictionMarketSystem", function(accounts) {
     );
 
     assert.equal(
-      (await etherToken.balanceOf.call(accounts[recipient])).toNumber(),
+      (await collateralToken.balanceOf.call(accounts[recipient])).toNumber(),
       recipientPayout.valueOf()
     );
     assert.equal(
-      (await etherToken.balanceOf.call(accounts[buyer])).toNumber(),
+      (await collateralToken.balanceOf.call(accounts[buyer])).toNumber(),
       buyerPayout.valueOf()
     );
   });
@@ -336,25 +344,33 @@ contract("PredictionMarketSystem", function(accounts) {
 
     // create some buyers and purchase collateralTokens and then some Outcome Slots
     const buyers = [3, 4, 5, 6];
-    const collateralTokenCounts = [1e19, 1e9, 1e18, 1000];
+    const collateralTokenCounts = [
+      toBN(1e19),
+      toBN(1e9),
+      toBN(1e18),
+      toBN(1000)
+    ];
     for (var i = 0; i < buyers.length; i++) {
-      await etherToken.deposit({
-        value: collateralTokenCounts[i],
-        from: accounts[buyers[i]]
-      });
+      await collateralToken.mint(
+        accounts[buyers[i]],
+        collateralTokenCounts[i],
+        {
+          from: minter
+        }
+      );
       assert.equal(
-        await etherToken
+        await collateralToken
           .balanceOf(accounts[buyers[i]])
           .then(res => res.toString()),
         collateralTokenCounts[i]
       );
-      await etherToken.approve(
+      await collateralToken.approve(
         predictionMarketSystem.address,
         collateralTokenCounts[i],
         { from: accounts[buyers[i]] }
       );
       await predictionMarketSystem.splitPosition(
-        etherToken.address,
+        collateralToken.address,
         asciiToHex(0),
         _conditionId,
         [0b0001, 0b0010, 0b0100, 0b1000],
@@ -400,17 +416,18 @@ contract("PredictionMarketSystem", function(accounts) {
     // assert correct payouts for Outcome Slots
     const payoutsForOutcomeSlots = [333, 666, 1, 0];
     for (var i = 0; i < buyers.length; i++) {
-      assert.equal(
-        await predictionMarketSystem.balanceOf.call(
-          accounts[buyers[i]],
-          keccak256(
-            etherToken.address +
-              keccak256(
-                _conditionId + padLeft(toHex(1 << i), 64).slice(2)
-              ).slice(2)
+      assert(
+        collateralTokenCounts[i].eq(
+          await predictionMarketSystem.balanceOf.call(
+            accounts[buyers[i]],
+            keccak256(
+              collateralToken.address +
+                keccak256(
+                  _conditionId + padLeft(toHex(1 << i), 64).slice(2)
+                ).slice(2)
+            )
           )
-        ),
-        collateralTokenCounts[i]
+        )
       );
       assert.equal(
         await predictionMarketSystem.payoutNumerators(_conditionId, i),
@@ -425,14 +442,14 @@ contract("PredictionMarketSystem", function(accounts) {
     // assert Outcome Token redemption
     for (var i = 0; i < buyers.length; i++) {
       await predictionMarketSystem.redeemPositions(
-        etherToken.address,
+        collateralToken.address,
         asciiToHex(0),
         _conditionId,
         [0b0001, 0b0010, 0b0100, 0b1000],
         { from: accounts[buyers[i]] }
       );
       assert.equal(
-        await etherToken
+        await collateralToken
           .balanceOf(accounts[buyers[i]])
           .then(res => res.toString()),
         collateralTokenCounts[i]
@@ -443,7 +460,8 @@ contract("PredictionMarketSystem", function(accounts) {
 
 contract("Complex splitting and merging scenario #1.", function(accounts) {
   let predictionMarketSystem,
-    etherToken,
+    collateralToken,
+    minter = accounts[0],
     oracle1,
     oracle2,
     oracle3,
@@ -462,7 +480,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
 
   before(async () => {
     predictionMarketSystem = await PredictionMarketSystem.deployed();
-    etherToken = await WETH9.deployed();
+    collateralToken = await ERC20Mintable.new();
 
     // prepare condition
     oracle1 = accounts[1];
@@ -519,27 +537,27 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
           .join("")
     );
 
-    await etherToken.deposit({ value: 10000, from: player1 });
-    await etherToken.approve(predictionMarketSystem.address, 10000, {
+    await collateralToken.mint(player1, 10000, { from: minter });
+    await collateralToken.approve(predictionMarketSystem.address, 10000, {
       from: player1
     });
-    await etherToken.deposit({ value: 10000, from: player2 });
-    await etherToken.approve(predictionMarketSystem.address, 10000, {
+    await collateralToken.mint(player2, 10000, { from: minter });
+    await collateralToken.approve(predictionMarketSystem.address, 10000, {
       from: player2
     });
-    await etherToken.deposit({ value: 10000, from: player3 });
-    await etherToken.approve(predictionMarketSystem.address, 10000, {
+    await collateralToken.mint(player3, 10000, { from: minter });
+    await collateralToken.approve(predictionMarketSystem.address, 10000, {
       from: player3
     });
   });
 
   it("Invalid initial positions should not give any outcome tokens", async () => {
     await predictionMarketSystem.splitPosition(
-      etherToken.address,
+      collateralToken.address,
       asciiToHex(0),
       conditionId1,
       [0b01],
-      1e19,
+      toBN(1e19),
       { from: player1 }
     );
 
@@ -547,7 +565,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       await predictionMarketSystem.balanceOf(
         player1,
         keccak256(
-          etherToken.address,
+          collateralToken.address,
           0 +
             keccak256(conditionId1, padLeft(toHex(0b01), 64).slice(2)).slice(2)
         )
@@ -555,39 +573,39 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       0
     );
     assert.equal(
-      await etherToken.balanceOf.call(player1).then(res => res.toString()),
+      await collateralToken.balanceOf.call(player1).then(res => res.toString()),
       10000
     );
 
     await assertRejects(
       predictionMarketSystem.splitPosition(
-        etherToken.address,
+        collateralToken.address,
         0,
         conditionId1,
         [0b01, 0b111],
-        1e19,
+        toBN(1e19),
         { from: player1 }
       ),
       "Worked with an invalid indexSet."
     );
     await assertRejects(
       predictionMarketSystem.splitPosition(
-        etherToken.address,
+        collateralToken.address,
         0,
         conditionId1,
         [0b01, 0b11],
-        1e19,
+        toBN(1e19),
         { from: player1 }
       ),
       "Worked with an invalid indexSet."
     );
     await assertRejects(
       predictionMarketSystem.splitPosition(
-        etherToken.address,
+        collateralToken.address,
         0,
         conditionId1,
         [0b01, 0b11, 0b0],
-        1e19,
+        toBN(1e19),
         { from: player1 }
       ),
       "Worked with an invalid indexSet."
@@ -596,7 +614,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
 
   it("should not produce any position changes when split on an incomplete set of base conditions", async () => {
     await predictionMarketSystem.splitPosition(
-      etherToken.address,
+      collateralToken.address,
       asciiToHex(0),
       conditionId1,
       [0b10],
@@ -604,7 +622,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       { from: player3 }
     );
     await predictionMarketSystem.splitPosition(
-      etherToken.address,
+      collateralToken.address,
       asciiToHex(0),
       conditionId1,
       [0b01],
@@ -617,8 +635,12 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     const collectionId2 = keccak256(
       conditionId1 + padLeft(toHex(0b10), 64).slice(2)
     );
-    const positionId1 = keccak256(etherToken.address + collectionId1.slice(2));
-    const positionId2 = keccak256(etherToken.address + collectionId2.slice(2));
+    const positionId1 = keccak256(
+      collateralToken.address + collectionId1.slice(2)
+    );
+    const positionId2 = keccak256(
+      collateralToken.address + collectionId2.slice(2)
+    );
 
     assert.equal(
       await predictionMarketSystem
@@ -637,7 +659,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
   it("should not be able to merge back into a collateral token from a position without any outcome tokens", async () => {
     await assertRejects(
       predictionMarketSystem.mergePositions(
-        etherToken.address,
+        collateralToken.address,
         asciiToHex(0),
         conditionId1,
         [0b01, 0b10],
@@ -653,8 +675,12 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     const collectionId2 = keccak256(
       conditionId1 + padLeft(toHex(0b10), 64).slice(2)
     );
-    const positionId1 = keccak256(etherToken.address + collectionId1.slice(2));
-    const positionId2 = keccak256(etherToken.address + collectionId2.slice(2));
+    const positionId1 = keccak256(
+      collateralToken.address + collectionId1.slice(2)
+    );
+    const positionId2 = keccak256(
+      collateralToken.address + collectionId2.slice(2)
+    );
 
     assert.equal(
       await predictionMarketSystem
@@ -673,7 +699,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
   it("Should be able to split and merge in more complex scenarios", async () => {
     // Split on an initial condition
     await predictionMarketSystem.splitPosition(
-      etherToken.address,
+      collateralToken.address,
       asciiToHex(0),
       conditionId1,
       [0b01, 0b10],
@@ -687,8 +713,12 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     const collectionId2 = keccak256(
       conditionId1 + padLeft(toHex(0b10), 64).slice(2)
     );
-    const positionId1 = keccak256(etherToken.address + collectionId1.slice(2));
-    const positionId2 = keccak256(etherToken.address + collectionId2.slice(2));
+    const positionId1 = keccak256(
+      collateralToken.address + collectionId1.slice(2)
+    );
+    const positionId2 = keccak256(
+      collateralToken.address + collectionId2.slice(2)
+    );
 
     assert.equal(
       await predictionMarketSystem
@@ -709,7 +739,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
 
     // Split on a non-root Collection Identifier and Condition
     await predictionMarketSystem.splitPosition(
-      etherToken.address,
+      collateralToken.address,
       collectionId1,
       conditionId2,
       [0b10, 0b01, 0b100],
@@ -750,9 +780,15 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
           toBN(keccak256(conditionId2 + padLeft(toHex(0b100), 64).slice(2)))
         )
       ).slice(-64);
-    const positionId3 = keccak256(etherToken.address + collectionId3.slice(2));
-    const positionId4 = keccak256(etherToken.address + collectionId4.slice(2));
-    const positionId5 = keccak256(etherToken.address + collectionId5.slice(2));
+    const positionId3 = keccak256(
+      collateralToken.address + collectionId3.slice(2)
+    );
+    const positionId4 = keccak256(
+      collateralToken.address + collectionId4.slice(2)
+    );
+    const positionId5 = keccak256(
+      collateralToken.address + collectionId5.slice(2)
+    );
 
     assert.equal(
       await predictionMarketSystem
@@ -775,7 +811,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
 
     // Split again on a non-root Collection Identifier and Condition
     await predictionMarketSystem.splitPosition(
-      etherToken.address,
+      collateralToken.address,
       collectionId3,
       conditionId3,
       [0b10, 0b01, 0b100, 0b1000],
@@ -823,10 +859,18 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
           toBN(keccak256(conditionId3 + padLeft(toHex(0b1000), 64).slice(2)))
         )
       ).slice(-64);
-    const positionId6 = keccak256(etherToken.address + collectionId6.slice(2));
-    const positionId7 = keccak256(etherToken.address + collectionId7.slice(2));
-    const positionId8 = keccak256(etherToken.address + collectionId8.slice(2));
-    const positionId9 = keccak256(etherToken.address + collectionId9.slice(2));
+    const positionId6 = keccak256(
+      collateralToken.address + collectionId6.slice(2)
+    );
+    const positionId7 = keccak256(
+      collateralToken.address + collectionId7.slice(2)
+    );
+    const positionId8 = keccak256(
+      collateralToken.address + collectionId8.slice(2)
+    );
+    const positionId9 = keccak256(
+      collateralToken.address + collectionId9.slice(2)
+    );
 
     assert.equal(
       await predictionMarketSystem
@@ -855,7 +899,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
 
     // Merge a full set of Outcome Slots back into conditionId3
     await predictionMarketSystem.mergePositions(
-      etherToken.address,
+      collateralToken.address,
       collectionId3,
       conditionId3,
       [0b10, 0b01, 0b100, 0b1000],
@@ -895,7 +939,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
 
     // Merge a partial set of Outcome Slots back
     await predictionMarketSystem.mergePositions(
-      etherToken.address,
+      collateralToken.address,
       collectionId3,
       conditionId3,
       [0b10, 0b01, 0b1000],
@@ -910,7 +954,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
         )
       ).slice(-64);
     const positionId10 = keccak256(
-      etherToken.address + collectionId10.slice(2)
+      collateralToken.address + collectionId10.slice(2)
     );
     assert.equal(
       await predictionMarketSystem
@@ -945,7 +989,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
 
     await assertRejects(
       predictionMarketSystem.mergePositions(
-        etherToken.address,
+        collateralToken.address,
         collectionId3,
         conditionId3,
         [0b10, 0b01, 0b100, 0b1000],
@@ -956,7 +1000,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     );
     await assertRejects(
       predictionMarketSystem.mergePositions(
-        etherToken.address,
+        collateralToken.address,
         collectionId3,
         conditionId3,
         [0b10, 0b01, 0b1000],
@@ -967,7 +1011,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     );
 
     await predictionMarketSystem.mergePositions(
-      etherToken.address,
+      collateralToken.address,
       collectionId3,
       conditionId3,
       [0b1011, 0b100],
@@ -995,7 +1039,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
 
     await assertRejects(
       predictionMarketSystem.mergePositions(
-        etherToken.address,
+        collateralToken.address,
         collectionId1,
         conditionId2,
         [0b01, 0b10, 0b100],
@@ -1006,7 +1050,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     );
 
     await predictionMarketSystem.mergePositions(
-      etherToken.address,
+      collateralToken.address,
       collectionId1,
       conditionId2,
       [0b01, 0b10, 0b100],
@@ -1040,7 +1084,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
 
     await assertRejects(
       predictionMarketSystem.mergePositions(
-        etherToken.address,
+        collateralToken.address,
         0,
         conditionId1,
         [0b01],
@@ -1051,7 +1095,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     );
     await assertRejects(
       predictionMarketSystem.mergePositions(
-        etherToken.address,
+        collateralToken.address,
         0,
         conditionId1,
         [0b01, 0b10],
@@ -1062,7 +1106,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     );
     await assertRejects(
       predictionMarketSystem.mergePositions(
-        etherToken.address,
+        collateralToken.address,
         0,
         conditionId1,
         [0b01, 0b10],
@@ -1073,7 +1117,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     );
 
     await predictionMarketSystem.mergePositions(
-      etherToken.address,
+      collateralToken.address,
       asciiToHex(0),
       conditionId1,
       [0b01, 0b10],
@@ -1093,13 +1137,13 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       50
     );
     assert.equal(
-      await etherToken.balanceOf(player1).then(r => r.toNumber()),
+      await collateralToken.balanceOf(player1).then(r => r.toNumber()),
       9950
     );
 
     await assertRejects(
       predictionMarketSystem.redeemPositions(
-        etherToken.address,
+        collateralToken.address,
         asciiToHex(0),
         conditionId1,
         [0b01, 0b10],
@@ -1126,7 +1170,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     );
     await assertRejects(
       predictionMarketSystem.redeemPositions(
-        etherToken.address,
+        collateralToken.address,
         asciiToHex(0),
         conditionId2,
         [0b01, 0b110],
@@ -1168,7 +1212,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
 
     // asserts that if you redeem the wrong indexSets, it won't affect the other indexes.
     await predictionMarketSystem.redeemPositions(
-      etherToken.address,
+      collateralToken.address,
       collectionId3,
       conditionId3,
       [0b10, 0b01, 0b1000],
@@ -1188,7 +1232,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     );
 
     await predictionMarketSystem.redeemPositions(
-      etherToken.address,
+      collateralToken.address,
       collectionId3,
       conditionId3,
       [0b10, 0b01, 0b100],
@@ -1208,7 +1252,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     );
 
     await predictionMarketSystem.redeemPositions(
-      etherToken.address,
+      collateralToken.address,
       collectionId3,
       conditionId3,
       [0b1011],
@@ -1230,7 +1274,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     );
 
     await predictionMarketSystem.redeemPositions(
-      etherToken.address,
+      collateralToken.address,
       collectionId1,
       conditionId2,
       [0b01, 0b10, 0b100],
@@ -1272,7 +1316,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     );
 
     await predictionMarketSystem.redeemPositions(
-      etherToken.address,
+      collateralToken.address,
       asciiToHex(0),
       conditionId1,
       [0b01],
@@ -1287,7 +1331,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
 
     // Missing 1 for the rounding of different outcomes
     assert.equal(
-      await etherToken.balanceOf(player1).then(r => r.toNumber()),
+      await collateralToken.balanceOf(player1).then(r => r.toNumber()),
       9999
     );
   });
@@ -1297,7 +1341,8 @@ contract(
   "Should be able to partially split and merge in complex scenarios. #2",
   function(accounts) {
     let predictionMarketSystem,
-      etherToken,
+      collateralToken,
+      minter = accounts[0],
       oracle1,
       oracle2,
       oracle3,
@@ -1316,7 +1361,7 @@ contract(
 
     before(async () => {
       predictionMarketSystem = await PredictionMarketSystem.deployed();
-      etherToken = await WETH9.deployed();
+      collateralToken = await ERC20Mintable.new({ from: minter });
 
       // prepare condition
       oracle1 = accounts[1];
@@ -1373,27 +1418,39 @@ contract(
             .join("")
       );
 
-      await etherToken.deposit({ value: 1e19, from: player1 });
-      await etherToken.approve(predictionMarketSystem.address, 1e19, {
-        from: player1
-      });
-      await etherToken.deposit({ value: 1e19, from: player2 });
-      await etherToken.approve(predictionMarketSystem.address, 1e19, {
-        from: player2
-      });
-      await etherToken.deposit({ value: 1e19, from: player3 });
-      await etherToken.approve(predictionMarketSystem.address, 1e19, {
-        from: player3
-      });
+      await collateralToken.mint(player1, toBN(1e19), { from: minter });
+      await collateralToken.approve(
+        predictionMarketSystem.address,
+        toBN(1e19),
+        {
+          from: player1
+        }
+      );
+      await collateralToken.mint(player2, toBN(1e19), { from: minter });
+      await collateralToken.approve(
+        predictionMarketSystem.address,
+        toBN(1e19),
+        {
+          from: player2
+        }
+      );
+      await collateralToken.mint(player3, toBN(1e19), { from: minter });
+      await collateralToken.approve(
+        predictionMarketSystem.address,
+        toBN(1e19),
+        {
+          from: player3
+        }
+      );
     });
 
     it("Should correctly and safely partially split and merge in complex scnarios.", async () => {
       await predictionMarketSystem.splitPosition(
-        etherToken.address,
+        collateralToken.address,
         asciiToHex(0),
         conditionId1,
         [0b01, 0b10],
-        1e19,
+        toBN(1e19),
         { from: player1 }
       );
 
@@ -1404,10 +1461,10 @@ contract(
         conditionId1 + padLeft(toHex(0b10), 64).slice(2)
       );
       const positionId1 = keccak256(
-        etherToken.address + collectionId1.slice(2)
+        collateralToken.address + collectionId1.slice(2)
       );
       const positionId2 = keccak256(
-        etherToken.address + collectionId2.slice(2)
+        collateralToken.address + collectionId2.slice(2)
       );
 
       assert.equal(
@@ -1424,11 +1481,14 @@ contract(
         ),
         10
       );
-      assert.equal(fromWei(await etherToken.balanceOf(player1), "ether"), 0);
+      assert.equal(
+        fromWei(await collateralToken.balanceOf(player1), "ether"),
+        0
+      );
 
       await assertRejects(
         predictionMarketSystem.splitPosition(
-          etherToken.address,
+          collateralToken.address,
           collectionId2,
           conditionId2,
           [0b01, 0b10],
@@ -1440,7 +1500,7 @@ contract(
 
       await assertRejects(
         predictionMarketSystem.splitPosition(
-          etherToken.address,
+          collateralToken.address,
           collectionId2,
           conditionId2,
           [0b100, 0b01],
@@ -1451,11 +1511,11 @@ contract(
       );
 
       await predictionMarketSystem.splitPosition(
-        etherToken.address,
+        collateralToken.address,
         collectionId2,
         conditionId2,
         [0b110, 0b01],
-        1e19,
+        toBN(1e19),
         { from: player1 }
       );
       const collectionId3 =
@@ -1473,10 +1533,10 @@ contract(
           )
         ).slice(-64);
       const positionId3 = keccak256(
-        etherToken.address + collectionId3.slice(2)
+        collateralToken.address + collectionId3.slice(2)
       );
       const positionId4 = keccak256(
-        etherToken.address + collectionId4.slice(2)
+        collateralToken.address + collectionId4.slice(2)
       );
 
       assert.equal(
@@ -1495,11 +1555,11 @@ contract(
       );
 
       await predictionMarketSystem.splitPosition(
-        etherToken.address,
+        collateralToken.address,
         collectionId2,
         conditionId2,
         [0b100, 0b10],
-        1e19,
+        toBN(1e19),
         { from: player1 }
       );
       assert.equal(
@@ -1532,10 +1592,10 @@ contract(
           )
         ).slice(-64);
       const positionId5 = keccak256(
-        etherToken.address + collectionId5.slice(2)
+        collateralToken.address + collectionId5.slice(2)
       );
       const positionId6 = keccak256(
-        etherToken.address + collectionId6.slice(2)
+        collateralToken.address + collectionId6.slice(2)
       );
       assert.equal(
         fromWei(
@@ -1553,11 +1613,11 @@ contract(
       );
 
       await predictionMarketSystem.mergePositions(
-        etherToken.address,
+        collateralToken.address,
         collectionId2,
         conditionId2,
         [0b01, 0b10],
-        1e19,
+        toBN(1e19),
         { from: player1 }
       );
       assert.equal(
@@ -1583,7 +1643,7 @@ contract(
           )
         ).slice(-64);
       const positionId7 = keccak256(
-        etherToken.address + collectionId7.slice(2)
+        collateralToken.address + collectionId7.slice(2)
       );
       assert.equal(
         fromWei(
@@ -1600,7 +1660,8 @@ contract(
   "The same positions in different orders should equal each other.",
   function(accounts) {
     let predictionMarketSystem,
-      etherToken,
+      collateralToken,
+      minter = accounts[0],
       oracle1,
       oracle2,
       oracle3,
@@ -1619,7 +1680,7 @@ contract(
 
     before(async () => {
       predictionMarketSystem = await PredictionMarketSystem.deployed();
-      etherToken = await WETH9.deployed();
+      collateralToken = await ERC20Mintable.new({ from: minter });
 
       // prepare condition
       oracle1 = accounts[1];
@@ -1676,35 +1737,47 @@ contract(
             .join("")
       );
 
-      await etherToken.deposit({ value: 1e19, from: player1 });
-      await etherToken.approve(predictionMarketSystem.address, 1e19, {
-        from: player1
-      });
-      await etherToken.deposit({ value: 1e19, from: player2 });
-      await etherToken.approve(predictionMarketSystem.address, 1e19, {
-        from: player2
-      });
-      await etherToken.deposit({ value: 1e19, from: player3 });
-      await etherToken.approve(predictionMarketSystem.address, 1e19, {
-        from: player3
-      });
+      await collateralToken.mint(player1, toBN(1e19), { from: minter });
+      await collateralToken.approve(
+        predictionMarketSystem.address,
+        toBN(1e19),
+        {
+          from: player1
+        }
+      );
+      await collateralToken.mint(player2, toBN(1e19), { from: minter });
+      await collateralToken.approve(
+        predictionMarketSystem.address,
+        toBN(1e19),
+        {
+          from: player2
+        }
+      );
+      await collateralToken.mint(player3, toBN(1e19), { from: minter });
+      await collateralToken.approve(
+        predictionMarketSystem.address,
+        toBN(1e19),
+        {
+          from: player3
+        }
+      );
     });
 
     it("Should create positions in opposite orders that equal each others values", async () => {
       await predictionMarketSystem.splitPosition(
-        etherToken.address,
+        collateralToken.address,
         asciiToHex(0),
         conditionId1,
         [0b01, 0b10],
-        1e18,
+        toBN(1e18),
         { from: player1 }
       );
       await predictionMarketSystem.splitPosition(
-        etherToken.address,
+        collateralToken.address,
         asciiToHex(0),
         conditionId2,
         [0b01, 0b10, 0b100],
-        1e18,
+        toBN(1e18),
         { from: player1 }
       );
 
@@ -1715,10 +1788,10 @@ contract(
         conditionId1 + padLeft(toHex(0b10), 64).slice(2)
       );
       const positionId1 = keccak256(
-        etherToken.address + collectionId1.slice(2)
+        collateralToken.address + collectionId1.slice(2)
       );
       const positionId2 = keccak256(
-        etherToken.address + collectionId2.slice(2)
+        collateralToken.address + collectionId2.slice(2)
       );
 
       const collectionId3 = keccak256(
@@ -1731,13 +1804,13 @@ contract(
         conditionId2 + padLeft(toHex(0b100), 64).slice(2)
       );
       const positionId3 = keccak256(
-        etherToken.address + collectionId3.slice(2)
+        collateralToken.address + collectionId3.slice(2)
       );
       const positionId4 = keccak256(
-        etherToken.address + collectionId4.slice(2)
+        collateralToken.address + collectionId4.slice(2)
       );
       const positionId5 = keccak256(
-        etherToken.address + collectionId5.slice(2)
+        collateralToken.address + collectionId5.slice(2)
       );
 
       assert.equal(
@@ -1776,22 +1849,25 @@ contract(
         1
       );
 
-      assert.equal(fromWei(await etherToken.balanceOf(player1), "ether"), 8);
+      assert.equal(
+        fromWei(await collateralToken.balanceOf(player1), "ether"),
+        8
+      );
 
       await predictionMarketSystem.splitPosition(
-        etherToken.address,
+        collateralToken.address,
         collectionId1,
         conditionId2,
         [0b10, 0b01, 0b100],
-        1e18,
+        toBN(1e18),
         { from: player1 }
       );
       await predictionMarketSystem.splitPosition(
-        etherToken.address,
+        collateralToken.address,
         collectionId4,
         conditionId1,
         [0b10, 0b01],
-        1e18,
+        toBN(1e18),
         { from: player1 }
       );
       // PositionId1 split on (PositionId4) should equal (PositionId4) split on PositionId1
@@ -1803,7 +1879,7 @@ contract(
           )
         ).slice(-64);
       const positionId6 = keccak256(
-        etherToken.address + collectionId6.slice(2)
+        collateralToken.address + collectionId6.slice(2)
       );
 
       const collectionId7 =
@@ -1814,7 +1890,7 @@ contract(
           )
         ).slice(-64);
       const positionId7 = keccak256(
-        etherToken.address + collectionId7.slice(2)
+        collateralToken.address + collectionId7.slice(2)
       );
 
       assert.equal(positionId6, positionId7);

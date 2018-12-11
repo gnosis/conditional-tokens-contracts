@@ -1,6 +1,6 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.1;
 
 
 interface OracleConsumer {
-    function receiveResult(bytes32 id, bytes result) external;
+    function receiveResult(bytes32 id, bytes calldata result) external;
 }
