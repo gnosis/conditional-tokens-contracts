@@ -2,7 +2,7 @@ const { assertRejects, getParamFromTxEvent } = require("./utils");
 const { toHex, padLeft, keccak256, asciiToHex, toBN, fromWei } = web3.utils;
 
 const PredictionMarketSystem = artifacts.require("PredictionMarketSystem");
-const ERC20Mintable = artifacts.require("ERC20Mintable");
+const ERC20Mintable = artifacts.require("MockCoin");
 
 contract("PredictionMarketSystem", function(accounts) {
   let collateralToken;
