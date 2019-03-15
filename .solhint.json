@@ -1,7 +1,6 @@
 {
-  "extends": "default",
+  "extends": "solhint:default",
   "rules": {
-    "compiler-fixed": false,
     "max-line-length": false
   }
 }

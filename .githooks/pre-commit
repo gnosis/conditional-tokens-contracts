@@ -22,3 +22,15 @@ else
   echo "✘ ESLint failed!" 1>&2
   exit ${eslint_exit}
 fi
+
+# Solhint staged changes only
+git diff --diff-filter=d --cached --name-only -z -- '*.sol' \
+  | xargs -0 -I % sh -c 'git show ":%" | ./node_modules/.bin/solhint stdin;'
+solhint_exit=$?
+
+if [ ${solhint_exit} -eq 0 ]; then
+  echo "✓ Solhint passed"
+else
+  echo "✘ Solhint failed!" 1>&2
+  exit ${solhint_exit}
+fi
