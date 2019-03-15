@@ -26,7 +26,6 @@
   "author": "Gnosis (https://gnosis.pm)",
   "license": "LGPL-3.0",
   "dependencies": {
-    "@gnosis.pm/util-contracts": "^2.0.0-alpha",
     "erc-1155": "github:cag/erc-1155#pragma-0.5.0",
     "openzeppelin-solidity": "github:elopio/openzeppelin-solidity#solc-nightly-2.0-update-2"
   },
@@ -37,7 +36,7 @@
     "eslint-plugin-prettier": "^3.0.0",
     "lodash": "^4.17.4",
     "npm-prepublish": "^1.2.3",
-    "prettier": "1.15.2",
+    "prettier": "1.16.4",
     "truffle": "^5.0.5",
     "web3": "^1.0.0-beta.35"
   },
