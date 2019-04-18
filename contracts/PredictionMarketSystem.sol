@@ -19,7 +19,7 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
     event PositionSplit(address indexed stakeholder, IERC20 collateralToken, bytes32 indexed parentCollectionId, bytes32 indexed conditionId, uint[] partition, uint amount);
     /// @dev Emitted when positions are successfully merged.
     event PositionsMerge(address indexed stakeholder, IERC20 collateralToken, bytes32 indexed parentCollectionId, bytes32 indexed conditionId, uint[] partition, uint amount);
-    event PayoutRedemption(address indexed redeemer, IERC20 indexed collateralToken, bytes32 indexed parentCollectionId, uint payout);
+    event PayoutRedemption(address indexed redeemer, IERC20 indexed collateralToken, bytes32 indexed parentCollectionId, uint[] indexSets, uint payout);
 
     /// Mapping key is an condition ID. Value represents numerators of the payout vector associated with the condition. This array is initialized with a length equal to the outcome slot count.
     mapping(bytes32 => uint[]) public payoutNumerators;
@@ -169,7 +169,7 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
                 balances[uint(key)][msg.sender] = balances[uint(key)][msg.sender].add(totalPayout);
             }
         }
-        emit PayoutRedemption(msg.sender, collateralToken, parentCollectionId, totalPayout);
+        emit PayoutRedemption(msg.sender, collateralToken, parentCollectionId, indexSets, totalPayout);
     }
 
     /// @dev Gets the outcome slot count of a condition.
