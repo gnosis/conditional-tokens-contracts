@@ -3,7 +3,7 @@
    :alt: Gnosis Logo
 
 
-Gnosis Mercury
+Gnosis Markets
 ==============
 Prediction Market Contracts
 ---------------------------
