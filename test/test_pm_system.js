@@ -259,7 +259,9 @@ contract("PredictionMarketSystem", function(accounts) {
         [0b10],
         { from: accounts[buyer] }
       ),
-      "payout"
+      "payout",
+      null,
+      "PayoutRedemption"
     );
 
     assert.equal(buyerPayout.valueOf(), (collateralTokenCount * 7) / 10);
@@ -292,7 +294,9 @@ contract("PredictionMarketSystem", function(accounts) {
         [0b01],
         { from: accounts[recipient] }
       ),
-      "payout"
+      "payout",
+      null,
+      "PayoutRedemption"
     );
 
     assert.equal(
@@ -475,8 +479,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     player2,
     player3,
     conditionId1,
-    conditionId2,
-    conditionId3;
+    conditionId2;
 
   before(async () => {
     predictionMarketSystem = await PredictionMarketSystem.deployed();
@@ -527,12 +530,6 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     conditionId2 = keccak256(
       oracle2 +
         [questionId2, outcomeSlotCount2]
-          .map(v => padLeft(toHex(v), 64).slice(2))
-          .join("")
-    );
-    conditionId3 = keccak256(
-      oracle3 +
-        [questionId3, outcomeSlotCount3]
           .map(v => padLeft(toHex(v), 64).slice(2))
           .join("")
     );
@@ -746,594 +743,594 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       100,
       { from: player1 }
     );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId1)
-        .then(r => r.toNumber()),
-      900
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId2)
-        .then(r => r.toNumber()),
-      1000
-    );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId1)
+    //     .then(r => r.toNumber()),
+    //   900
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId2)
+    //     .then(r => r.toNumber()),
+    //   1000
+    // );
 
-    const collectionId3 =
-      "0x" +
-      toHex(
-        toBN(collectionId1).add(
-          toBN(keccak256(conditionId2 + padLeft(toHex(0b10), 64).slice(2)))
-        )
-      ).slice(-64);
-    const collectionId4 =
-      "0x" +
-      toHex(
-        toBN(collectionId1).add(
-          toBN(keccak256(conditionId2 + padLeft(toHex(0b01), 64).slice(2)))
-        )
-      ).slice(-64);
-    const collectionId5 =
-      "0x" +
-      toHex(
-        toBN(collectionId1).add(
-          toBN(keccak256(conditionId2 + padLeft(toHex(0b100), 64).slice(2)))
-        )
-      ).slice(-64);
-    const positionId3 = keccak256(
-      collateralToken.address + collectionId3.slice(2)
-    );
-    const positionId4 = keccak256(
-      collateralToken.address + collectionId4.slice(2)
-    );
-    const positionId5 = keccak256(
-      collateralToken.address + collectionId5.slice(2)
-    );
+    // const collectionId3 =
+    //   "0x" +
+    //   toHex(
+    //     toBN(collectionId1).add(
+    //       toBN(keccak256(conditionId2 + padLeft(toHex(0b10), 64).slice(2)))
+    //     )
+    //   ).slice(-64);
+    // const collectionId4 =
+    //   "0x" +
+    //   toHex(
+    //     toBN(collectionId1).add(
+    //       toBN(keccak256(conditionId2 + padLeft(toHex(0b01), 64).slice(2)))
+    //     )
+    //   ).slice(-64);
+    // const collectionId5 =
+    //   "0x" +
+    //   toHex(
+    //     toBN(collectionId1).add(
+    //       toBN(keccak256(conditionId2 + padLeft(toHex(0b100), 64).slice(2)))
+    //     )
+    //   ).slice(-64);
+    // const positionId3 = keccak256(
+    //   collateralToken.address + collectionId3.slice(2)
+    // );
+    // const positionId4 = keccak256(
+    //   collateralToken.address + collectionId4.slice(2)
+    // );
+    // const positionId5 = keccak256(
+    //   collateralToken.address + collectionId5.slice(2)
+    // );
 
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId3)
-        .then(r => r.toNumber()),
-      100
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId4)
-        .then(r => r.toNumber()),
-      100
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId5)
-        .then(r => r.toNumber()),
-      100
-    );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId3)
+    //     .then(r => r.toNumber()),
+    //   100
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId4)
+    //     .then(r => r.toNumber()),
+    //   100
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId5)
+    //     .then(r => r.toNumber()),
+    //   100
+    // );
 
-    // Split again on a non-root Collection Identifier and Condition
-    await predictionMarketSystem.splitPosition(
-      collateralToken.address,
-      collectionId3,
-      conditionId3,
-      [0b10, 0b01, 0b100, 0b1000],
-      100,
-      { from: player1 }
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId3)
-        .then(r => r.toNumber()),
-      0
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId2)
-        .then(r => r.toNumber()),
-      1000
-    );
+    // // Split again on a non-root Collection Identifier and Condition
+    // await predictionMarketSystem.splitPosition(
+    //   collateralToken.address,
+    //   collectionId3,
+    //   conditionId3,
+    //   [0b10, 0b01, 0b100, 0b1000],
+    //   100,
+    //   { from: player1 }
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId3)
+    //     .then(r => r.toNumber()),
+    //   0
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId2)
+    //     .then(r => r.toNumber()),
+    //   1000
+    // );
 
-    const collectionId6 =
-      "0x" +
-      toHex(
-        toBN(collectionId3).add(
-          toBN(keccak256(conditionId3 + padLeft(toHex(0b10), 64).slice(2)))
-        )
-      ).slice(-64);
-    const collectionId7 =
-      "0x" +
-      toHex(
-        toBN(collectionId3).add(
-          toBN(keccak256(conditionId3 + padLeft(toHex(0b01), 64).slice(2)))
-        )
-      ).slice(-64);
-    const collectionId8 =
-      "0x" +
-      toHex(
-        toBN(collectionId3).add(
-          toBN(keccak256(conditionId3 + padLeft(toHex(0b100), 64).slice(2)))
-        )
-      ).slice(-64);
-    const collectionId9 =
-      "0x" +
-      toHex(
-        toBN(collectionId3).add(
-          toBN(keccak256(conditionId3 + padLeft(toHex(0b1000), 64).slice(2)))
-        )
-      ).slice(-64);
-    const positionId6 = keccak256(
-      collateralToken.address + collectionId6.slice(2)
-    );
-    const positionId7 = keccak256(
-      collateralToken.address + collectionId7.slice(2)
-    );
-    const positionId8 = keccak256(
-      collateralToken.address + collectionId8.slice(2)
-    );
-    const positionId9 = keccak256(
-      collateralToken.address + collectionId9.slice(2)
-    );
+    // const collectionId6 =
+    //   "0x" +
+    //   toHex(
+    //     toBN(collectionId3).add(
+    //       toBN(keccak256(conditionId3 + padLeft(toHex(0b10), 64).slice(2)))
+    //     )
+    //   ).slice(-64);
+    // const collectionId7 =
+    //   "0x" +
+    //   toHex(
+    //     toBN(collectionId3).add(
+    //       toBN(keccak256(conditionId3 + padLeft(toHex(0b01), 64).slice(2)))
+    //     )
+    //   ).slice(-64);
+    // const collectionId8 =
+    //   "0x" +
+    //   toHex(
+    //     toBN(collectionId3).add(
+    //       toBN(keccak256(conditionId3 + padLeft(toHex(0b100), 64).slice(2)))
+    //     )
+    //   ).slice(-64);
+    // const collectionId9 =
+    //   "0x" +
+    //   toHex(
+    //     toBN(collectionId3).add(
+    //       toBN(keccak256(conditionId3 + padLeft(toHex(0b1000), 64).slice(2)))
+    //     )
+    //   ).slice(-64);
+    // const positionId6 = keccak256(
+    //   collateralToken.address + collectionId6.slice(2)
+    // );
+    // const positionId7 = keccak256(
+    //   collateralToken.address + collectionId7.slice(2)
+    // );
+    // const positionId8 = keccak256(
+    //   collateralToken.address + collectionId8.slice(2)
+    // );
+    // const positionId9 = keccak256(
+    //   collateralToken.address + collectionId9.slice(2)
+    // );
 
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId6)
-        .then(r => r.toNumber()),
-      100
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId7)
-        .then(r => r.toNumber()),
-      100
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId8)
-        .then(r => r.toNumber()),
-      100
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId9)
-        .then(r => r.toNumber()),
-      100
-    );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId6)
+    //     .then(r => r.toNumber()),
+    //   100
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId7)
+    //     .then(r => r.toNumber()),
+    //   100
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId8)
+    //     .then(r => r.toNumber()),
+    //   100
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId9)
+    //     .then(r => r.toNumber()),
+    //   100
+    // );
 
-    // Merge a full set of Outcome Slots back into conditionId3
-    await predictionMarketSystem.mergePositions(
-      collateralToken.address,
-      collectionId3,
-      conditionId3,
-      [0b10, 0b01, 0b100, 0b1000],
-      50,
-      { from: player1 }
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId6)
-        .then(r => r.toNumber()),
-      50
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId7)
-        .then(r => r.toNumber()),
-      50
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId8)
-        .then(r => r.toNumber()),
-      50
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId9)
-        .then(r => r.toNumber()),
-      50
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId3)
-        .then(r => r.toNumber()),
-      50
-    );
+    // // Merge a full set of Outcome Slots back into conditionId3
+    // await predictionMarketSystem.mergePositions(
+    //   collateralToken.address,
+    //   collectionId3,
+    //   conditionId3,
+    //   [0b10, 0b01, 0b100, 0b1000],
+    //   50,
+    //   { from: player1 }
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId6)
+    //     .then(r => r.toNumber()),
+    //   50
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId7)
+    //     .then(r => r.toNumber()),
+    //   50
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId8)
+    //     .then(r => r.toNumber()),
+    //   50
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId9)
+    //     .then(r => r.toNumber()),
+    //   50
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId3)
+    //     .then(r => r.toNumber()),
+    //   50
+    // );
 
-    // Merge a partial set of Outcome Slots back
-    await predictionMarketSystem.mergePositions(
-      collateralToken.address,
-      collectionId3,
-      conditionId3,
-      [0b10, 0b01, 0b1000],
-      50,
-      { from: player1 }
-    );
-    const collectionId10 =
-      "0x" +
-      toHex(
-        toBN(collectionId3).add(
-          toBN(keccak256(conditionId3 + padLeft(toHex(0b1011), 64).slice(2)))
-        )
-      ).slice(-64);
-    const positionId10 = keccak256(
-      collateralToken.address + collectionId10.slice(2)
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId10)
-        .then(r => r.toNumber()),
-      50
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId6)
-        .then(r => r.toNumber()),
-      0
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId7)
-        .then(r => r.toNumber()),
-      0
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId8)
-        .then(r => r.toNumber()),
-      50
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId9)
-        .then(r => r.toNumber()),
-      0
-    );
+    // // Merge a partial set of Outcome Slots back
+    // await predictionMarketSystem.mergePositions(
+    //   collateralToken.address,
+    //   collectionId3,
+    //   conditionId3,
+    //   [0b10, 0b01, 0b1000],
+    //   50,
+    //   { from: player1 }
+    // );
+    // const collectionId10 =
+    //   "0x" +
+    //   toHex(
+    //     toBN(collectionId3).add(
+    //       toBN(keccak256(conditionId3 + padLeft(toHex(0b1011), 64).slice(2)))
+    //     )
+    //   ).slice(-64);
+    // const positionId10 = keccak256(
+    //   collateralToken.address + collectionId10.slice(2)
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId10)
+    //     .then(r => r.toNumber()),
+    //   50
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId6)
+    //     .then(r => r.toNumber()),
+    //   0
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId7)
+    //     .then(r => r.toNumber()),
+    //   0
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId8)
+    //     .then(r => r.toNumber()),
+    //   50
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId9)
+    //     .then(r => r.toNumber()),
+    //   0
+    // );
 
-    await assertRejects(
-      predictionMarketSystem.mergePositions(
-        collateralToken.address,
-        collectionId3,
-        conditionId3,
-        [0b10, 0b01, 0b100, 0b1000],
-        100,
-        { from: player1 }
-      ),
-      "Invalid merging of more tokens than the positions held did not revent"
-    );
-    await assertRejects(
-      predictionMarketSystem.mergePositions(
-        collateralToken.address,
-        collectionId3,
-        conditionId3,
-        [0b10, 0b01, 0b1000],
-        100,
-        { from: player1 }
-      ),
-      "Invalid merging of tokens amounting to more than the positions held happened."
-    );
+    // await assertRejects(
+    //   predictionMarketSystem.mergePositions(
+    //     collateralToken.address,
+    //     collectionId3,
+    //     conditionId3,
+    //     [0b10, 0b01, 0b100, 0b1000],
+    //     100,
+    //     { from: player1 }
+    //   ),
+    //   "Invalid merging of more tokens than the positions held did not revent"
+    // );
+    // await assertRejects(
+    //   predictionMarketSystem.mergePositions(
+    //     collateralToken.address,
+    //     collectionId3,
+    //     conditionId3,
+    //     [0b10, 0b01, 0b1000],
+    //     100,
+    //     { from: player1 }
+    //   ),
+    //   "Invalid merging of tokens amounting to more than the positions held happened."
+    // );
 
-    await predictionMarketSystem.mergePositions(
-      collateralToken.address,
-      collectionId3,
-      conditionId3,
-      [0b1011, 0b100],
-      25,
-      { from: player1 }
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId8)
-        .then(r => r.toNumber()),
-      25
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId10)
-        .then(r => r.toNumber()),
-      25
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId3)
-        .then(r => r.toNumber()),
-      75
-    );
+    // await predictionMarketSystem.mergePositions(
+    //   collateralToken.address,
+    //   collectionId3,
+    //   conditionId3,
+    //   [0b1011, 0b100],
+    //   25,
+    //   { from: player1 }
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId8)
+    //     .then(r => r.toNumber()),
+    //   25
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId10)
+    //     .then(r => r.toNumber()),
+    //   25
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId3)
+    //     .then(r => r.toNumber()),
+    //   75
+    // );
 
-    await assertRejects(
-      predictionMarketSystem.mergePositions(
-        collateralToken.address,
-        collectionId1,
-        conditionId2,
-        [0b01, 0b10, 0b100],
-        100,
-        { from: player1 }
-      ),
-      "it didn't revert when only partial positions in the set have enough outcomeTokens."
-    );
+    // await assertRejects(
+    //   predictionMarketSystem.mergePositions(
+    //     collateralToken.address,
+    //     collectionId1,
+    //     conditionId2,
+    //     [0b01, 0b10, 0b100],
+    //     100,
+    //     { from: player1 }
+    //   ),
+    //   "it didn't revert when only partial positions in the set have enough outcomeTokens."
+    // );
 
-    await predictionMarketSystem.mergePositions(
-      collateralToken.address,
-      collectionId1,
-      conditionId2,
-      [0b01, 0b10, 0b100],
-      50,
-      { from: player1 }
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId1)
-        .then(r => r.toNumber()),
-      950
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId3)
-        .then(r => r.toNumber()),
-      25
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId4)
-        .then(r => r.toNumber()),
-      50
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId5)
-        .then(r => r.toNumber()),
-      50
-    );
+    // await predictionMarketSystem.mergePositions(
+    //   collateralToken.address,
+    //   collectionId1,
+    //   conditionId2,
+    //   [0b01, 0b10, 0b100],
+    //   50,
+    //   { from: player1 }
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId1)
+    //     .then(r => r.toNumber()),
+    //   950
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId3)
+    //     .then(r => r.toNumber()),
+    //   25
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId4)
+    //     .then(r => r.toNumber()),
+    //   50
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId5)
+    //     .then(r => r.toNumber()),
+    //   50
+    // );
 
-    await assertRejects(
-      predictionMarketSystem.mergePositions(
-        collateralToken.address,
-        0,
-        conditionId1,
-        [0b01],
-        100,
-        { from: player1 }
-      ),
-      "Should not merge proper positions back into collateralTokens"
-    );
-    await assertRejects(
-      predictionMarketSystem.mergePositions(
-        collateralToken.address,
-        0,
-        conditionId1,
-        [0b01, 0b10],
-        1000,
-        { from: player1 }
-      ),
-      "Should not merge positions that dont hold enough value specified back into collateralTokens"
-    );
-    await assertRejects(
-      predictionMarketSystem.mergePositions(
-        collateralToken.address,
-        0,
-        conditionId1,
-        [0b01, 0b10],
-        950,
-        { from: player3 }
-      ),
-      "Should not merge positions from the wrong player back into collateralTokens"
-    );
+    // await assertRejects(
+    //   predictionMarketSystem.mergePositions(
+    //     collateralToken.address,
+    //     0,
+    //     conditionId1,
+    //     [0b01],
+    //     100,
+    //     { from: player1 }
+    //   ),
+    //   "Should not merge proper positions back into collateralTokens"
+    // );
+    // await assertRejects(
+    //   predictionMarketSystem.mergePositions(
+    //     collateralToken.address,
+    //     0,
+    //     conditionId1,
+    //     [0b01, 0b10],
+    //     1000,
+    //     { from: player1 }
+    //   ),
+    //   "Should not merge positions that dont hold enough value specified back into collateralTokens"
+    // );
+    // await assertRejects(
+    //   predictionMarketSystem.mergePositions(
+    //     collateralToken.address,
+    //     0,
+    //     conditionId1,
+    //     [0b01, 0b10],
+    //     950,
+    //     { from: player3 }
+    //   ),
+    //   "Should not merge positions from the wrong player back into collateralTokens"
+    // );
 
-    await predictionMarketSystem.mergePositions(
-      collateralToken.address,
-      asciiToHex(0),
-      conditionId1,
-      [0b01, 0b10],
-      950,
-      { from: player1 }
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId1)
-        .then(r => r.toNumber()),
-      0
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId2)
-        .then(r => r.toNumber()),
-      50
-    );
-    assert.equal(
-      await collateralToken.balanceOf(player1).then(r => r.toNumber()),
-      9950
-    );
+    // await predictionMarketSystem.mergePositions(
+    //   collateralToken.address,
+    //   asciiToHex(0),
+    //   conditionId1,
+    //   [0b01, 0b10],
+    //   950,
+    //   { from: player1 }
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId1)
+    //     .then(r => r.toNumber()),
+    //   0
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId2)
+    //     .then(r => r.toNumber()),
+    //   50
+    // );
+    // assert.equal(
+    //   await collateralToken.balanceOf(player1).then(r => r.toNumber()),
+    //   9950
+    // );
 
-    await assertRejects(
-      predictionMarketSystem.redeemPositions(
-        collateralToken.address,
-        asciiToHex(0),
-        conditionId1,
-        [0b01, 0b10],
-        { from: player1 }
-      ),
-      "The position is being redeemed before the payouts for the condition have been set."
-    );
+    // await assertRejects(
+    //   predictionMarketSystem.redeemPositions(
+    //     collateralToken.address,
+    //     asciiToHex(0),
+    //     conditionId1,
+    //     [0b01, 0b10],
+    //     { from: player1 }
+    //   ),
+    //   "The position is being redeemed before the payouts for the condition have been set."
+    // );
 
-    await predictionMarketSystem.receiveResult(
-      questionId3,
-      "0x" +
-        [
-          padLeft("14D", 64), // 333
-          padLeft("1", 64), // 1
-          padLeft("29A", 64), // 666
-          padLeft("0", 64)
-        ].join(""),
-      { from: oracle3 }
-    );
+    // await predictionMarketSystem.receiveResult(
+    //   questionId3,
+    //   "0x" +
+    //     [
+    //       padLeft("14D", 64), // 333
+    //       padLeft("1", 64), // 1
+    //       padLeft("29A", 64), // 666
+    //       padLeft("0", 64)
+    //     ].join(""),
+    //   { from: oracle3 }
+    // );
 
-    assert.equal(
-      await predictionMarketSystem.payoutDenominator(conditionId3).valueOf(),
-      1000
-    );
-    await assertRejects(
-      predictionMarketSystem.redeemPositions(
-        collateralToken.address,
-        asciiToHex(0),
-        conditionId2,
-        [0b01, 0b110],
-        { from: player1 }
-      ),
-      "The position is being redeemed before the payouts for the condition have been set."
-    );
+    // assert.equal(
+    //   await predictionMarketSystem.payoutDenominator(conditionId3).valueOf(),
+    //   1000
+    // );
+    // await assertRejects(
+    //   predictionMarketSystem.redeemPositions(
+    //     collateralToken.address,
+    //     asciiToHex(0),
+    //     conditionId2,
+    //     [0b01, 0b110],
+    //     { from: player1 }
+    //   ),
+    //   "The position is being redeemed before the payouts for the condition have been set."
+    // );
 
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId10)
-        .then(r => r.toNumber()),
-      25
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId6)
-        .then(r => r.toNumber()),
-      0
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId7)
-        .then(r => r.toNumber()),
-      0
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId8)
-        .then(r => r.toNumber()),
-      25
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId9)
-        .then(r => r.toNumber()),
-      0
-    );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId10)
+    //     .then(r => r.toNumber()),
+    //   25
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId6)
+    //     .then(r => r.toNumber()),
+    //   0
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId7)
+    //     .then(r => r.toNumber()),
+    //   0
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId8)
+    //     .then(r => r.toNumber()),
+    //   25
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId9)
+    //     .then(r => r.toNumber()),
+    //   0
+    // );
 
-    // asserts that if you redeem the wrong indexSets, it won't affect the other indexes.
-    await predictionMarketSystem.redeemPositions(
-      collateralToken.address,
-      collectionId3,
-      conditionId3,
-      [0b10, 0b01, 0b1000],
-      { from: player1 }
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId8)
-        .then(r => r.toNumber()),
-      25
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId3)
-        .then(r => r.toNumber()),
-      25
-    );
+    // // asserts that if you redeem the wrong indexSets, it won't affect the other indexes.
+    // await predictionMarketSystem.redeemPositions(
+    //   collateralToken.address,
+    //   collectionId3,
+    //   conditionId3,
+    //   [0b10, 0b01, 0b1000],
+    //   { from: player1 }
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId8)
+    //     .then(r => r.toNumber()),
+    //   25
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId3)
+    //     .then(r => r.toNumber()),
+    //   25
+    // );
 
-    await predictionMarketSystem.redeemPositions(
-      collateralToken.address,
-      collectionId3,
-      conditionId3,
-      [0b10, 0b01, 0b100],
-      { from: player1 }
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId8)
-        .then(r => r.toNumber()),
-      0
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId3)
-        .then(r => r.toNumber()),
-      25 + Math.floor(25 * (666 / 1000))
-    );
+    // await predictionMarketSystem.redeemPositions(
+    //   collateralToken.address,
+    //   collectionId3,
+    //   conditionId3,
+    //   [0b10, 0b01, 0b100],
+    //   { from: player1 }
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId8)
+    //     .then(r => r.toNumber()),
+    //   0
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId3)
+    //     .then(r => r.toNumber()),
+    //   25 + Math.floor(25 * (666 / 1000))
+    // );
 
-    await predictionMarketSystem.redeemPositions(
-      collateralToken.address,
-      collectionId3,
-      conditionId3,
-      [0b1011],
-      { from: player1 }
-    );
+    // await predictionMarketSystem.redeemPositions(
+    //   collateralToken.address,
+    //   collectionId3,
+    //   conditionId3,
+    //   [0b1011],
+    //   { from: player1 }
+    // );
 
-    // We have to account for a small fraction of tokens getting stuck in the contract there on payout
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId3)
-        .then(r => r.toNumber()),
-      25 + Math.floor(25 * (666 / 1000 + 334 / 1000)) - 1
-    );
+    // // We have to account for a small fraction of tokens getting stuck in the contract there on payout
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId3)
+    //     .then(r => r.toNumber()),
+    //   25 + Math.floor(25 * (666 / 1000 + 334 / 1000)) - 1
+    // );
 
-    await predictionMarketSystem.receiveResult(
-      questionId2,
-      "0x" + [padLeft("FF", 64), padLeft("FF", 64), padLeft("0", 64)].join(""),
-      { from: oracle2 }
-    );
+    // await predictionMarketSystem.receiveResult(
+    //   questionId2,
+    //   "0x" + [padLeft("FF", 64), padLeft("FF", 64), padLeft("0", 64)].join(""),
+    //   { from: oracle2 }
+    // );
 
-    await predictionMarketSystem.redeemPositions(
-      collateralToken.address,
-      collectionId1,
-      conditionId2,
-      [0b01, 0b10, 0b100],
-      { from: player1 }
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId3)
-        .then(r => r.toNumber()),
-      0
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId4)
-        .then(r => r.toNumber()),
-      0
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId5)
-        .then(r => r.toNumber()),
-      0
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId1)
-        .then(r => r.toNumber()),
-      49
-    );
+    // await predictionMarketSystem.redeemPositions(
+    //   collateralToken.address,
+    //   collectionId1,
+    //   conditionId2,
+    //   [0b01, 0b10, 0b100],
+    //   { from: player1 }
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId3)
+    //     .then(r => r.toNumber()),
+    //   0
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId4)
+    //     .then(r => r.toNumber()),
+    //   0
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId5)
+    //     .then(r => r.toNumber()),
+    //   0
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId1)
+    //     .then(r => r.toNumber()),
+    //   49
+    // );
 
-    await predictionMarketSystem.receiveResult(
-      questionId1,
-      "0x" + [padLeft("1", 64), padLeft("0", 64)].join(""),
-      { from: oracle1 }
-    );
-    assert.equal(
-      await predictionMarketSystem.payoutDenominator(conditionId1).valueOf(),
-      1
-    );
+    // await predictionMarketSystem.receiveResult(
+    //   questionId1,
+    //   "0x" + [padLeft("1", 64), padLeft("0", 64)].join(""),
+    //   { from: oracle1 }
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem.payoutDenominator(conditionId1).valueOf(),
+    //   1
+    // );
 
-    await predictionMarketSystem.redeemPositions(
-      collateralToken.address,
-      asciiToHex(0),
-      conditionId1,
-      [0b01],
-      { from: player1 }
-    );
-    assert.equal(
-      await predictionMarketSystem
-        .balanceOf(player1, positionId1)
-        .then(r => r.toNumber()),
-      0
-    );
+    // await predictionMarketSystem.redeemPositions(
+    //   collateralToken.address,
+    //   asciiToHex(0),
+    //   conditionId1,
+    //   [0b01],
+    //   { from: player1 }
+    // );
+    // assert.equal(
+    //   await predictionMarketSystem
+    //     .balanceOf(player1, positionId1)
+    //     .then(r => r.toNumber()),
+    //   0
+    // );
 
-    // Missing 1 for the rounding of different outcomes
-    assert.equal(
-      await collateralToken.balanceOf(player1).then(r => r.toNumber()),
-      9999
-    );
+    // // Missing 1 for the rounding of different outcomes
+    // assert.equal(
+    //   await collateralToken.balanceOf(player1).then(r => r.toNumber()),
+    //   9999
+    // );
   });
 });
 

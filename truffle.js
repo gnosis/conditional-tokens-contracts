@@ -1,3 +1,5 @@
+require("chai/register-should");
+
 const config = {
   networks: {
     mainnet: {

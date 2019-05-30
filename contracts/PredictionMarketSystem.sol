@@ -1,6 +1,6 @@
 pragma solidity ^0.5.1;
 import { IERC20 } from "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import { ERC1155 } from "erc-1155/contracts/ERC1155.sol";
+import { ERC1155 } from "./ERC1155/ERC1155.sol";
 import "./OracleConsumer.sol";
 
 
@@ -121,7 +121,7 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
             require((indexSet & freeIndexSet) == indexSet, "partition not disjoint");
             freeIndexSet ^= indexSet;
             key = keccak256(abi.encodePacked(collateralToken, getCollectionId(parentCollectionId, conditionId, indexSet)));
-            balances[uint(key)][msg.sender] = balances[uint(key)][msg.sender].add(amount);
+            _mint(msg.sender, uint(key), amount, "");
         }
 
         if (freeIndexSet == 0) {
@@ -129,11 +129,11 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
                 require(collateralToken.transferFrom(msg.sender, address(this), amount), "could not receive collateral tokens");
             } else {
                 key = keccak256(abi.encodePacked(collateralToken, parentCollectionId));
-                balances[uint(key)][msg.sender] = balances[uint(key)][msg.sender].sub(amount);
+                _burn(msg.sender, uint(key), amount);
             }
         } else {
-            key = keccak256(abi.encodePacked(collateralToken,getCollectionId(parentCollectionId, conditionId, fullIndexSet ^ freeIndexSet)));
-            balances[uint(key)][msg.sender] = balances[uint(key)][msg.sender].sub(amount);
+            key = keccak256(abi.encodePacked(collateralToken, getCollectionId(parentCollectionId, conditionId, fullIndexSet ^ freeIndexSet)));
+            _burn(msg.sender, uint(key), amount);
         }
 
         emit PositionSplit(msg.sender, collateralToken, parentCollectionId, conditionId, partition, amount);
@@ -159,7 +159,7 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
             require((indexSet & freeIndexSet) == indexSet, "partition not disjoint");
             freeIndexSet ^= indexSet;
             key = keccak256(abi.encodePacked(collateralToken, getCollectionId(parentCollectionId, conditionId, indexSet)));
-            balances[uint(key)][msg.sender] = balances[uint(key)][msg.sender].sub(amount);
+            _burn(msg.sender, uint(key), amount);
         }
 
         if (freeIndexSet == 0) {
@@ -167,11 +167,11 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
                 require(collateralToken.transfer(msg.sender, amount), "could not send collateral tokens");
             } else {
                 key = keccak256(abi.encodePacked(collateralToken, parentCollectionId));
-                balances[uint(key)][msg.sender] = balances[uint(key)][msg.sender].add(amount);
+                _mint(msg.sender, uint(key), amount, "");
             }
         } else {
             key = keccak256(abi.encodePacked(collateralToken, getCollectionId(parentCollectionId, conditionId, fullIndexSet ^ freeIndexSet)));
-            balances[uint(key)][msg.sender] = balances[uint(key)][msg.sender].add(amount);
+            _mint(msg.sender, uint(key), amount, "");
         }
 
         emit PositionsMerge(msg.sender, collateralToken, parentCollectionId, conditionId, partition, amount);
@@ -198,10 +198,10 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
                 }
             }
 
-            uint payoutStake = balances[uint(key)][msg.sender];
+            uint payoutStake = balanceOf(msg.sender, uint(key));
             if (payoutStake > 0) {
                 totalPayout = totalPayout.add(payoutStake.mul(payoutNumerator).div(payoutDenominator[conditionId]));
-                balances[uint(key)][msg.sender] = 0;
+                _burn(msg.sender, uint(key), payoutStake);
             }
         }
 
@@ -210,7 +210,7 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
                 require(collateralToken.transfer(msg.sender, totalPayout), "could not transfer payout to message sender");
             } else {
                 key = keccak256(abi.encodePacked(collateralToken, parentCollectionId));
-                balances[uint(key)][msg.sender] = balances[uint(key)][msg.sender].add(totalPayout);
+                _mint(msg.sender, uint(key), totalPayout, "");
             }
         }
         emit PayoutRedemption(msg.sender, collateralToken, parentCollectionId, conditionId, indexSets, totalPayout);
