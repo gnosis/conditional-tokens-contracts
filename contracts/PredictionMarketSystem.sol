@@ -1,5 +1,6 @@
 pragma solidity ^0.5.1;
 import { IERC20 } from "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import { IERC1155TokenReceiver } from "./ERC1155/IERC1155TokenReceiver.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
 import "./OracleConsumer.sol";
 
@@ -228,5 +229,62 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
             uint(parentCollectionId) +
             uint(keccak256(abi.encodePacked(conditionId, indexSet)))
         );
+    }
+
+    function _doSafeTransferAcceptanceCheck(
+        address operator,
+        address from,
+        address to,
+        uint256 id,
+        uint256 value,
+        bytes memory data
+    )
+        internal
+    {
+        if(to.isContract()) {
+            (bool callSucceeded, bytes memory callReturnData) = to.call(abi.encodeWithSignature(
+                "onERC1155Received(address,address,uint256,uint256,bytes)",
+                operator, from, id, value, data
+            ));
+
+            if(callSucceeded) {
+                require(
+                    abi.decode(callReturnData, (bytes4)) ==
+                        IERC1155TokenReceiver(to).onERC1155Received.selector,
+                    "ERC1155: got unknown value from onERC1155Received"
+                );
+            } else {
+                // is this a terrible idea? yes. yes it is.
+                require(callReturnData.length == 0, string(callReturnData));
+            }
+        }
+    }
+
+    function _doSafeBatchTransferAcceptanceCheck(
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory values,
+        bytes memory data
+    )
+        internal
+    {
+        if(to.isContract()) {
+            (bool callSucceeded, bytes memory callReturnData) = to.call(abi.encodeWithSignature(
+                "onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)",
+                operator, from, ids, values, data
+            ));
+
+            if(callSucceeded) {
+                require(
+                    abi.decode(callReturnData, (bytes4)) ==
+                        IERC1155TokenReceiver(to).onERC1155Received.selector,
+                    "ERC1155: got unknown value from onERC1155Received"
+                );
+            } else {
+                require(callReturnData.length == 0, string(callReturnData));
+            }
+        }
     }
 }
