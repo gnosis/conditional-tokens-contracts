@@ -327,7 +327,7 @@ contract("PredictionMarketSystem", function(accounts) {
       await predictionMarketSystem.getOutcomeSlotCount(_conditionId),
       4
     );
-    for (var i = 0; i < 4; i++) {
+    for (let i = 0; i < 4; i++) {
       assert.equal(
         (await predictionMarketSystem.payoutNumerators(
           _conditionId,
@@ -350,7 +350,7 @@ contract("PredictionMarketSystem", function(accounts) {
       toBN(1e18),
       toBN(1000)
     ];
-    for (var i = 0; i < buyers.length; i++) {
+    for (let i = 0; i < buyers.length; i++) {
       await collateralToken.mint(
         accounts[buyers[i]],
         collateralTokenCounts[i],
@@ -415,7 +415,7 @@ contract("PredictionMarketSystem", function(accounts) {
 
     // assert correct payouts for Outcome Slots
     const payoutsForOutcomeSlots = [333, 666, 1, 0];
-    for (var i = 0; i < buyers.length; i++) {
+    for (let i = 0; i < buyers.length; i++) {
       assert(
         collateralTokenCounts[i].eq(
           await predictionMarketSystem.balanceOf.call(
@@ -440,7 +440,7 @@ contract("PredictionMarketSystem", function(accounts) {
     }
 
     // assert Outcome Token redemption
-    for (var i = 0; i < buyers.length; i++) {
+    for (let i = 0; i < buyers.length; i++) {
       await predictionMarketSystem.redeemPositions(
         collateralToken.address,
         asciiToHex(0),
@@ -1356,8 +1356,7 @@ contract(
       player2,
       player3,
       conditionId1,
-      conditionId2,
-      conditionId3;
+      conditionId2;
 
     before(async () => {
       predictionMarketSystem = await PredictionMarketSystem.deployed();
@@ -1408,12 +1407,6 @@ contract(
       conditionId2 = keccak256(
         oracle2 +
           [questionId2, outcomeSlotCount2]
-            .map(v => padLeft(toHex(v), 64).slice(2))
-            .join("")
-      );
-      conditionId3 = keccak256(
-        oracle3 +
-          [questionId3, outcomeSlotCount3]
             .map(v => padLeft(toHex(v), 64).slice(2))
             .join("")
       );
@@ -1675,8 +1668,7 @@ contract(
       player2,
       player3,
       conditionId1,
-      conditionId2,
-      conditionId3;
+      conditionId2;
 
     before(async () => {
       predictionMarketSystem = await PredictionMarketSystem.deployed();
@@ -1727,12 +1719,6 @@ contract(
       conditionId2 = keccak256(
         oracle2 +
           [questionId2, outcomeSlotCount2]
-            .map(v => padLeft(toHex(v), 64).slice(2))
-            .join("")
-      );
-      conditionId3 = keccak256(
-        oracle3 +
-          [questionId3, outcomeSlotCount3]
             .map(v => padLeft(toHex(v), 64).slice(2))
             .join("")
       );
