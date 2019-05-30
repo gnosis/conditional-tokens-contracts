@@ -10,11 +10,11 @@
     "migrate": "truffle migrate",
     "networks": "truffle networks",
     "test": "truffle test",
-    "lint-contracts": "solhint contracts/**/*.sol",
+    "lint-contracts": "solium -d contracts/",
     "injectnetinfo": "tnt iN",
     "extractnetinfo": "tnt eN",
     "resetnetinfo": "truffle networks --clean && tnt iN",
-    "prepack": "eslint . && solhint contracts/**/*.sol && truffle compile && truffle networks --clean && tnt iN"
+    "prepack": "eslint . && npm run lint-contracts && truffle compile && truffle networks --clean && tnt iN"
   },
   "keywords": [
     "Ethereum",
@@ -34,10 +34,10 @@
     "eslint": "^5.9.0",
     "eslint-config-prettier": "^4.1.0",
     "eslint-plugin-prettier": "^3.0.0",
+    "ethlint": "^1.2.4",
     "lodash": "^4.17.4",
     "npm-prepublish": "^1.2.3",
     "prettier": "1.17.0",
-    "solhint": "^2.0.0",
     "truffle": "^5.0.5",
     "web3": "^1.0.0-beta.35"
   },

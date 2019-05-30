@@ -13,7 +13,7 @@ IFS=$'\n\t'
 
 # ESLint staged changes only
 git diff --diff-filter=d --cached --name-only -z -- '*.js' '*.jsx' \
-  | xargs -0 -I % sh -c 'git show ":%" | ./node_modules/.bin/eslint --stdin --stdin-filename "%";'
+  | xargs -0 -I % sh -c 'git show ":%" | npx eslint --stdin --stdin-filename "%";'
 eslint_exit=$?
 
 if [ ${eslint_exit} -eq 0 ]; then
@@ -25,7 +25,7 @@ fi
 
 # Solhint staged changes only
 git diff --diff-filter=d --cached --name-only -z -- '*.sol' \
-  | xargs -0 -I % sh -c 'git show ":%" | ./node_modules/.bin/solhint stdin;'
+  | xargs -0 -I % sh -c 'git show ":%" | npx solium --stdin;'
 solhint_exit=$?
 
 if [ ${solhint_exit} -eq 0 ]; then

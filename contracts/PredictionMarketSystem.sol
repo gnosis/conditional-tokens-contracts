@@ -11,15 +11,47 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
     /// @param oracle The account assigned to report the result for the prepared condition.
     /// @param questionId An identifier for the question to be answered by the oracle.
     /// @param outcomeSlotCount The number of outcome slots which should be used for this condition. Must not exceed 256.
-    event ConditionPreparation(bytes32 indexed conditionId, address indexed oracle, bytes32 indexed questionId, uint outcomeSlotCount);
+    event ConditionPreparation(
+        bytes32 indexed conditionId,
+        address indexed oracle,
+        bytes32 indexed questionId,
+        uint outcomeSlotCount
+    );
 
-    event ConditionResolution(bytes32 indexed conditionId, address indexed oracle, bytes32 indexed questionId, uint outcomeSlotCount, uint[] payoutNumerators);
+    event ConditionResolution(
+        bytes32 indexed conditionId,
+        address indexed oracle,
+        bytes32 indexed questionId,
+        uint outcomeSlotCount,
+        uint[] payoutNumerators
+    );
 
     /// @dev Emitted when a position is successfully split.
-    event PositionSplit(address indexed stakeholder, IERC20 collateralToken, bytes32 indexed parentCollectionId, bytes32 indexed conditionId, uint[] partition, uint amount);
+    event PositionSplit(
+        address indexed stakeholder,
+        IERC20 collateralToken,
+        bytes32 indexed parentCollectionId,
+        bytes32 indexed conditionId,
+        uint[] partition,
+        uint amount
+    );
     /// @dev Emitted when positions are successfully merged.
-    event PositionsMerge(address indexed stakeholder, IERC20 collateralToken, bytes32 indexed parentCollectionId, bytes32 indexed conditionId, uint[] partition, uint amount);
-    event PayoutRedemption(address indexed redeemer, IERC20 indexed collateralToken, bytes32 indexed parentCollectionId, bytes32 conditionId, uint[] indexSets, uint payout);
+    event PositionsMerge(
+        address indexed stakeholder,
+        IERC20 collateralToken,
+        bytes32 indexed parentCollectionId,
+        bytes32 indexed conditionId,
+        uint[] partition,
+        uint amount
+    );
+    event PayoutRedemption(
+        address indexed redeemer,
+        IERC20 indexed collateralToken,
+        bytes32 indexed parentCollectionId,
+        bytes32 conditionId,
+        uint[] indexSets,
+        uint payout
+    );
 
     /// Mapping key is an condition ID. Value represents numerators of the payout vector associated with the condition. This array is initialized with a length equal to the outcome slot count.
     mapping(bytes32 => uint[]) public payoutNumerators;
@@ -50,7 +82,7 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
         require(payoutDenominator[conditionId] == 0, "payout denominator already set");
         for (uint i = 0; i < outcomeSlotCount; i++) {
             uint payoutNum;
-            // solhint-disable-next-line no-inline-assembly
+            // solium-disable-next-line security/no-inline-assembly
             assembly {
                 payoutNum := calldataload(add(0x64, mul(0x20, i)))
             }
@@ -69,7 +101,13 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
     /// @param conditionId The ID of the condition to split on.
     /// @param partition An array of disjoint index sets representing a nontrivial partition of the outcome slots of the given condition.
     /// @param amount The amount of collateral or stake to split.
-    function splitPosition(IERC20 collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint[] calldata partition, uint amount) external {
+    function splitPosition(
+        IERC20 collateralToken,
+        bytes32 parentCollectionId,
+        bytes32 conditionId,
+        uint[] calldata partition,
+        uint amount
+    ) external {
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0, "condition not prepared yet");
 
@@ -94,14 +132,20 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
                 balances[uint(key)][msg.sender] = balances[uint(key)][msg.sender].sub(amount);
             }
         } else {
-            key = keccak256(abi.encodePacked(collateralToken, getCollectionId(parentCollectionId, conditionId, fullIndexSet ^ freeIndexSet)));
+            key = keccak256(abi.encodePacked(collateralToken,getCollectionId(parentCollectionId, conditionId, fullIndexSet ^ freeIndexSet)));
             balances[uint(key)][msg.sender] = balances[uint(key)][msg.sender].sub(amount);
         }
 
         emit PositionSplit(msg.sender, collateralToken, parentCollectionId, conditionId, partition, amount);
     }
 
-    function mergePositions(IERC20 collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint[] calldata partition, uint amount) external {
+    function mergePositions(
+        IERC20 collateralToken,
+        bytes32 parentCollectionId,
+        bytes32 conditionId,
+        uint[] calldata partition,
+        uint amount
+    ) external {
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0, "condition not prepared yet");
 
