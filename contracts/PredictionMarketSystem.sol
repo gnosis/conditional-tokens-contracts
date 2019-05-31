@@ -249,6 +249,7 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
 
             if(
                 callSucceeded &&
+                callReturnData.length > 0 &&
                 abi.decode(callReturnData, (bytes4)) == IERC1155TokenReceiver(to).isERC1155TokenReceiver.selector
             ) {
                 require(
@@ -288,6 +289,7 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
 
             if(
                 callSucceeded &&
+                callReturnData.length > 0 &&
                 abi.decode(callReturnData, (bytes4)) == IERC1155TokenReceiver(to).isERC1155TokenReceiver.selector
             ) {
                 require(

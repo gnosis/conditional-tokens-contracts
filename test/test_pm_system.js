@@ -1,8 +1,12 @@
+const ethSigUtil = require("eth-sig-util");
+
 const { assertRejects, getParamFromTxEvent } = require("./utils");
 const { toHex, padLeft, keccak256, asciiToHex, toBN, fromWei } = web3.utils;
 
 const PredictionMarketSystem = artifacts.require("PredictionMarketSystem");
 const ERC20Mintable = artifacts.require("MockCoin");
+const Forwarder = artifacts.require("Forwarder");
+const GnosisSafe = artifacts.require("GnosisSafe");
 
 contract("PredictionMarketSystem", function(accounts) {
   let collateralToken;
@@ -56,131 +60,281 @@ contract("PredictionMarketSystem", function(accounts) {
     );
   });
 
-  it("should split and merge positions on outcome slots", async () => {
-    const buyer = 0;
-    const collateralTokenCount = toBN(1e19);
-    await collateralToken.mint(accounts[buyer], collateralTokenCount, {
-      from: minter
-    });
-    assert(
-      collateralTokenCount.eq(
-        await collateralToken.balanceOf.call(accounts[buyer])
-      )
-    );
+  function shouldSplitAndMergePositionsOnOutcomeSlots(trader) {
+    it("should split and merge positions on outcome slots", async () => {
+      const collateralTokenCount = toBN(1e19);
+      await collateralToken.mint(trader.address, collateralTokenCount, {
+        from: minter
+      });
+      assert(
+        collateralTokenCount.eq(
+          await collateralToken.balanceOf.call(trader.address)
+        )
+      );
 
-    await collateralToken.approve(
-      predictionMarketSystem.address,
-      collateralTokenCount,
-      { from: accounts[buyer] }
-    );
+      await trader.execCall(
+        collateralToken,
+        "approve",
+        predictionMarketSystem.address,
+        collateralTokenCount
+      );
 
-    for (let i = 0; i < 10; i++) {
-      await predictionMarketSystem.splitPosition(
+      for (let i = 0; i < 10; i++) {
+        await trader.execCall(
+          predictionMarketSystem,
+          "splitPosition",
+          collateralToken.address,
+          asciiToHex(0),
+          conditionId,
+          [0b01, 0b10],
+          collateralTokenCount.divn(10)
+        );
+      }
+
+      assert(
+        collateralTokenCount.eq(
+          await collateralToken.balanceOf.call(predictionMarketSystem.address)
+        )
+      );
+      assert.equal(await collateralToken.balanceOf.call(trader.address), 0);
+
+      assert(
+        collateralTokenCount.eq(
+          await predictionMarketSystem.balanceOf.call(
+            trader.address,
+            keccak256(
+              collateralToken.address +
+                keccak256(
+                  conditionId + padLeft(toHex(0b01), 64).slice(2)
+                ).slice(2)
+            )
+          )
+        )
+      );
+      assert(
+        collateralTokenCount.eq(
+          await predictionMarketSystem.balanceOf.call(
+            trader.address,
+            keccak256(
+              collateralToken.address +
+                keccak256(
+                  conditionId + padLeft(toHex(0b10), 64).slice(2)
+                ).slice(2)
+            )
+          )
+        )
+      );
+
+      // Validate getters
+      assert.equal(
+        await predictionMarketSystem.getOutcomeSlotCount.call(conditionId),
+        2
+      );
+
+      await trader.execCall(
+        predictionMarketSystem,
+        "mergePositions",
         collateralToken.address,
         asciiToHex(0),
         conditionId,
         [0b01, 0b10],
-        collateralTokenCount.divn(10),
-        { from: accounts[buyer] }
+        collateralTokenCount
       );
-    }
+      assert(
+        collateralTokenCount.eq(
+          await collateralToken.balanceOf.call(trader.address)
+        )
+      );
+      assert.equal(
+        await collateralToken.balanceOf.call(predictionMarketSystem.address),
+        0
+      );
 
-    assert(
-      collateralTokenCount.eq(
-        await collateralToken.balanceOf.call(predictionMarketSystem.address)
-      )
-    );
-    assert.equal(await collateralToken.balanceOf.call(accounts[buyer]), 0);
-
-    assert(
-      collateralTokenCount.eq(
+      assert.equal(
         await predictionMarketSystem.balanceOf.call(
-          accounts[buyer],
+          trader.address,
           keccak256(
             collateralToken.address +
               keccak256(conditionId + padLeft(toHex(0b01), 64).slice(2)).slice(
                 2
               )
           )
-        )
-      )
-    );
-    assert(
-      collateralTokenCount.eq(
+        ),
+        0
+      );
+      assert.equal(
         await predictionMarketSystem.balanceOf.call(
-          accounts[buyer],
+          trader.address,
           keccak256(
             collateralToken.address +
               keccak256(conditionId + padLeft(toHex(0b10), 64).slice(2)).slice(
                 2
               )
           )
-        )
-      )
-    );
+        ),
+        0
+      );
+    });
+  }
 
-    // Validate getters
-    assert.equal(
-      await predictionMarketSystem.getOutcomeSlotCount.call(conditionId),
-      2
-    );
+  context("with EOAs", () => {
+    shouldSplitAndMergePositionsOnOutcomeSlots({
+      address: accounts[0],
+      async execCall(contract, method, ...args) {
+        return await contract[method](...args, { from: accounts[0] });
+      }
+    });
+  });
 
-    await predictionMarketSystem.mergePositions(
-      collateralToken.address,
-      asciiToHex(0),
-      conditionId,
-      [0b01, 0b10],
-      collateralTokenCount,
-      { from: accounts[buyer] }
-    );
-    assert(
-      collateralTokenCount.eq(
-        await collateralToken.balanceOf.call(accounts[buyer])
-      )
-    );
-    assert.equal(
-      await collateralToken.balanceOf.call(predictionMarketSystem.address),
-      0
-    );
+  context("with Forwarder", () => {
+    let trader = {};
+    before(async () => {
+      const forwarder = await Forwarder.new();
+      const executor = accounts[2];
+      async function forwardCall(contract, method, ...args) {
+        // ???: why is reformatting the args necessary here?
+        args = args.map(arg =>
+          Array.isArray(arg) ? arg.map(a => a.toString()) : arg.toString()
+        );
 
-    assert.equal(
-      await predictionMarketSystem.balanceOf.call(
-        accounts[buyer],
-        keccak256(
-          collateralToken.address +
-            keccak256(conditionId + padLeft(toHex(0b01), 64).slice(2)).slice(2)
-        )
-      ),
-      0
-    );
-    assert.equal(
-      await predictionMarketSystem.balanceOf.call(
-        accounts[buyer],
-        keccak256(
-          collateralToken.address +
-            keccak256(conditionId + padLeft(toHex(0b10), 64).slice(2)).slice(2)
-        )
-      ),
-      0
-    );
+        return await forwarder.call(
+          contract.address,
+          contract.contract.methods[method](...args).encodeABI(),
+          { from: executor }
+        );
+      }
+
+      trader.address = forwarder.address;
+      trader.execCall = forwardCall;
+    });
+
+    shouldSplitAndMergePositionsOnOutcomeSlots(trader);
+  });
+
+  context("with Gnosis Safes", () => {
+    let trader = {};
+    before(async () => {
+      const zeroAccount = `0x${"0".repeat(40)}`;
+      const safeOwners = Array.from({ length: 2 }, () =>
+        web3.eth.accounts.create()
+      );
+      safeOwners.sort(({ address: a }, { address: b }) =>
+        a.toLowerCase() < b.toLowerCase() ? -1 : a === b ? 0 : 1
+      );
+      const gnosisSafe = await GnosisSafe.new();
+      await gnosisSafe.setup(
+        safeOwners.map(({ address }) => address),
+        safeOwners.length,
+        zeroAccount,
+        "0x",
+        zeroAccount,
+        0,
+        zeroAccount
+      );
+      const gnosisSafeTypedDataCommon = {
+        types: {
+          EIP712Domain: [{ name: "verifyingContract", type: "address" }],
+          SafeTx: [
+            { name: "to", type: "address" },
+            { name: "value", type: "uint256" },
+            { name: "data", type: "bytes" },
+            { name: "operation", type: "uint8" },
+            { name: "safeTxGas", type: "uint256" },
+            { name: "baseGas", type: "uint256" },
+            { name: "gasPrice", type: "uint256" },
+            { name: "gasToken", type: "address" },
+            { name: "refundReceiver", type: "address" },
+            { name: "nonce", type: "uint256" }
+          ],
+          SafeMessage: [{ name: "message", type: "bytes" }]
+        },
+        domain: {
+          verifyingContract: gnosisSafe.address
+        }
+      };
+
+      const safeExecutor = accounts[3];
+
+      async function gnosisSafeCall(contract, method, ...args) {
+        const safeOperations = {
+          CALL: 0,
+          DELEGATECALL: 1,
+          CREATE: 2
+        };
+        const nonce = await gnosisSafe.nonce();
+
+        // ???: why is reformatting the args necessary here?
+        args = args.map(arg =>
+          Array.isArray(arg) ? arg.map(a => a.toString()) : arg.toString()
+        );
+
+        const txData = contract.contract.methods[method](...args).encodeABI();
+        const signatures = safeOwners.map(safeOwner =>
+          ethSigUtil.signTypedData(
+            Buffer.from(safeOwner.privateKey.replace("0x", ""), "hex"),
+            {
+              data: Object.assign(
+                {
+                  primaryType: "SafeTx",
+                  message: {
+                    to: contract.address,
+                    value: 0,
+                    data: txData,
+                    operation: safeOperations.CALL,
+                    safeTxGas: 0,
+                    baseGas: 0,
+                    gasPrice: 0,
+                    gasToken: zeroAccount,
+                    refundReceiver: zeroAccount,
+                    nonce
+                  }
+                },
+                gnosisSafeTypedDataCommon
+              )
+            }
+          )
+        );
+        const tx = await gnosisSafe.execTransaction(
+          contract.address,
+          0,
+          txData,
+          safeOperations.CALL,
+          0,
+          0,
+          0,
+          zeroAccount,
+          zeroAccount,
+          `0x${signatures.map(s => s.replace("0x", "")).join("")}`,
+          { from: safeExecutor }
+        );
+        if (tx.logs[0] && tx.logs[0].event === "ExecutionFailed")
+          throw new Error(`Safe transaction ${method}(${args}) failed`);
+        return tx;
+      }
+
+      trader.address = gnosisSafe.address;
+      trader.execCall = gnosisSafeCall;
+    });
+
+    shouldSplitAndMergePositionsOnOutcomeSlots(trader);
   });
 
   it("should split positions, set outcome slot values, and redeem outcome tokens for conditions", async () => {
     // Mint outcome slots
-    const buyer = 2;
-    const recipient = 7;
+    const trader = accounts[2];
+    const recipient = accounts[7];
     const collateralTokenCount = 10;
-    await collateralToken.mint(accounts[buyer], collateralTokenCount, {
+    await collateralToken.mint(trader, collateralTokenCount, {
       from: minter
     });
     assert.equal(
-      await collateralToken.balanceOf.call(accounts[buyer]),
+      await collateralToken.balanceOf.call(trader),
       collateralTokenCount
     );
     await collateralToken.approve(
       predictionMarketSystem.address,
       collateralTokenCount,
-      { from: accounts[buyer] }
+      { from: trader }
     );
 
     await predictionMarketSystem.splitPosition(
@@ -189,7 +343,7 @@ contract("PredictionMarketSystem", function(accounts) {
       conditionId,
       [0b01, 0b10],
       collateralTokenCount,
-      { from: accounts[buyer] }
+      { from: trader }
     );
     assert.equal(
       (await collateralToken.balanceOf.call(
@@ -197,11 +351,11 @@ contract("PredictionMarketSystem", function(accounts) {
       )).valueOf(),
       collateralTokenCount
     );
-    assert.equal(await collateralToken.balanceOf.call(accounts[buyer]), 0);
+    assert.equal(await collateralToken.balanceOf.call(trader), 0);
 
     assert.equal(
       await predictionMarketSystem.balanceOf.call(
-        accounts[buyer],
+        trader,
         keccak256(
           collateralToken.address +
             keccak256(conditionId + padLeft(toHex(0b01), 64).slice(2)).slice(2)
@@ -211,7 +365,7 @@ contract("PredictionMarketSystem", function(accounts) {
     );
     assert.equal(
       await predictionMarketSystem.balanceOf.call(
-        accounts[buyer],
+        trader,
         keccak256(
           collateralToken.address +
             keccak256(conditionId + padLeft(toHex(0b10), 64).slice(2)).slice(2)
@@ -240,15 +394,15 @@ contract("PredictionMarketSystem", function(accounts) {
     );
 
     await predictionMarketSystem.safeTransferFrom(
-      accounts[buyer],
-      accounts[recipient],
+      trader,
+      recipient,
       keccak256(
         collateralToken.address +
           keccak256(conditionId + padLeft(toHex(0b01), 64).slice(2)).slice(2)
       ),
       collateralTokenCount,
       "0x",
-      { from: accounts[buyer] }
+      { from: trader }
     );
 
     const buyerPayout = getParamFromTxEvent(
@@ -257,7 +411,7 @@ contract("PredictionMarketSystem", function(accounts) {
         asciiToHex(0),
         conditionId,
         [0b10],
-        { from: accounts[buyer] }
+        { from: trader }
       ),
       "payout",
       null,
@@ -267,7 +421,7 @@ contract("PredictionMarketSystem", function(accounts) {
     assert.equal(buyerPayout.valueOf(), (collateralTokenCount * 7) / 10);
     assert.equal(
       await predictionMarketSystem.balanceOf.call(
-        accounts[recipient],
+        recipient,
         keccak256(
           collateralToken.address +
             keccak256(conditionId + padLeft(toHex(0b01), 64).slice(2)).slice(2)
@@ -277,7 +431,7 @@ contract("PredictionMarketSystem", function(accounts) {
     );
     assert.equal(
       await predictionMarketSystem.balanceOf.call(
-        accounts[buyer],
+        trader,
         keccak256(
           collateralToken.address +
             keccak256(conditionId + padLeft(toHex(0b10), 64).slice(2)).slice(2)
@@ -292,7 +446,7 @@ contract("PredictionMarketSystem", function(accounts) {
         asciiToHex(0),
         conditionId,
         [0b01],
-        { from: accounts[recipient] }
+        { from: recipient }
       ),
       "payout",
       null,
@@ -300,11 +454,11 @@ contract("PredictionMarketSystem", function(accounts) {
     );
 
     assert.equal(
-      (await collateralToken.balanceOf.call(accounts[recipient])).toNumber(),
+      (await collateralToken.balanceOf.call(recipient)).toNumber(),
       recipientPayout.valueOf()
     );
     assert.equal(
-      (await collateralToken.balanceOf.call(accounts[buyer])).toNumber(),
+      (await collateralToken.balanceOf.call(trader)).toNumber(),
       buyerPayout.valueOf()
     );
   });

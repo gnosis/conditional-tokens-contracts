@@ -29,11 +29,13 @@
     "openzeppelin-solidity": "^2.3.0"
   },
   "devDependencies": {
+    "@gnosis.pm/safe-contracts": "^1.0.0",
     "@gnosis.pm/truffle-nice-tools": "^1.1.3",
     "chai": "^4.2.0",
     "eslint": "^5.9.0",
     "eslint-config-prettier": "^4.1.0",
     "eslint-plugin-prettier": "^3.0.0",
+    "eth-sig-util": "^2.2.0",
     "ethlint": "^1.2.4",
     "lodash": "^4.17.4",
     "npm-prepublish": "^1.2.3",
