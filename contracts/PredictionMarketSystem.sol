@@ -1,6 +1,8 @@
 pragma solidity ^0.5.1;
 import { IERC20 } from "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import { ERC1155 } from "erc-1155/contracts/ERC1155.sol";
+import { IERC1155TokenReceiver } from "./ERC1155/IERC1155TokenReceiver.sol";
+import { ERC1155 } from "./ERC1155/ERC1155.sol";
+import { ERC1820Registry } from "./ERC1820Registry.sol";
 import "./OracleConsumer.sol";
 
 
@@ -11,15 +13,47 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
     /// @param oracle The account assigned to report the result for the prepared condition.
     /// @param questionId An identifier for the question to be answered by the oracle.
     /// @param outcomeSlotCount The number of outcome slots which should be used for this condition. Must not exceed 256.
-    event ConditionPreparation(bytes32 indexed conditionId, address indexed oracle, bytes32 indexed questionId, uint outcomeSlotCount);
+    event ConditionPreparation(
+        bytes32 indexed conditionId,
+        address indexed oracle,
+        bytes32 indexed questionId,
+        uint outcomeSlotCount
+    );
 
-    event ConditionResolution(bytes32 indexed conditionId, address indexed oracle, bytes32 indexed questionId, uint outcomeSlotCount, uint[] payoutNumerators);
+    event ConditionResolution(
+        bytes32 indexed conditionId,
+        address indexed oracle,
+        bytes32 indexed questionId,
+        uint outcomeSlotCount,
+        uint[] payoutNumerators
+    );
 
     /// @dev Emitted when a position is successfully split.
-    event PositionSplit(address indexed stakeholder, IERC20 collateralToken, bytes32 indexed parentCollectionId, bytes32 indexed conditionId, uint[] partition, uint amount);
+    event PositionSplit(
+        address indexed stakeholder,
+        IERC20 collateralToken,
+        bytes32 indexed parentCollectionId,
+        bytes32 indexed conditionId,
+        uint[] partition,
+        uint amount
+    );
     /// @dev Emitted when positions are successfully merged.
-    event PositionsMerge(address indexed stakeholder, IERC20 collateralToken, bytes32 indexed parentCollectionId, bytes32 indexed conditionId, uint[] partition, uint amount);
-    event PayoutRedemption(address indexed redeemer, IERC20 indexed collateralToken, bytes32 indexed parentCollectionId, bytes32 conditionId, uint[] indexSets, uint payout);
+    event PositionsMerge(
+        address indexed stakeholder,
+        IERC20 collateralToken,
+        bytes32 indexed parentCollectionId,
+        bytes32 indexed conditionId,
+        uint[] partition,
+        uint amount
+    );
+    event PayoutRedemption(
+        address indexed redeemer,
+        IERC20 indexed collateralToken,
+        bytes32 indexed parentCollectionId,
+        bytes32 conditionId,
+        uint[] indexSets,
+        uint payout
+    );
 
     /// Mapping key is an condition ID. Value represents numerators of the payout vector associated with the condition. This array is initialized with a length equal to the outcome slot count.
     mapping(bytes32 => uint[]) public payoutNumerators;
@@ -50,7 +84,7 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
         require(payoutDenominator[conditionId] == 0, "payout denominator already set");
         for (uint i = 0; i < outcomeSlotCount; i++) {
             uint payoutNum;
-            // solhint-disable-next-line no-inline-assembly
+            // solium-disable-next-line security/no-inline-assembly
             assembly {
                 payoutNum := calldataload(add(0x64, mul(0x20, i)))
             }
@@ -69,7 +103,13 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
     /// @param conditionId The ID of the condition to split on.
     /// @param partition An array of disjoint index sets representing a nontrivial partition of the outcome slots of the given condition.
     /// @param amount The amount of collateral or stake to split.
-    function splitPosition(IERC20 collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint[] calldata partition, uint amount) external {
+    function splitPosition(
+        IERC20 collateralToken,
+        bytes32 parentCollectionId,
+        bytes32 conditionId,
+        uint[] calldata partition,
+        uint amount
+    ) external {
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0, "condition not prepared yet");
 
@@ -83,7 +123,7 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
             require((indexSet & freeIndexSet) == indexSet, "partition not disjoint");
             freeIndexSet ^= indexSet;
             key = keccak256(abi.encodePacked(collateralToken, getCollectionId(parentCollectionId, conditionId, indexSet)));
-            balances[uint(key)][msg.sender] = balances[uint(key)][msg.sender].add(amount);
+            _mint(msg.sender, uint(key), amount, "");
         }
 
         if (freeIndexSet == 0) {
@@ -91,17 +131,23 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
                 require(collateralToken.transferFrom(msg.sender, address(this), amount), "could not receive collateral tokens");
             } else {
                 key = keccak256(abi.encodePacked(collateralToken, parentCollectionId));
-                balances[uint(key)][msg.sender] = balances[uint(key)][msg.sender].sub(amount);
+                _burn(msg.sender, uint(key), amount);
             }
         } else {
             key = keccak256(abi.encodePacked(collateralToken, getCollectionId(parentCollectionId, conditionId, fullIndexSet ^ freeIndexSet)));
-            balances[uint(key)][msg.sender] = balances[uint(key)][msg.sender].sub(amount);
+            _burn(msg.sender, uint(key), amount);
         }
 
         emit PositionSplit(msg.sender, collateralToken, parentCollectionId, conditionId, partition, amount);
     }
 
-    function mergePositions(IERC20 collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint[] calldata partition, uint amount) external {
+    function mergePositions(
+        IERC20 collateralToken,
+        bytes32 parentCollectionId,
+        bytes32 conditionId,
+        uint[] calldata partition,
+        uint amount
+    ) external {
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0, "condition not prepared yet");
 
@@ -115,7 +161,7 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
             require((indexSet & freeIndexSet) == indexSet, "partition not disjoint");
             freeIndexSet ^= indexSet;
             key = keccak256(abi.encodePacked(collateralToken, getCollectionId(parentCollectionId, conditionId, indexSet)));
-            balances[uint(key)][msg.sender] = balances[uint(key)][msg.sender].sub(amount);
+            _burn(msg.sender, uint(key), amount);
         }
 
         if (freeIndexSet == 0) {
@@ -123,11 +169,11 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
                 require(collateralToken.transfer(msg.sender, amount), "could not send collateral tokens");
             } else {
                 key = keccak256(abi.encodePacked(collateralToken, parentCollectionId));
-                balances[uint(key)][msg.sender] = balances[uint(key)][msg.sender].add(amount);
+                _mint(msg.sender, uint(key), amount, "");
             }
         } else {
             key = keccak256(abi.encodePacked(collateralToken, getCollectionId(parentCollectionId, conditionId, fullIndexSet ^ freeIndexSet)));
-            balances[uint(key)][msg.sender] = balances[uint(key)][msg.sender].add(amount);
+            _mint(msg.sender, uint(key), amount, "");
         }
 
         emit PositionsMerge(msg.sender, collateralToken, parentCollectionId, conditionId, partition, amount);
@@ -154,10 +200,10 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
                 }
             }
 
-            uint payoutStake = balances[uint(key)][msg.sender];
+            uint payoutStake = balanceOf(msg.sender, uint(key));
             if (payoutStake > 0) {
                 totalPayout = totalPayout.add(payoutStake.mul(payoutNumerator).div(payoutDenominator[conditionId]));
-                balances[uint(key)][msg.sender] = 0;
+                _burn(msg.sender, uint(key), payoutStake);
             }
         }
 
@@ -166,7 +212,7 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
                 require(collateralToken.transfer(msg.sender, totalPayout), "could not transfer payout to message sender");
             } else {
                 key = keccak256(abi.encodePacked(collateralToken, parentCollectionId));
-                balances[uint(key)][msg.sender] = balances[uint(key)][msg.sender].add(totalPayout);
+                _mint(msg.sender, uint(key), totalPayout, "");
             }
         }
         emit PayoutRedemption(msg.sender, collateralToken, parentCollectionId, conditionId, indexSets, totalPayout);
@@ -184,5 +230,85 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
             uint(parentCollectionId) +
             uint(keccak256(abi.encodePacked(conditionId, indexSet)))
         );
+    }
+
+    function _doSafeTransferAcceptanceCheck(
+        address operator,
+        address from,
+        address to,
+        uint256 id,
+        uint256 value,
+        bytes memory data
+    )
+        internal
+    {
+        if(to.isContract()) {
+            (bool callSucceeded, bytes memory callReturnData) = to.staticcall(
+                abi.encodeWithSignature("isERC1155TokenReceiver()")
+            );
+
+            if(
+                callSucceeded &&
+                callReturnData.length > 0 &&
+                abi.decode(callReturnData, (bytes4)) == IERC1155TokenReceiver(to).isERC1155TokenReceiver.selector
+            ) {
+                require(
+                    IERC1155TokenReceiver(to).onERC1155Received(operator, from, id, value, data) ==
+                        IERC1155TokenReceiver(to).onERC1155Received.selector,
+                    "ERC1155: got unknown value from onERC1155Received"
+                );
+            } else {
+                address implementer = ERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24)
+                    .getInterfaceImplementer(to, keccak256(bytes("ERC1155TokenReceiver")));
+
+                if(implementer != address(0)) {
+                    require(
+                        IERC1155TokenReceiver(implementer).onERC1155Received(operator, from, id, value, data) ==
+                            IERC1155TokenReceiver(implementer).onERC1155Received.selector,
+                        "ERC1155: got unknown value from implemented onERC1155Received"
+                    );
+                }
+            }
+        }
+    }
+
+    function _doSafeBatchTransferAcceptanceCheck(
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory values,
+        bytes memory data
+    )
+        internal
+    {
+        if(to.isContract()) {
+            (bool callSucceeded, bytes memory callReturnData) = to.staticcall(
+                abi.encodeWithSignature("isERC1155TokenReceiver()")
+            );
+
+            if(
+                callSucceeded &&
+                callReturnData.length > 0 &&
+                abi.decode(callReturnData, (bytes4)) == IERC1155TokenReceiver(to).isERC1155TokenReceiver.selector
+            ) {
+                require(
+                    IERC1155TokenReceiver(to).onERC1155BatchReceived(operator, from, ids, values, data) ==
+                        IERC1155TokenReceiver(to).onERC1155BatchReceived.selector,
+                    "ERC1155: got unknown value from onERC1155BatchReceived"
+                );
+            } else {
+                address implementer = ERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24)
+                    .getInterfaceImplementer(to, keccak256(bytes("ERC1155TokenReceiver")));
+
+                if(implementer != address(0)) {
+                    require(
+                        IERC1155TokenReceiver(implementer).onERC1155BatchReceived(operator, from, ids, values, data) ==
+                            IERC1155TokenReceiver(implementer).onERC1155BatchReceived.selector,
+                        "ERC1155: got unknown value from implemented onERC1155BatchReceived"
+                    );
+                }
+            }
+        }
     }
 }
