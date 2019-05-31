@@ -2,6 +2,7 @@ pragma solidity ^0.5.1;
 import { IERC20 } from "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import { IERC1155TokenReceiver } from "./ERC1155/IERC1155TokenReceiver.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
+import { ERC1820Registry } from "./ERC1820Registry.sol";
 import "./OracleConsumer.sol";
 
 
@@ -242,20 +243,30 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
         internal
     {
         if(to.isContract()) {
-            (bool callSucceeded, bytes memory callReturnData) = to.call(abi.encodeWithSignature(
-                "onERC1155Received(address,address,uint256,uint256,bytes)",
-                operator, from, id, value, data
-            ));
+            (bool callSucceeded, bytes memory callReturnData) = to.staticcall(
+                abi.encodeWithSignature("isERC1155TokenReceiver()")
+            );
 
-            if(callSucceeded) {
+            if(
+                callSucceeded &&
+                abi.decode(callReturnData, (bytes4)) == IERC1155TokenReceiver(to).isERC1155TokenReceiver.selector
+            ) {
                 require(
-                    abi.decode(callReturnData, (bytes4)) ==
+                    IERC1155TokenReceiver(to).onERC1155Received(operator, from, id, value, data) ==
                         IERC1155TokenReceiver(to).onERC1155Received.selector,
                     "ERC1155: got unknown value from onERC1155Received"
                 );
             } else {
-                // is this a terrible idea? yes. yes it is.
-                require(callReturnData.length == 0, string(callReturnData));
+                address implementer = ERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24)
+                    .getInterfaceImplementer(to, keccak256(bytes("ERC1155TokenReceiver")));
+
+                if(implementer != address(0)) {
+                    require(
+                        IERC1155TokenReceiver(implementer).onERC1155Received(operator, from, id, value, data) ==
+                            IERC1155TokenReceiver(implementer).onERC1155Received.selector,
+                        "ERC1155: got unknown value from implemented onERC1155Received"
+                    );
+                }
             }
         }
     }
@@ -271,19 +282,30 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
         internal
     {
         if(to.isContract()) {
-            (bool callSucceeded, bytes memory callReturnData) = to.call(abi.encodeWithSignature(
-                "onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)",
-                operator, from, ids, values, data
-            ));
+            (bool callSucceeded, bytes memory callReturnData) = to.staticcall(
+                abi.encodeWithSignature("isERC1155TokenReceiver()")
+            );
 
-            if(callSucceeded) {
+            if(
+                callSucceeded &&
+                abi.decode(callReturnData, (bytes4)) == IERC1155TokenReceiver(to).isERC1155TokenReceiver.selector
+            ) {
                 require(
-                    abi.decode(callReturnData, (bytes4)) ==
-                        IERC1155TokenReceiver(to).onERC1155Received.selector,
-                    "ERC1155: got unknown value from onERC1155Received"
+                    IERC1155TokenReceiver(to).onERC1155BatchReceived(operator, from, ids, values, data) ==
+                        IERC1155TokenReceiver(to).onERC1155BatchReceived.selector,
+                    "ERC1155: got unknown value from onERC1155BatchReceived"
                 );
             } else {
-                require(callReturnData.length == 0, string(callReturnData));
+                address implementer = ERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24)
+                    .getInterfaceImplementer(to, keccak256(bytes("ERC1155TokenReceiver")));
+
+                if(implementer != address(0)) {
+                    require(
+                        IERC1155TokenReceiver(implementer).onERC1155BatchReceived(operator, from, ids, values, data) ==
+                            IERC1155TokenReceiver(implementer).onERC1155BatchReceived.selector,
+                        "ERC1155: got unknown value from implemented onERC1155BatchReceived"
+                    );
+                }
             }
         }
     }
