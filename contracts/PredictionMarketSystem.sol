@@ -65,6 +65,7 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
     /// @param outcomeSlotCount The number of outcome slots which should be used for this condition. Must not exceed 256.
     function prepareCondition(address oracle, bytes32 questionId, uint outcomeSlotCount) external {
         require(outcomeSlotCount <= 256, "too many outcome slots");
+        require(outcomeSlotCount > 0, "no outcome slots provided");
         bytes32 conditionId = keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount));
         require(payoutNumerators[conditionId].length == 0, "condition already prepared");
         payoutNumerators[conditionId] = new uint[](outcomeSlotCount);
