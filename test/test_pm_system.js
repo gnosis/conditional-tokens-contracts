@@ -38,6 +38,17 @@ contract("PredictionMarketSystem", function(accounts) {
     );
   });
 
+  it("should not be able to prepare a condition with no outomes slots", async () => {
+    await assertRejects(
+      predictionMarketSystem.prepareCondition(
+        oracle,
+        questionId,
+        0
+      ),
+      "Transaction should have reverted."
+    );
+  });
+
   it("should have obtainable conditionIds if in possession of oracle, questionId, and outcomeSlotCount", async () => {
     assert.equal(
       (await predictionMarketSystem.getOutcomeSlotCount(conditionId)).valueOf(),
