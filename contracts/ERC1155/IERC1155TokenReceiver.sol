@@ -1,10 +1,13 @@
 pragma solidity ^0.5.0;
 
+import "openzeppelin-solidity/contracts/introspection/IERC165.sol";
+
 /**
-    @title ERC-1155 Multi Token Receiver
+    @title ERC-1155 Multi Token Receiver Interface
     @dev See https://eips.ethereum.org/EIPS/eip-1155
 */
-interface IERC1155TokenReceiver {
+contract IERC1155TokenReceiver is IERC165 {
+
     /**
         @dev Handles the receipt of a single ERC1155 token type. This function is
         called at the end of a `safeTransferFrom` after the balance has been updated.
@@ -46,12 +49,4 @@ interface IERC1155TokenReceiver {
         uint256[] calldata values,
         bytes calldata data
     ) external returns(bytes4);
-
-    /**
-        @dev Indicates whether a contract implements the `ERC1155TokenReceiver`
-        functions and so can accept ERC1155 token types. Will return
-        `bytes4(keccak256("isERC1155TokenReceiver()"))`
-        (i.e. 0x0d912442 or its own function selector).
-    */
-    function isERC1155TokenReceiver() external view returns (bytes4);
 }

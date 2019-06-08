@@ -28,12 +28,12 @@ contract ERC1155 is ERC165, IERC1155
         public
     {
         _registerInterface(
-            this.safeTransferFrom.selector ^
-            this.safeBatchTransferFrom.selector ^
-            this.balanceOf.selector ^
-            this.balanceOfBatch.selector ^
-            this.setApprovalForAll.selector ^
-            this.isApprovedForAll.selector
+            ERC1155(0).safeTransferFrom.selector ^
+            ERC1155(0).safeBatchTransferFrom.selector ^
+            ERC1155(0).balanceOf.selector ^
+            ERC1155(0).balanceOfBatch.selector ^
+            ERC1155(0).setApprovalForAll.selector ^
+            ERC1155(0).isApprovedForAll.selector
         );
     }
 
