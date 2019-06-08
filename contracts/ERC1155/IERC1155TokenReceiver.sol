@@ -27,7 +27,9 @@ contract IERC1155TokenReceiver is IERC165 {
         uint256 id,
         uint256 value,
         bytes calldata data
-    ) external returns(bytes4);
+    )
+        external
+        returns(bytes4);
 
     /**
         @dev Handles the receipt of a multiple ERC1155 token types. This function
@@ -48,5 +50,7 @@ contract IERC1155TokenReceiver is IERC165 {
         uint256[] calldata ids,
         uint256[] calldata values,
         bytes calldata data
-    ) external returns(bytes4);
+    )
+        external
+        returns(bytes4);
 }
