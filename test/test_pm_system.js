@@ -40,11 +40,7 @@ contract("PredictionMarketSystem", function(accounts) {
 
   it("should not be able to prepare a condition with no outomes slots", async () => {
     await assertRejects(
-      predictionMarketSystem.prepareCondition(
-        oracle,
-        questionId,
-        0
-      ),
+      predictionMarketSystem.prepareCondition(oracle, questionId, 0),
       "Transaction should have reverted."
     );
   });
