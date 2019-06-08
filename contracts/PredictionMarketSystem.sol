@@ -232,6 +232,22 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
         );
     }
 
+    // this value is meant to be used in a require(gasleft() >= CHECK_IS_RECEIVER_REQUIRED_GAS)
+    // statement preceding an ERC165 introspection staticcall to verify that a contract is
+    // an ERC1155TokenReceiver. Gas values gotten through experimenting with Remix.
+    uint constant CHECK_IS_RECEIVER_REQUIRED_GAS =
+        uint(10000) * 64 / 63 + 1 + // minimum gas required to exist before call opcode
+        700 +                       // call cost
+        564 +                       // cost for getting the stuff on the stack
+        100;                        // cost for executing require statement itself
+
+    bytes constant CHECK_IS_RECEIVER_CALLDATA = abi.encodeWithSignature(
+        "supportsInterface(bytes4)",
+        bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)")) ^
+        bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))
+    );
+
+
     function _doSafeTransferAcceptanceCheck(
         address operator,
         address from,
@@ -243,14 +259,13 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
         internal
     {
         if(to.isContract()) {
-            (bool callSucceeded, bytes memory callReturnData) = to.staticcall(
-                abi.encodeWithSignature("isERC1155TokenReceiver()")
-            );
+            require(gasleft() >= CHECK_IS_RECEIVER_REQUIRED_GAS, "ERC1155: not enough gas reserved for token receiver check");
+            (bool callSucceeded, bytes memory callReturnData) = to.call.gas(10000)(CHECK_IS_RECEIVER_CALLDATA);
 
             if(
                 callSucceeded &&
                 callReturnData.length > 0 &&
-                abi.decode(callReturnData, (bytes4)) == IERC1155TokenReceiver(to).isERC1155TokenReceiver.selector
+                abi.decode(callReturnData, (bool)) == true
             ) {
                 require(
                     IERC1155TokenReceiver(to).onERC1155Received(operator, from, id, value, data) ==
@@ -283,14 +298,13 @@ contract PredictionMarketSystem is OracleConsumer, ERC1155 {
         internal
     {
         if(to.isContract()) {
-            (bool callSucceeded, bytes memory callReturnData) = to.staticcall(
-                abi.encodeWithSignature("isERC1155TokenReceiver()")
-            );
+            require(gasleft() >= CHECK_IS_RECEIVER_REQUIRED_GAS, "ERC1155: not enough gas reserved for token receiver check");
+            (bool callSucceeded, bytes memory callReturnData) = to.staticcall.gas(10000)(CHECK_IS_RECEIVER_CALLDATA);
 
             if(
                 callSucceeded &&
                 callReturnData.length > 0 &&
-                abi.decode(callReturnData, (bytes4)) == IERC1155TokenReceiver(to).isERC1155TokenReceiver.selector
+                abi.decode(callReturnData, (bool)) == true
             ) {
                 require(
                     IERC1155TokenReceiver(to).onERC1155BatchReceived(operator, from, ids, values, data) ==
