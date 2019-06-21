@@ -52,15 +52,23 @@ contract ConditionalTokens is ERC1155 {
         uint payout
     );
 
+    
     /// Mapping key is an condition ID. Value represents numerators of the payout vector associated with the condition. This array is initialized with a length equal to the outcome slot count.
-    mapping(bytes32 => uint[]) public payoutNumerators;
+    /// e.g Condition with 3 outcomes [A, B, C] and two of those correct [0.5, 0.5, 0]
+    /// In Ethereum there are no decimal values so, to represent 0.5 it has to be represented by a division of two intengers 1/2 == 0.5. That's why we need numerator and denominator values.
+    mapping(bytes32 => uint[]) public payoutNumerators; 
     mapping(bytes32 => uint) public payoutDenominator;
+
+    // Note:
+    /// Numerator is also used as a check of initialization. If numerator is null, means condition was not created/prepared.
+    /// Denominator is used for checking if the condition has been resolved.
 
     /// @dev This function prepares a condition by initializing a payout vector associated with the condition.
     /// @param oracle The account assigned to report the result for the prepared condition.
     /// @param questionId An identifier for the question to be answered by the oracle.
     /// @param outcomeSlotCount The number of outcome slots which should be used for this condition. Must not exceed 256.
     function prepareCondition(address oracle, bytes32 questionId, uint outcomeSlotCount) external {
+        // Limit of 256 because we use a partition array that is a number of 256 bits.
         require(outcomeSlotCount <= 256, "too many outcome slots");
         require(outcomeSlotCount > 1, "there should be more than one outcome slot");
         bytes32 conditionId = getConditionId(oracle, questionId, outcomeSlotCount);
@@ -75,6 +83,7 @@ contract ConditionalTokens is ERC1155 {
     function reportPayouts(bytes32 questionId, uint[] calldata payouts) external {
         uint outcomeSlotCount = payouts.length;
         require(outcomeSlotCount > 1, "there should be more than one outcome slot");
+        // IMPORTANT, the oracle is enforced to be the sender because it's part of the hash.
         bytes32 conditionId = getConditionId(msg.sender, questionId, outcomeSlotCount);
         require(payoutNumerators[conditionId].length == outcomeSlotCount, "condition not prepared or found");
         require(payoutDenominator[conditionId] == 0, "payout denominator already set");
@@ -92,25 +101,29 @@ contract ConditionalTokens is ERC1155 {
         emit ConditionResolution(conditionId, msg.sender, questionId, outcomeSlotCount, payoutNumerators[conditionId]);
     }
 
-    /// @dev This function splits a position. If splitting from the collateral, this contract will attempt to transfer `amount` collateral from the message sender to itself. Otherwise, this contract will burn `amount` stake held by the message sender in the position being split. Regardless, if successful, `amount` stake will be minted in the split target positions. If any of the transfers, mints, or burns fail, the transaction will revert. The transaction will also revert if the given partition is trivial, invalid, or refers to more slots than the condition is prepared with.
+    /// @dev This function splits a position. If splitting from the collateral, this contract will attempt to transfer `amount` collateral from the message sender to itself.
+    /// Otherwise, this contract will burn `amount` stake held by the message sender in the position being split worth of EIP 1155 tokens. Regardless, if successful, `amount`
+    /// stake will be minted in the split target positions. If any of the transfers, mints, or burns fail, the transaction will revert. The transaction will also revert if
+    /// the given partition is trivial, invalid, or refers to more slots than the condition is prepared with.
     /// @param collateralToken The address of the positions' backing collateral token.
     /// @param parentCollectionId The ID of the outcome collections common to the position being split and the split target positions. May be null, in which only the collateral is shared.
     /// @param conditionId The ID of the condition to split on.
-    /// @param partition An array of disjoint index sets representing a nontrivial partition of the outcome slots of the given condition.
+    /// @param partition An array of disjoint index sets representing a nontrivial partition of the outcome slots of the given condition. E.g A|B and C but not A|B and B|C (is not disjoint).
     /// @param amount The amount of collateral or stake to split.
     function splitPosition(
         IERC20 collateralToken,
         bytes32 parentCollectionId,
         bytes32 conditionId,
-        uint[] calldata partition,
+        uint[] calldata partition, // It's a number that represents the outcome slot collection. 111 it's A|B|C 010 is B...
         uint amount
     ) external {
         require(partition.length > 1, "got empty or singleton partition");
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0, "condition not prepared yet");
 
-        uint fullIndexSet = (1 << outcomeSlotCount) - 1;
-        uint freeIndexSet = fullIndexSet;
+        uint fullIndexSet = (1 << outcomeSlotCount) - 1; // For a condition with 4 outcomes it's 1111, for 5 it's 11111...
+        uint freeIndexSet = fullIndexSet; // Starts as the full collection
+        // This loop checks that all condition sets are disjoint (the same outcome is not part of more than 1 set)
         for (uint i = 0; i < partition.length; i++) {
             uint indexSet = partition[i];
             require(indexSet > 0 && indexSet < fullIndexSet, "got invalid index set");
@@ -118,13 +131,14 @@ contract ConditionalTokens is ERC1155 {
             freeIndexSet ^= indexSet;
             _mint(
                 msg.sender,
+                // position ID is the ERC 1155 token ID
                 getPositionId(collateralToken, getCollectionId(parentCollectionId, conditionId, indexSet)),
                 amount,
                 ""
             );
         }
 
-        if (freeIndexSet == 0) {
+        if (freeIndexSet == 0) { // This is the full set. A|B and C
             if (parentCollectionId == bytes32(0)) {
                 require(collateralToken.transferFrom(msg.sender, address(this), amount), "could not receive collateral tokens");
             } else {
@@ -135,6 +149,7 @@ contract ConditionalTokens is ERC1155 {
                 );
             }
         } else {
+            // In this branch you cannot enter with individual outcomes from the root level
             _burn(
                 msg.sender,
                 getPositionId(collateralToken,
