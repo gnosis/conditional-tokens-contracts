@@ -181,7 +181,8 @@ contract ConditionalTokens is OracleConsumer, ERC1155 {
     }
 
     function redeemPositions(IERC20 collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint[] calldata indexSets) external {
-        require(payoutDenominator[conditionId] > 0, "result for condition not received yet");
+        uint den = payoutDenominator[conditionId];
+        require(den > 0, "result for condition not received yet");
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0, "condition not prepared yet");
 
@@ -203,7 +204,7 @@ contract ConditionalTokens is OracleConsumer, ERC1155 {
 
             uint payoutStake = balanceOf(msg.sender, uint(key));
             if (payoutStake > 0) {
-                totalPayout = totalPayout.add(payoutStake.mul(payoutNumerator).div(payoutDenominator[conditionId]));
+                totalPayout = totalPayout.add(payoutStake.mul(payoutNumerator).div(den));
                 _burn(msg.sender, uint(key), payoutStake);
             }
         }
