@@ -65,11 +65,7 @@ contract("ConditionalTokens", function(accounts) {
 
   it("should not be able to prepare the same condition more than once", async () => {
     await assertRejects(
-      conditionalTokens.prepareCondition(
-        oracle,
-        questionId,
-        outcomeSlotCount
-      ),
+      conditionalTokens.prepareCondition(oracle, questionId, outcomeSlotCount),
       "Transaction should have reverted."
     );
   });
@@ -495,16 +491,10 @@ contract("ConditionalTokens", function(accounts) {
           .join("")
     );
 
-    assert.equal(
-      await conditionalTokens.getOutcomeSlotCount(_conditionId),
-      4
-    );
+    assert.equal(await conditionalTokens.getOutcomeSlotCount(_conditionId), 4);
     for (let i = 0; i < 4; i++) {
       assert.equal(
-        (await conditionalTokens.payoutNumerators(
-          _conditionId,
-          i
-        )).valueOf(),
+        (await conditionalTokens.payoutNumerators(_conditionId, i)).valueOf(),
         0
       );
     }
@@ -1584,29 +1574,17 @@ contract(
       );
 
       await collateralToken.mint(player1, toBN(1e19), { from: minter });
-      await collateralToken.approve(
-        conditionalTokens.address,
-        toBN(1e19),
-        {
-          from: player1
-        }
-      );
+      await collateralToken.approve(conditionalTokens.address, toBN(1e19), {
+        from: player1
+      });
       await collateralToken.mint(player2, toBN(1e19), { from: minter });
-      await collateralToken.approve(
-        conditionalTokens.address,
-        toBN(1e19),
-        {
-          from: player2
-        }
-      );
+      await collateralToken.approve(conditionalTokens.address, toBN(1e19), {
+        from: player2
+      });
       await collateralToken.mint(player3, toBN(1e19), { from: minter });
-      await collateralToken.approve(
-        conditionalTokens.address,
-        toBN(1e19),
-        {
-          from: player3
-        }
-      );
+      await collateralToken.approve(conditionalTokens.address, toBN(1e19), {
+        from: player3
+      });
     });
 
     it("Should correctly and safely partially split and merge in complex scnarios.", async () => {
@@ -1896,29 +1874,17 @@ contract(
       );
 
       await collateralToken.mint(player1, toBN(1e19), { from: minter });
-      await collateralToken.approve(
-        conditionalTokens.address,
-        toBN(1e19),
-        {
-          from: player1
-        }
-      );
+      await collateralToken.approve(conditionalTokens.address, toBN(1e19), {
+        from: player1
+      });
       await collateralToken.mint(player2, toBN(1e19), { from: minter });
-      await collateralToken.approve(
-        conditionalTokens.address,
-        toBN(1e19),
-        {
-          from: player2
-        }
-      );
+      await collateralToken.approve(conditionalTokens.address, toBN(1e19), {
+        from: player2
+      });
       await collateralToken.mint(player3, toBN(1e19), { from: minter });
-      await collateralToken.approve(
-        conditionalTokens.address,
-        toBN(1e19),
-        {
-          from: player3
-        }
-      );
+      await collateralToken.approve(conditionalTokens.address, toBN(1e19), {
+        from: player3
+      });
     });
 
     it("Should create positions in opposite orders that equal each others values", async () => {
