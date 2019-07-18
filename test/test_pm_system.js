@@ -50,7 +50,7 @@ contract("PredictionMarketSystem", function(accounts) {
       predictionMarketSystem.prepareCondition(oracle, questionId, 1),
       "Transaction should have reverted."
     );
-});
+  });
 
   it("should have obtainable conditionIds if in possession of oracle, questionId, and outcomeSlotCount", async () => {
     assert.equal(

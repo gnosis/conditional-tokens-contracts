@@ -1,6 +1,7 @@
 language: node_js
 node_js:
-- 'node'
+- '11'
+- '10'
 - '9'
 - '8'
 before_install:
@@ -10,14 +11,3 @@ script:
 - npm run lint
 - npm test
 after_script: greenkeeper-lockfile-upload
-before_deploy:
-- npm-prepublish --verbose --lax
-deploy:
-  provider: npm
-  email: alanlu1023@gmail.com
-  api_key: $NPM_TOKEN
-  on:
-    all_branches: true
-    tags: true
-    node: '8'
-    repo: gnosis/gnosis-contracts
