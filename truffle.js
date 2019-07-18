@@ -21,11 +21,21 @@ const config = {
       host: "localhost",
       port: 8545,
       network_id: "4"
+    },
+    local: {
+      host: "localhost",
+      port: 8545,
+      network_id: "*"
     }
   },
   mocha: {
     enableTimeouts: false,
-    grep: process.env.TEST_GREP
+    grep: process.env.TEST_GREP,
+    reporter: "eth-gas-reporter",
+    reporterOptions: {
+      currency: "USD",
+      excludeContracts: ["Migrations"]
+    }
   },
   compilers: {
     solc: {
