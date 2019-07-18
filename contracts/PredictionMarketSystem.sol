@@ -83,17 +83,19 @@ contract ConditionalTokens is OracleConsumer, ERC1155 {
         bytes32 conditionId = keccak256(abi.encodePacked(msg.sender, questionId, outcomeSlotCount));
         require(payoutNumerators[conditionId].length == outcomeSlotCount, "number of outcomes mismatch");
         require(payoutDenominator[conditionId] == 0, "payout denominator already set");
+        uint den = 0;
         for (uint i = 0; i < outcomeSlotCount; i++) {
             uint payoutNum;
             // solium-disable-next-line security/no-inline-assembly
             assembly {
                 payoutNum := calldataload(add(0x64, mul(0x20, i)))
             }
-            payoutDenominator[conditionId] = payoutDenominator[conditionId].add(payoutNum);
+            den = den.add(payoutNum);
 
             require(payoutNumerators[conditionId][i] == 0, "payout numerator already set");
             payoutNumerators[conditionId][i] = payoutNum;
         }
+        payoutDenominator[conditionId] = den;
         require(payoutDenominator[conditionId] > 0, "payout is all zeroes");
         emit ConditionResolution(conditionId, msg.sender, questionId, outcomeSlotCount, payoutNumerators[conditionId]);
     }
@@ -181,7 +183,8 @@ contract ConditionalTokens is OracleConsumer, ERC1155 {
     }
 
     function redeemPositions(IERC20 collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint[] calldata indexSets) external {
-        require(payoutDenominator[conditionId] > 0, "result for condition not received yet");
+        uint den = payoutDenominator[conditionId];
+        require(den > 0, "result for condition not received yet");
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0, "condition not prepared yet");
 
@@ -203,7 +206,7 @@ contract ConditionalTokens is OracleConsumer, ERC1155 {
 
             uint payoutStake = balanceOf(msg.sender, uint(key));
             if (payoutStake > 0) {
-                totalPayout = totalPayout.add(payoutStake.mul(payoutNumerator).div(payoutDenominator[conditionId]));
+                totalPayout = totalPayout.add(payoutStake.mul(payoutNumerator).div(den));
                 _burn(msg.sender, uint(key), payoutStake);
             }
         }
