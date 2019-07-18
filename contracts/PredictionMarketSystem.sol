@@ -6,7 +6,7 @@ import { ERC1820Registry } from "./ERC1820Registry.sol";
 import "./OracleConsumer.sol";
 
 
-contract PredictionMarketSystem is OracleConsumer, ERC1155 {
+contract ConditionalTokens is OracleConsumer, ERC1155 {
 
     /// @dev Emitted upon the successful preparation of a condition.
     /// @param conditionId The condition's ID. This ID may be derived from the other three parameters via ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``.
