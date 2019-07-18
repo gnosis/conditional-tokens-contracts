@@ -81,7 +81,7 @@ contract ConditionalTokens is OracleConsumer, ERC1155 {
         uint outcomeSlotCount = result.length / 32;
         require(outcomeSlotCount <= 256, "too many outcome slots");
         bytes32 conditionId = keccak256(abi.encodePacked(msg.sender, questionId, outcomeSlotCount));
-        require(payoutNumerators[conditionId].length == outcomeSlotCount, "number of outcomes mismatch");
+        require(payoutNumerators[conditionId].length == outcomeSlotCount, "condition not prepared or found");
         require(payoutDenominator[conditionId] == 0, "payout denominator already set");
         uint den = 0;
         for (uint i = 0; i < outcomeSlotCount; i++) {
