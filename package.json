@@ -29,6 +29,7 @@
     "openzeppelin-solidity": "^2.3.0"
   },
   "devDependencies": {
+    "@codechecks/client": "^0.1.5",
     "@gnosis.pm/safe-contracts": "^1.0.0",
     "@gnosis.pm/truffle-nice-tools": "^1.1.3",
     "chai": "^4.2.0",
