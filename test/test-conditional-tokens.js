@@ -1,12 +1,44 @@
 const ethSigUtil = require("eth-sig-util");
 
 const { assertRejects, getParamFromTxEvent } = require("./utils");
-const { toHex, padLeft, keccak256, asciiToHex, toBN, fromWei } = web3.utils;
+const { asciiToHex, toBN, fromWei, soliditySha3 } = web3.utils;
 
 const ConditionalTokens = artifacts.require("ConditionalTokens");
 const ERC20Mintable = artifacts.require("MockCoin");
 const Forwarder = artifacts.require("Forwarder");
 const GnosisSafe = artifacts.require("GnosisSafe");
+
+function getConditionId(oracle, questionId, outcomeSlotCount) {
+  return soliditySha3(
+    { t: "address", v: oracle },
+    { t: "bytes32", v: questionId },
+    { t: "uint", v: outcomeSlotCount }
+  );
+}
+
+function getCollectionId(conditionId, indexSet) {
+  return soliditySha3(
+    { t: "bytes32", v: conditionId },
+    { t: "uint", v: indexSet }
+  );
+}
+
+function combineCollectionIds(collectionIds) {
+  return (
+    "0x" +
+    collectionIds
+      .reduce((acc, collectionId) => acc.add(toBN(collectionId)), toBN(0))
+      .maskn(256)
+      .toString(16, 64)
+  );
+}
+
+function getPositionId(collateralToken, collectionId) {
+  return soliditySha3(
+    { t: "address", v: collateralToken },
+    { t: "bytes32", v: collectionId }
+  );
+}
 
 contract("ConditionalTokens", function(accounts) {
   let collateralToken;
@@ -30,12 +62,7 @@ contract("ConditionalTokens", function(accounts) {
       outcomeSlotCount
     );
 
-    conditionId = keccak256(
-      oracle +
-        [questionId, outcomeSlotCount]
-          .map(v => padLeft(toHex(v), 64).slice(2))
-          .join("")
-    );
+    conditionId = getConditionId(oracle, questionId, outcomeSlotCount);
   });
 
   it("should not be able to prepare a condition with no outcome slots", async () => {
@@ -101,10 +128,11 @@ contract("ConditionalTokens", function(accounts) {
         );
       }
 
-      assert(
-        collateralTokenCount.eq(
-          await collateralToken.balanceOf.call(conditionalTokens.address)
-        )
+      assert.equal(
+        collateralTokenCount.toString(),
+        (await collateralToken.balanceOf.call(
+          conditionalTokens.address
+        )).toString()
       );
       assert.equal(await collateralToken.balanceOf.call(trader.address), 0);
 
@@ -112,11 +140,9 @@ contract("ConditionalTokens", function(accounts) {
         collateralTokenCount.eq(
           await conditionalTokens.balanceOf.call(
             trader.address,
-            keccak256(
-              collateralToken.address +
-                keccak256(
-                  conditionId + padLeft(toHex(0b01), 64).slice(2)
-                ).slice(2)
+            getPositionId(
+              collateralToken.address,
+              getCollectionId(conditionId, 0b01)
             )
           )
         )
@@ -125,11 +151,9 @@ contract("ConditionalTokens", function(accounts) {
         collateralTokenCount.eq(
           await conditionalTokens.balanceOf.call(
             trader.address,
-            keccak256(
-              collateralToken.address +
-                keccak256(
-                  conditionId + padLeft(toHex(0b10), 64).slice(2)
-                ).slice(2)
+            getPositionId(
+              collateralToken.address,
+              getCollectionId(conditionId, 0b10)
             )
           )
         )
@@ -163,11 +187,9 @@ contract("ConditionalTokens", function(accounts) {
       assert.equal(
         await conditionalTokens.balanceOf.call(
           trader.address,
-          keccak256(
-            collateralToken.address +
-              keccak256(conditionId + padLeft(toHex(0b01), 64).slice(2)).slice(
-                2
-              )
+          getPositionId(
+            collateralToken.address,
+            getCollectionId(conditionId, 0b01)
           )
         ),
         0
@@ -175,11 +197,9 @@ contract("ConditionalTokens", function(accounts) {
       assert.equal(
         await conditionalTokens.balanceOf.call(
           trader.address,
-          keccak256(
-            collateralToken.address +
-              keccak256(conditionId + padLeft(toHex(0b10), 64).slice(2)).slice(
-                2
-              )
+          getPositionId(
+            collateralToken.address,
+            getCollectionId(conditionId, 0b10)
           )
         ),
         0
@@ -366,9 +386,9 @@ contract("ConditionalTokens", function(accounts) {
     assert.equal(
       await conditionalTokens.balanceOf.call(
         trader,
-        keccak256(
-          collateralToken.address +
-            keccak256(conditionId + padLeft(toHex(0b01), 64).slice(2)).slice(2)
+        getPositionId(
+          collateralToken.address,
+          getCollectionId(conditionId, 0b01)
         )
       ),
       collateralTokenCount
@@ -376,20 +396,16 @@ contract("ConditionalTokens", function(accounts) {
     assert.equal(
       await conditionalTokens.balanceOf.call(
         trader,
-        keccak256(
-          collateralToken.address +
-            keccak256(conditionId + padLeft(toHex(0b10), 64).slice(2)).slice(2)
+        getPositionId(
+          collateralToken.address,
+          getCollectionId(conditionId, 0b10)
         )
       ),
       collateralTokenCount
     );
 
     // Set outcome in condition
-    await conditionalTokens.receiveResult(
-      questionId,
-      "0x" + [padLeft("3", 64), padLeft("7", 64)].join(""),
-      { from: oracle }
-    );
+    await conditionalTokens.reportPayouts(questionId, [3, 7], { from: oracle });
     assert.equal(
       await conditionalTokens.payoutDenominator.call(conditionId),
       10
@@ -406,9 +422,9 @@ contract("ConditionalTokens", function(accounts) {
     await conditionalTokens.safeTransferFrom(
       trader,
       recipient,
-      keccak256(
-        collateralToken.address +
-          keccak256(conditionId + padLeft(toHex(0b01), 64).slice(2)).slice(2)
+      getPositionId(
+        collateralToken.address,
+        getCollectionId(conditionId, 0b01)
       ),
       collateralTokenCount,
       "0x",
@@ -432,9 +448,9 @@ contract("ConditionalTokens", function(accounts) {
     assert.equal(
       await conditionalTokens.balanceOf.call(
         recipient,
-        keccak256(
-          collateralToken.address +
-            keccak256(conditionId + padLeft(toHex(0b01), 64).slice(2)).slice(2)
+        getPositionId(
+          collateralToken.address,
+          getCollectionId(conditionId, 0b01)
         )
       ),
       collateralTokenCount
@@ -442,9 +458,9 @@ contract("ConditionalTokens", function(accounts) {
     assert.equal(
       await conditionalTokens.balanceOf.call(
         trader,
-        keccak256(
-          collateralToken.address +
-            keccak256(conditionId + padLeft(toHex(0b10), 64).slice(2)).slice(2)
+        getPositionId(
+          collateralToken.address,
+          getCollectionId(conditionId, 0b10)
         )
       ),
       0
@@ -484,11 +500,10 @@ contract("ConditionalTokens", function(accounts) {
       _questionId,
       _outcomeSlotCount
     );
-    const _conditionId = keccak256(
-      _oracle +
-        [_questionId, _outcomeSlotCount]
-          .map(v => padLeft(toHex(v), 64).slice(2))
-          .join("")
+    const _conditionId = getConditionId(
+      _oracle,
+      _questionId,
+      _outcomeSlotCount
     );
 
     assert.equal(await conditionalTokens.getOutcomeSlotCount(_conditionId), 4);
@@ -542,32 +557,16 @@ contract("ConditionalTokens", function(accounts) {
     }
 
     await assertRejects(
-      conditionalTokens.receiveResult(
-        _questionId,
-        "0x" +
-          [
-            padLeft("14D", 64), // 333
-            padLeft("29A", 64), // 666
-            padLeft("1", 64), // 1
-            padLeft("0", 64)
-          ].join(""),
-        { from: accounts[9] }
-      ),
+      conditionalTokens.reportPayouts(_questionId, [333, 666, 1, 0], {
+        from: accounts[9]
+      }),
       "Transaction should have reverted."
     );
 
     // resolve the condition
-    await conditionalTokens.receiveResult(
-      _questionId,
-      "0x" +
-        [
-          padLeft("14D", 64), // 333
-          padLeft("29A", 64), // 666
-          padLeft("1", 64), // 1
-          padLeft("0", 64)
-        ].join(""),
-      { from: _oracle }
-    );
+    await conditionalTokens.reportPayouts(_questionId, [333, 666, 1, 0], {
+      from: _oracle
+    });
     assert.equal(
       await conditionalTokens.payoutDenominator
         .call(_conditionId)
@@ -578,18 +577,15 @@ contract("ConditionalTokens", function(accounts) {
     // assert correct payouts for Outcome Slots
     const payoutsForOutcomeSlots = [333, 666, 1, 0];
     for (let i = 0; i < buyers.length; i++) {
-      assert(
-        collateralTokenCounts[i].eq(
-          await conditionalTokens.balanceOf.call(
-            accounts[buyers[i]],
-            keccak256(
-              collateralToken.address +
-                keccak256(
-                  _conditionId + padLeft(toHex(1 << i), 64).slice(2)
-                ).slice(2)
-            )
+      assert.equal(
+        collateralTokenCounts[i].toString(),
+        (await conditionalTokens.balanceOf.call(
+          accounts[buyers[i]],
+          getPositionId(
+            collateralToken.address,
+            getCollectionId(_conditionId, 1 << i)
           )
-        )
+        )).toString()
       );
       assert.equal(
         await conditionalTokens.payoutNumerators(_conditionId, i),
@@ -680,24 +676,9 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       outcomeSlotCount3
     );
 
-    conditionId1 = keccak256(
-      oracle1 +
-        [questionId1, outcomeSlotCount1]
-          .map(v => padLeft(toHex(v), 64).slice(2))
-          .join("")
-    );
-    conditionId2 = keccak256(
-      oracle2 +
-        [questionId2, outcomeSlotCount2]
-          .map(v => padLeft(toHex(v), 64).slice(2))
-          .join("")
-    );
-    conditionId3 = keccak256(
-      oracle3 +
-        [questionId3, outcomeSlotCount3]
-          .map(v => padLeft(toHex(v), 64).slice(2))
-          .join("")
-    );
+    conditionId1 = getConditionId(oracle1, questionId1, outcomeSlotCount1);
+    conditionId2 = getConditionId(oracle2, questionId2, outcomeSlotCount2);
+    conditionId3 = getConditionId(oracle3, questionId3, outcomeSlotCount3);
 
     await collateralToken.mint(player1, 10000, { from: minter });
     await collateralToken.approve(conditionalTokens.address, 10000, {
@@ -726,10 +707,9 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     assert.equal(
       await conditionalTokens.balanceOf(
         player1,
-        keccak256(
+        getPositionId(
           collateralToken.address,
-          0 +
-            keccak256(conditionId1, padLeft(toHex(0b01), 64).slice(2)).slice(2)
+          getCollectionId(conditionId1, 0b01)
         )
       ),
       0
@@ -791,18 +771,10 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       1,
       { from: player3 }
     );
-    const collectionId1 = keccak256(
-      conditionId1 + padLeft(toHex(0b01), 64).slice(2)
-    );
-    const collectionId2 = keccak256(
-      conditionId1 + padLeft(toHex(0b10), 64).slice(2)
-    );
-    const positionId1 = keccak256(
-      collateralToken.address + collectionId1.slice(2)
-    );
-    const positionId2 = keccak256(
-      collateralToken.address + collectionId2.slice(2)
-    );
+    const collectionId1 = getCollectionId(conditionId1, 0b01);
+    const collectionId2 = getCollectionId(conditionId1, 0b10);
+    const positionId1 = getPositionId(collateralToken.address, collectionId1);
+    const positionId2 = getPositionId(collateralToken.address, collectionId2);
 
     assert.equal(
       await conditionalTokens
@@ -831,18 +803,10 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       "If this didn't fail, the user is somehow able to withdraw ethereum from positions with none in it, or they have already ether in that position"
     );
 
-    const collectionId1 = keccak256(
-      conditionId1 + padLeft(toHex(0b01), 64).slice(2)
-    );
-    const collectionId2 = keccak256(
-      conditionId1 + padLeft(toHex(0b10), 64).slice(2)
-    );
-    const positionId1 = keccak256(
-      collateralToken.address + collectionId1.slice(2)
-    );
-    const positionId2 = keccak256(
-      collateralToken.address + collectionId2.slice(2)
-    );
+    const collectionId1 = getCollectionId(conditionId1, 0b01);
+    const collectionId2 = getCollectionId(conditionId1, 0b10);
+    const positionId1 = getPositionId(collateralToken.address, collectionId1);
+    const positionId2 = getPositionId(collateralToken.address, collectionId2);
 
     assert.equal(
       await conditionalTokens
@@ -869,18 +833,10 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       { from: player1 }
     );
 
-    const collectionId1 = keccak256(
-      conditionId1 + padLeft(toHex(0b01), 64).slice(2)
-    );
-    const collectionId2 = keccak256(
-      conditionId1 + padLeft(toHex(0b10), 64).slice(2)
-    );
-    const positionId1 = keccak256(
-      collateralToken.address + collectionId1.slice(2)
-    );
-    const positionId2 = keccak256(
-      collateralToken.address + collectionId2.slice(2)
-    );
+    const collectionId1 = getCollectionId(conditionId1, 0b01);
+    const collectionId2 = getCollectionId(conditionId1, 0b10);
+    const positionId1 = getPositionId(collateralToken.address, collectionId1);
+    const positionId2 = getPositionId(collateralToken.address, collectionId2);
 
     assert.equal(
       await conditionalTokens
@@ -921,36 +877,21 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       1000
     );
 
-    const collectionId3 =
-      "0x" +
-      toHex(
-        toBN(collectionId1).add(
-          toBN(keccak256(conditionId2 + padLeft(toHex(0b10), 64).slice(2)))
-        )
-      ).slice(-64);
-    const collectionId4 =
-      "0x" +
-      toHex(
-        toBN(collectionId1).add(
-          toBN(keccak256(conditionId2 + padLeft(toHex(0b01), 64).slice(2)))
-        )
-      ).slice(-64);
-    const collectionId5 =
-      "0x" +
-      toHex(
-        toBN(collectionId1).add(
-          toBN(keccak256(conditionId2 + padLeft(toHex(0b100), 64).slice(2)))
-        )
-      ).slice(-64);
-    const positionId3 = keccak256(
-      collateralToken.address + collectionId3.slice(2)
-    );
-    const positionId4 = keccak256(
-      collateralToken.address + collectionId4.slice(2)
-    );
-    const positionId5 = keccak256(
-      collateralToken.address + collectionId5.slice(2)
-    );
+    const collectionId3 = combineCollectionIds([
+      collectionId1,
+      getCollectionId(conditionId2, 0b10)
+    ]);
+    const collectionId4 = combineCollectionIds([
+      collectionId1,
+      getCollectionId(conditionId2, 0b01)
+    ]);
+    const collectionId5 = combineCollectionIds([
+      collectionId1,
+      getCollectionId(conditionId2, 0b100)
+    ]);
+    const positionId3 = getPositionId(collateralToken.address, collectionId3);
+    const positionId4 = getPositionId(collateralToken.address, collectionId4);
+    const positionId5 = getPositionId(collateralToken.address, collectionId5);
 
     assert.equal(
       await conditionalTokens
@@ -993,46 +934,26 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       1000
     );
 
-    const collectionId6 =
-      "0x" +
-      toHex(
-        toBN(collectionId3).add(
-          toBN(keccak256(conditionId3 + padLeft(toHex(0b10), 64).slice(2)))
-        )
-      ).slice(-64);
-    const collectionId7 =
-      "0x" +
-      toHex(
-        toBN(collectionId3).add(
-          toBN(keccak256(conditionId3 + padLeft(toHex(0b01), 64).slice(2)))
-        )
-      ).slice(-64);
-    const collectionId8 =
-      "0x" +
-      toHex(
-        toBN(collectionId3).add(
-          toBN(keccak256(conditionId3 + padLeft(toHex(0b100), 64).slice(2)))
-        )
-      ).slice(-64);
-    const collectionId9 =
-      "0x" +
-      toHex(
-        toBN(collectionId3).add(
-          toBN(keccak256(conditionId3 + padLeft(toHex(0b1000), 64).slice(2)))
-        )
-      ).slice(-64);
-    const positionId6 = keccak256(
-      collateralToken.address + collectionId6.slice(2)
-    );
-    const positionId7 = keccak256(
-      collateralToken.address + collectionId7.slice(2)
-    );
-    const positionId8 = keccak256(
-      collateralToken.address + collectionId8.slice(2)
-    );
-    const positionId9 = keccak256(
-      collateralToken.address + collectionId9.slice(2)
-    );
+    const collectionId6 = combineCollectionIds([
+      collectionId3,
+      getCollectionId(conditionId3, 0b10)
+    ]);
+    const collectionId7 = combineCollectionIds([
+      collectionId3,
+      getCollectionId(conditionId3, 0b01)
+    ]);
+    const collectionId8 = combineCollectionIds([
+      collectionId3,
+      getCollectionId(conditionId3, 0b100)
+    ]);
+    const collectionId9 = combineCollectionIds([
+      collectionId3,
+      getCollectionId(conditionId3, 0b1000)
+    ]);
+    const positionId6 = getPositionId(collateralToken.address, collectionId6);
+    const positionId7 = getPositionId(collateralToken.address, collectionId7);
+    const positionId8 = getPositionId(collateralToken.address, collectionId8);
+    const positionId9 = getPositionId(collateralToken.address, collectionId9);
 
     assert.equal(
       await conditionalTokens
@@ -1108,16 +1029,11 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       50,
       { from: player1 }
     );
-    const collectionId10 =
-      "0x" +
-      toHex(
-        toBN(collectionId3).add(
-          toBN(keccak256(conditionId3 + padLeft(toHex(0b1011), 64).slice(2)))
-        )
-      ).slice(-64);
-    const positionId10 = keccak256(
-      collateralToken.address + collectionId10.slice(2)
-    );
+    const collectionId10 = combineCollectionIds([
+      collectionId3,
+      getCollectionId(conditionId3, 0b1011)
+    ]);
+    const positionId10 = getPositionId(collateralToken.address, collectionId10);
     assert.equal(
       await conditionalTokens
         .balanceOf(player1, positionId10)
@@ -1314,17 +1230,9 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       "The position is being redeemed before the payouts for the condition have been set."
     );
 
-    await conditionalTokens.receiveResult(
-      questionId3,
-      "0x" +
-        [
-          padLeft("14D", 64), // 333
-          padLeft("1", 64), // 1
-          padLeft("29A", 64), // 666
-          padLeft("0", 64)
-        ].join(""),
-      { from: oracle3 }
-    );
+    await conditionalTokens.reportPayouts(questionId3, [333, 1, 666, 0], {
+      from: oracle3
+    });
 
     assert.equal(
       await conditionalTokens.payoutDenominator(conditionId3).valueOf(),
@@ -1429,11 +1337,9 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       25 + Math.floor(25 * (666 / 1000 + 334 / 1000)) - 1
     );
 
-    await conditionalTokens.receiveResult(
-      questionId2,
-      "0x" + [padLeft("FF", 64), padLeft("FF", 64), padLeft("0", 64)].join(""),
-      { from: oracle2 }
-    );
+    await conditionalTokens.reportPayouts(questionId2, [255, 255, 0], {
+      from: oracle2
+    });
 
     await conditionalTokens.redeemPositions(
       collateralToken.address,
@@ -1467,11 +1373,9 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       49
     );
 
-    await conditionalTokens.receiveResult(
-      questionId1,
-      "0x" + [padLeft("1", 64), padLeft("0", 64)].join(""),
-      { from: oracle1 }
-    );
+    await conditionalTokens.reportPayouts(questionId1, [1, 0], {
+      from: oracle1
+    });
     assert.equal(
       await conditionalTokens.payoutDenominator(conditionId1).valueOf(),
       1
@@ -1560,18 +1464,8 @@ contract(
         outcomeSlotCount3
       );
 
-      conditionId1 = keccak256(
-        oracle1 +
-          [questionId1, outcomeSlotCount1]
-            .map(v => padLeft(toHex(v), 64).slice(2))
-            .join("")
-      );
-      conditionId2 = keccak256(
-        oracle2 +
-          [questionId2, outcomeSlotCount2]
-            .map(v => padLeft(toHex(v), 64).slice(2))
-            .join("")
-      );
+      conditionId1 = getConditionId(oracle1, questionId1, outcomeSlotCount1);
+      conditionId2 = getConditionId(oracle2, questionId2, outcomeSlotCount2);
 
       await collateralToken.mint(player1, toBN(1e19), { from: minter });
       await collateralToken.approve(conditionalTokens.address, toBN(1e19), {
@@ -1597,18 +1491,10 @@ contract(
         { from: player1 }
       );
 
-      const collectionId1 = keccak256(
-        conditionId1 + padLeft(toHex(0b01), 64).slice(2)
-      );
-      const collectionId2 = keccak256(
-        conditionId1 + padLeft(toHex(0b10), 64).slice(2)
-      );
-      const positionId1 = keccak256(
-        collateralToken.address + collectionId1.slice(2)
-      );
-      const positionId2 = keccak256(
-        collateralToken.address + collectionId2.slice(2)
-      );
+      const collectionId1 = getCollectionId(conditionId1, 0b01);
+      const collectionId2 = getCollectionId(conditionId1, 0b10);
+      const positionId1 = getPositionId(collateralToken.address, collectionId1);
+      const positionId2 = getPositionId(collateralToken.address, collectionId2);
 
       assert.equal(
         fromWei(
@@ -1661,26 +1547,16 @@ contract(
         toBN(1e19),
         { from: player1 }
       );
-      const collectionId3 =
-        "0x" +
-        toHex(
-          toBN(collectionId2).add(
-            toBN(keccak256(conditionId2 + padLeft(toHex(0b110), 64).slice(2)))
-          )
-        ).slice(-64);
-      const collectionId4 =
-        "0x" +
-        toHex(
-          toBN(collectionId2).add(
-            toBN(keccak256(conditionId2 + padLeft(toHex(0b01), 64).slice(2)))
-          )
-        ).slice(-64);
-      const positionId3 = keccak256(
-        collateralToken.address + collectionId3.slice(2)
-      );
-      const positionId4 = keccak256(
-        collateralToken.address + collectionId4.slice(2)
-      );
+      const collectionId3 = combineCollectionIds([
+        collectionId2,
+        getCollectionId(conditionId2, 0b110)
+      ]);
+      const collectionId4 = combineCollectionIds([
+        collectionId2,
+        getCollectionId(conditionId2, 0b01)
+      ]);
+      const positionId3 = getPositionId(collateralToken.address, collectionId3);
+      const positionId4 = getPositionId(collateralToken.address, collectionId4);
 
       assert.equal(
         fromWei(
@@ -1720,26 +1596,17 @@ contract(
         10
       );
 
-      const collectionId5 =
-        "0x" +
-        toHex(
-          toBN(collectionId2).add(
-            toBN(keccak256(conditionId2 + padLeft(toHex(0b100), 64).slice(2)))
-          )
-        ).slice(-64);
-      const collectionId6 =
-        "0x" +
-        toHex(
-          toBN(collectionId2).add(
-            toBN(keccak256(conditionId2 + padLeft(toHex(0b10), 64).slice(2)))
-          )
-        ).slice(-64);
-      const positionId5 = keccak256(
-        collateralToken.address + collectionId5.slice(2)
-      );
-      const positionId6 = keccak256(
-        collateralToken.address + collectionId6.slice(2)
-      );
+      const collectionId5 = combineCollectionIds([
+        collectionId2,
+        getCollectionId(conditionId2, 0b100)
+      ]);
+
+      const collectionId6 = combineCollectionIds([
+        collectionId2,
+        getCollectionId(conditionId2, 0b10)
+      ]);
+      const positionId5 = getPositionId(collateralToken.address, collectionId5);
+      const positionId6 = getPositionId(collateralToken.address, collectionId6);
       assert.equal(
         fromWei(
           await conditionalTokens.balanceOf(player1, positionId5),
@@ -1778,16 +1645,11 @@ contract(
         0
       );
 
-      const collectionId7 =
-        "0x" +
-        toHex(
-          toBN(collectionId2).add(
-            toBN(keccak256(conditionId2 + padLeft(toHex(0b11), 64).slice(2)))
-          )
-        ).slice(-64);
-      const positionId7 = keccak256(
-        collateralToken.address + collectionId7.slice(2)
-      );
+      const collectionId7 = combineCollectionIds([
+        collectionId2,
+        getCollectionId(conditionId2, 0b11)
+      ]);
+      const positionId7 = getPositionId(collateralToken.address, collectionId7);
       assert.equal(
         fromWei(
           await conditionalTokens.balanceOf(player1, positionId7),
@@ -1860,18 +1722,8 @@ contract(
         outcomeSlotCount3
       );
 
-      conditionId1 = keccak256(
-        oracle1 +
-          [questionId1, outcomeSlotCount1]
-            .map(v => padLeft(toHex(v), 64).slice(2))
-            .join("")
-      );
-      conditionId2 = keccak256(
-        oracle2 +
-          [questionId2, outcomeSlotCount2]
-            .map(v => padLeft(toHex(v), 64).slice(2))
-            .join("")
-      );
+      conditionId1 = getConditionId(oracle1, questionId1, outcomeSlotCount1);
+      conditionId2 = getConditionId(oracle2, questionId2, outcomeSlotCount2);
 
       await collateralToken.mint(player1, toBN(1e19), { from: minter });
       await collateralToken.approve(conditionalTokens.address, toBN(1e19), {
@@ -1905,37 +1757,17 @@ contract(
         { from: player1 }
       );
 
-      const collectionId1 = keccak256(
-        conditionId1 + padLeft(toHex(0b01), 64).slice(2)
-      );
-      const collectionId2 = keccak256(
-        conditionId1 + padLeft(toHex(0b10), 64).slice(2)
-      );
-      const positionId1 = keccak256(
-        collateralToken.address + collectionId1.slice(2)
-      );
-      const positionId2 = keccak256(
-        collateralToken.address + collectionId2.slice(2)
-      );
+      const collectionId1 = getCollectionId(conditionId1, 0b01);
+      const collectionId2 = getCollectionId(conditionId1, 0b10);
+      const positionId1 = getPositionId(collateralToken.address, collectionId1);
+      const positionId2 = getPositionId(collateralToken.address, collectionId2);
 
-      const collectionId3 = keccak256(
-        conditionId2 + padLeft(toHex(0b01), 64).slice(2)
-      );
-      const collectionId4 = keccak256(
-        conditionId2 + padLeft(toHex(0b10), 64).slice(2)
-      );
-      const collectionId5 = keccak256(
-        conditionId2 + padLeft(toHex(0b100), 64).slice(2)
-      );
-      const positionId3 = keccak256(
-        collateralToken.address + collectionId3.slice(2)
-      );
-      const positionId4 = keccak256(
-        collateralToken.address + collectionId4.slice(2)
-      );
-      const positionId5 = keccak256(
-        collateralToken.address + collectionId5.slice(2)
-      );
+      const collectionId3 = getCollectionId(conditionId2, 0b001);
+      const collectionId4 = getCollectionId(conditionId2, 0b010);
+      const collectionId5 = getCollectionId(conditionId2, 0b100);
+      const positionId3 = getPositionId(collateralToken.address, collectionId3);
+      const positionId4 = getPositionId(collateralToken.address, collectionId4);
+      const positionId5 = getPositionId(collateralToken.address, collectionId5);
 
       assert.equal(
         fromWei(
@@ -1995,27 +1827,17 @@ contract(
         { from: player1 }
       );
       // PositionId1 split on (PositionId4) should equal (PositionId4) split on PositionId1
-      const collectionId6 =
-        "0x" +
-        toHex(
-          toBN(collectionId1).add(
-            toBN(keccak256(conditionId2 + padLeft(toHex(0b10), 64).slice(2)))
-          )
-        ).slice(-64);
-      const positionId6 = keccak256(
-        collateralToken.address + collectionId6.slice(2)
-      );
+      const collectionId6 = combineCollectionIds([
+        collectionId1,
+        getCollectionId(conditionId2, 0b10)
+      ]);
+      const positionId6 = getPositionId(collateralToken.address, collectionId6);
 
-      const collectionId7 =
-        "0x" +
-        toHex(
-          toBN(collectionId4).add(
-            toBN(keccak256(conditionId1 + padLeft(toHex(0b01), 64).slice(2)))
-          )
-        ).slice(-64);
-      const positionId7 = keccak256(
-        collateralToken.address + collectionId7.slice(2)
-      );
+      const collectionId7 = combineCollectionIds([
+        collectionId4,
+        getCollectionId(conditionId1, 0b01)
+      ]);
+      const positionId7 = getPositionId(collateralToken.address, collectionId7);
 
       assert.equal(positionId6, positionId7);
     });

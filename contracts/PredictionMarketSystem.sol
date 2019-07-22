@@ -3,10 +3,9 @@ import { IERC20 } from "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import { IERC1155TokenReceiver } from "./ERC1155/IERC1155TokenReceiver.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
 import { ERC1820Registry } from "./ERC1820Registry.sol";
-import "./OracleConsumer.sol";
 
 
-contract ConditionalTokens is OracleConsumer, ERC1155 {
+contract ConditionalTokens is ERC1155 {
 
     /// @dev Emitted upon the successful preparation of a condition.
     /// @param conditionId The condition's ID. This ID may be derived from the other three parameters via ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``.
@@ -72,28 +71,22 @@ contract ConditionalTokens is OracleConsumer, ERC1155 {
         emit ConditionPreparation(conditionId, oracle, questionId, outcomeSlotCount);
     }
 
-    /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is derived from result, which is the result of serializing 32-byte EVM words representing payoutNumerators for each outcome slot of the condition.
+    /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
     /// @param questionId The question ID the oracle is answering for
-    /// @param result The oracle's answer
-    function receiveResult(bytes32 questionId, bytes calldata result) external {
-        require(result.length > 0, "results empty");
-        require(result.length % 32 == 0, "results not 32-byte aligned");
-        uint outcomeSlotCount = result.length / 32;
-        require(outcomeSlotCount <= 256, "too many outcome slots");
+    /// @param payouts The oracle's answer
+    function reportPayouts(bytes32 questionId, uint[] calldata payouts) external {
+        uint outcomeSlotCount = payouts.length;
+        require(outcomeSlotCount > 1, "there should be more than one outcome slot");
         bytes32 conditionId = keccak256(abi.encodePacked(msg.sender, questionId, outcomeSlotCount));
         require(payoutNumerators[conditionId].length == outcomeSlotCount, "condition not prepared or found");
         require(payoutDenominator[conditionId] == 0, "payout denominator already set");
         uint den = 0;
         for (uint i = 0; i < outcomeSlotCount; i++) {
-            uint payoutNum;
-            // solium-disable-next-line security/no-inline-assembly
-            assembly {
-                payoutNum := calldataload(add(0x64, mul(0x20, i)))
-            }
-            den = den.add(payoutNum);
+            uint num = payouts[i];
+            den = den.add(num);
 
             require(payoutNumerators[conditionId][i] == 0, "payout numerator already set");
-            payoutNumerators[conditionId][i] = payoutNum;
+            payoutNumerators[conditionId][i] = num;
         }
         payoutDenominator[conditionId] = den;
         require(payoutDenominator[conditionId] > 0, "payout is all zeroes");
