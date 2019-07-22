@@ -75,20 +75,22 @@ contract ConditionalTokens is ERC1155 {
     /// @param questionId The question ID the oracle is answering for
     /// @param payouts The oracle's answer
     function reportPayouts(bytes32 questionId, uint[] calldata payouts) external {
-        require(payouts.length > 1, "there should be more than one outcome slot");
-        bytes32 conditionId = keccak256(abi.encodePacked(msg.sender, questionId, payouts.length));
-        require(payoutNumerators[conditionId].length == payouts.length, "condition not prepared or found");
+        uint outcomeSlotCount = payouts.length;
+        require(outcomeSlotCount > 1, "there should be more than one outcome slot");
+        bytes32 conditionId = keccak256(abi.encodePacked(msg.sender, questionId, outcomeSlotCount));
+        require(payoutNumerators[conditionId].length == outcomeSlotCount, "condition not prepared or found");
         require(payoutDenominator[conditionId] == 0, "payout denominator already set");
         uint den = 0;
-        for (uint i = 0; i < payouts.length; i++) {
-            den = den.add(payouts[i]);
+        for (uint i = 0; i < outcomeSlotCount; i++) {
+            uint num = payouts[i];
+            den = den.add(num);
 
             require(payoutNumerators[conditionId][i] == 0, "payout numerator already set");
-            payoutNumerators[conditionId][i] = payouts[i];
+            payoutNumerators[conditionId][i] = num;
         }
         payoutDenominator[conditionId] = den;
         require(payoutDenominator[conditionId] > 0, "payout is all zeroes");
-        emit ConditionResolution(conditionId, msg.sender, questionId, payouts.length, payoutNumerators[conditionId]);
+        emit ConditionResolution(conditionId, msg.sender, questionId, outcomeSlotCount, payoutNumerators[conditionId]);
     }
 
     /// @dev This function splits a position. If splitting from the collateral, this contract will attempt to transfer `amount` collateral from the message sender to itself. Otherwise, this contract will burn `amount` stake held by the message sender in the position being split. Regardless, if successful, `amount` stake will be minted in the split target positions. If any of the transfers, mints, or burns fail, the transaction will revert. The transaction will also revert if the given partition is trivial, invalid, or refers to more slots than the condition is prepared with.
