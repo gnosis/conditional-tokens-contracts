@@ -419,7 +419,7 @@ Redeeming Positions
 
 Before this is possible, the payout vector must be set by the oracle:
 
-.. autosolfunction:: ConditionalTokens.receiveResult
+.. autosolfunction:: ConditionalTokens.reportPayouts
 
 This will emit the following event:
 

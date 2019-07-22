@@ -1,7 +1,7 @@
 const ethSigUtil = require("eth-sig-util");
 
 const { assertRejects, getParamFromTxEvent } = require("./utils");
-const { padLeft, asciiToHex, toBN, fromWei, soliditySha3 } = web3.utils;
+const { asciiToHex, toBN, fromWei, soliditySha3 } = web3.utils;
 
 const ConditionalTokens = artifacts.require("ConditionalTokens");
 const ERC20Mintable = artifacts.require("MockCoin");
@@ -405,11 +405,7 @@ contract("ConditionalTokens", function(accounts) {
     );
 
     // Set outcome in condition
-    await conditionalTokens.receiveResult(
-      questionId,
-      "0x" + [padLeft("3", 64), padLeft("7", 64)].join(""),
-      { from: oracle }
-    );
+    await conditionalTokens.reportPayouts(questionId, [3, 7], { from: oracle });
     assert.equal(
       await conditionalTokens.payoutDenominator.call(conditionId),
       10
@@ -561,32 +557,16 @@ contract("ConditionalTokens", function(accounts) {
     }
 
     await assertRejects(
-      conditionalTokens.receiveResult(
-        _questionId,
-        "0x" +
-          [
-            padLeft("14D", 64), // 333
-            padLeft("29A", 64), // 666
-            padLeft("1", 64), // 1
-            padLeft("0", 64)
-          ].join(""),
-        { from: accounts[9] }
-      ),
+      conditionalTokens.reportPayouts(_questionId, [333, 666, 1, 0], {
+        from: accounts[9]
+      }),
       "Transaction should have reverted."
     );
 
     // resolve the condition
-    await conditionalTokens.receiveResult(
-      _questionId,
-      "0x" +
-        [
-          padLeft("14D", 64), // 333
-          padLeft("29A", 64), // 666
-          padLeft("1", 64), // 1
-          padLeft("0", 64)
-        ].join(""),
-      { from: _oracle }
-    );
+    await conditionalTokens.reportPayouts(_questionId, [333, 666, 1, 0], {
+      from: _oracle
+    });
     assert.equal(
       await conditionalTokens.payoutDenominator
         .call(_conditionId)
@@ -1250,17 +1230,9 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       "The position is being redeemed before the payouts for the condition have been set."
     );
 
-    await conditionalTokens.receiveResult(
-      questionId3,
-      "0x" +
-        [
-          padLeft("14D", 64), // 333
-          padLeft("1", 64), // 1
-          padLeft("29A", 64), // 666
-          padLeft("0", 64)
-        ].join(""),
-      { from: oracle3 }
-    );
+    await conditionalTokens.reportPayouts(questionId3, [333, 1, 666, 0], {
+      from: oracle3
+    });
 
     assert.equal(
       await conditionalTokens.payoutDenominator(conditionId3).valueOf(),
@@ -1365,11 +1337,9 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       25 + Math.floor(25 * (666 / 1000 + 334 / 1000)) - 1
     );
 
-    await conditionalTokens.receiveResult(
-      questionId2,
-      "0x" + [padLeft("FF", 64), padLeft("FF", 64), padLeft("0", 64)].join(""),
-      { from: oracle2 }
-    );
+    await conditionalTokens.reportPayouts(questionId2, [255, 255, 0], {
+      from: oracle2
+    });
 
     await conditionalTokens.redeemPositions(
       collateralToken.address,
@@ -1403,11 +1373,9 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       49
     );
 
-    await conditionalTokens.receiveResult(
-      questionId1,
-      "0x" + [padLeft("1", 64), padLeft("0", 64)].join(""),
-      { from: oracle1 }
-    );
+    await conditionalTokens.reportPayouts(questionId1, [1, 0], {
+      from: oracle1
+    });
     assert.equal(
       await conditionalTokens.payoutDenominator(conditionId1).valueOf(),
       1
