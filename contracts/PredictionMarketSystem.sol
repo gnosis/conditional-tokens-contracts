@@ -2,7 +2,6 @@ pragma solidity ^0.5.1;
 import { IERC20 } from "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import { IERC1155TokenReceiver } from "./ERC1155/IERC1155TokenReceiver.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
-import { ERC1820Registry } from "./ERC1820Registry.sol";
 
 
 contract ConditionalTokens is ERC1155 {
@@ -227,99 +226,5 @@ contract ConditionalTokens is ERC1155 {
             uint(parentCollectionId) +
             uint(keccak256(abi.encodePacked(conditionId, indexSet)))
         );
-    }
-
-    // this value is meant to be used in a require(gasleft() >= CHECK_IS_RECEIVER_REQUIRED_GAS)
-    // statement preceding an ERC165 introspection staticcall to verify that a contract is
-    // an ERC1155TokenReceiver. Gas values gotten through experimenting with Remix.
-    uint constant CHECK_IS_RECEIVER_REQUIRED_GAS =
-        uint(10000) * 64 / 63 + 1 + // minimum gas required to exist before call opcode
-        700 +                       // call cost
-        564 +                       // cost for getting the stuff on the stack
-        100;                        // cost for executing require statement itself
-
-    bytes constant CHECK_IS_RECEIVER_CALLDATA = abi.encodeWithSignature(
-        "supportsInterface(bytes4)",
-        bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)")) ^
-        bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))
-    );
-
-
-    function _doSafeTransferAcceptanceCheck(
-        address operator,
-        address from,
-        address to,
-        uint256 id,
-        uint256 value,
-        bytes memory data
-    )
-        internal
-    {
-        if(to.isContract()) {
-            require(gasleft() >= CHECK_IS_RECEIVER_REQUIRED_GAS, "ERC1155: not enough gas reserved for token receiver check");
-            (bool callSucceeded, bytes memory callReturnData) = to.call.gas(10000)(CHECK_IS_RECEIVER_CALLDATA);
-
-            if(
-                callSucceeded &&
-                callReturnData.length > 0 &&
-                abi.decode(callReturnData, (bool)) == true
-            ) {
-                require(
-                    IERC1155TokenReceiver(to).onERC1155Received(operator, from, id, value, data) ==
-                        IERC1155TokenReceiver(to).onERC1155Received.selector,
-                    "ERC1155: got unknown value from onERC1155Received"
-                );
-            } else {
-                address implementer = ERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24)
-                    .getInterfaceImplementer(to, keccak256(bytes("ERC1155TokenReceiver")));
-
-                if(implementer != address(0)) {
-                    require(
-                        IERC1155TokenReceiver(implementer).onERC1155Received(operator, from, id, value, data) ==
-                            IERC1155TokenReceiver(implementer).onERC1155Received.selector,
-                        "ERC1155: got unknown value from implemented onERC1155Received"
-                    );
-                }
-            }
-        }
-    }
-
-    function _doSafeBatchTransferAcceptanceCheck(
-        address operator,
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory values,
-        bytes memory data
-    )
-        internal
-    {
-        if(to.isContract()) {
-            require(gasleft() >= CHECK_IS_RECEIVER_REQUIRED_GAS, "ERC1155: not enough gas reserved for token receiver check");
-            (bool callSucceeded, bytes memory callReturnData) = to.staticcall.gas(10000)(CHECK_IS_RECEIVER_CALLDATA);
-
-            if(
-                callSucceeded &&
-                callReturnData.length > 0 &&
-                abi.decode(callReturnData, (bool)) == true
-            ) {
-                require(
-                    IERC1155TokenReceiver(to).onERC1155BatchReceived(operator, from, ids, values, data) ==
-                        IERC1155TokenReceiver(to).onERC1155BatchReceived.selector,
-                    "ERC1155: got unknown value from onERC1155BatchReceived"
-                );
-            } else {
-                address implementer = ERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24)
-                    .getInterfaceImplementer(to, keccak256(bytes("ERC1155TokenReceiver")));
-
-                if(implementer != address(0)) {
-                    require(
-                        IERC1155TokenReceiver(implementer).onERC1155BatchReceived(operator, from, ids, values, data) ==
-                            IERC1155TokenReceiver(implementer).onERC1155BatchReceived.selector,
-                        "ERC1155: got unknown value from implemented onERC1155BatchReceived"
-                    );
-                }
-            }
-        }
     }
 }

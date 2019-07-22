@@ -6,6 +6,7 @@ const { asciiToHex, toBN, fromWei, soliditySha3 } = web3.utils;
 const ConditionalTokens = artifacts.require("ConditionalTokens");
 const ERC20Mintable = artifacts.require("MockCoin");
 const Forwarder = artifacts.require("Forwarder");
+const DefaultCallbackHandler = artifacts.require("DefaultCallbackHandler.sol");
 const GnosisSafe = artifacts.require("GnosisSafe");
 
 function getConditionId(oracle, questionId, outcomeSlotCount) {
@@ -251,12 +252,14 @@ contract("ConditionalTokens", function(accounts) {
       safeOwners.sort(({ address: a }, { address: b }) =>
         a.toLowerCase() < b.toLowerCase() ? -1 : a === b ? 0 : 1
       );
+      const callbackHandler = await DefaultCallbackHandler.new();
       const gnosisSafe = await GnosisSafe.new();
       await gnosisSafe.setup(
         safeOwners.map(({ address }) => address),
         safeOwners.length,
         zeroAccount,
         "0x",
+        callbackHandler.address,
         zeroAccount,
         0,
         zeroAccount

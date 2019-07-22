@@ -8,7 +8,7 @@
     "compile": "truffle compile",
     "migrate": "truffle migrate",
     "networks": "truffle networks",
-    "test": "run-with-testrpc 'truffle test --network=local'",
+    "test": "run-with-testrpc 'truffle test --network local'",
     "lint-contracts": "solium -d contracts/",
     "injectnetinfo": "tnt iN",
     "extractnetinfo": "tnt eN",
@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@codechecks/client": "^0.1.5",
-    "@gnosis.pm/safe-contracts": "^1.0.0",
+    "@gnosis.pm/safe-contracts": "github:gnosis/safe-contracts",
     "@gnosis.pm/truffle-nice-tools": "^1.1.3",
     "chai": "^4.2.0",
     "eslint": "^6.0.1",
