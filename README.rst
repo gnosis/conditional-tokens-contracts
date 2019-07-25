@@ -3,8 +3,8 @@
    :alt: Gnosis Logo
 
 
-Gnosis Mercury
-==============
+Gnosis Conditional Tokens Contracts
+===================================
 Prediction Market Contracts
 ---------------------------
 
@@ -20,7 +20,7 @@ Prediction Market Contracts
    :target: https://slack.gnosis.pm
    :alt: Slack Status
 
-Experimental smart contracts for prediction markets.
+Experimental smart contracts for conditional prediction markets.
 
 `→ Online Documentation`_
 
