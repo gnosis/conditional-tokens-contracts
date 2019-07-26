@@ -8,17 +8,13 @@ Gnosis Conditional Tokens Contracts
 Prediction Market Contracts
 ---------------------------
 
-.. image:: https://travis-ci.org/gnosis/hg-contracts.svg?branch=master
-   :target: https://travis-ci.org/gnosis/hg-contracts
+.. image:: https://travis-ci.org/gnosis/conditional-tokens-contracts.svg?branch=master
+   :target: https://travis-ci.org/gnosis/conditional-tokens-contracts
    :alt: Build Status
 
-.. image:: https://badges.greenkeeper.io/gnosis/hg-contracts.svg
+.. image:: https://badges.greenkeeper.io/gnosis/conditional-tokens-contracts.svg
    :target: https://greenkeeper.io/
    :alt: Greenkeeper badge
-
-.. image:: https://slack.gnosis.pm/badge.svg
-   :target: https://slack.gnosis.pm
-   :alt: Slack Status
 
 Experimental smart contracts for conditional prediction markets.
 
