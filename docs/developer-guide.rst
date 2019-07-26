@@ -18,7 +18,7 @@ The current state of this smart contract may be found on `Github`_.
 .. _Truffle: https://truffleframework.com
 .. _web3.js: https://web3js.readthedocs.io/en/1.0/
 .. _TruffleContract: https://github.com/trufflesuite/truffle/tree/next/packages/truffle-contract#truffle-contract
-.. _Github: https://github.com/gnosis/hg-contracts
+.. _Github: https://github.com/gnosis/conditional-tokens-contracts
 
 Installation
 ------------
@@ -28,7 +28,7 @@ Via NPM
 
 This developmental framework may be installed from Github through NPM by running the following::
 
-    npm i '@gnosis.pm/hg-contracts'
+    npm i '@gnosis.pm/conditional-tokens-contracts'
 
 
 Preparing a Condition

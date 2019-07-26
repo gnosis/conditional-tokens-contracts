@@ -3,17 +3,13 @@ Contributing
 
 The source for the contracts can be found on `Github`_.
 
-.. _Github: https://github.com/gnosis/hg-contracts
+.. _Github: https://github.com/gnosis/conditional-tokens-contracts
 
 .. highlight:: bash
 
-To set up for contributing, first install requirements with NPM::
+To set up for contributing, install requirements with NPM::
 
    npm install
-
-Then, set up Git hooks to ensure commits pass the linters::
-
-   npm run setup-githooks
 
 .. tip:: Many of the following commands simply wrap corresponding `Truffle commands <https://truffleframework.com/docs/truffle/reference/truffle-commands>`_.
 

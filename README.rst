@@ -1,4 +1,4 @@
-.. figure:: https://raw.githubusercontent.com/gnosis/hg-contracts/master/assets/logo.png
+.. figure:: https://raw.githubusercontent.com/gnosis/conditional-tokens-contracts/master/assets/logo.png
    :target: https://gnosis.pm
    :alt: Gnosis Logo
 
@@ -12,7 +12,7 @@ Prediction Market Contracts
    :target: https://travis-ci.org/gnosis/conditional-tokens-contracts
    :alt: Build Status
 
-.. image:: https://badges.greenkeeper.io/gnosis/hg-contracts.svg
+.. image:: https://badges.greenkeeper.io/gnosis/conditional-tokens-contracts.svg
    :target: https://greenkeeper.io/
    :alt: Greenkeeper badge
 

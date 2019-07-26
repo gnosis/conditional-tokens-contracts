@@ -1,5 +1,5 @@
 {
-  "name": "@gnosis.pm/hg-contracts",
+  "name": "@gnosis.pm/conditional-tokens-contracts",
   "version": "0.4.0",
   "description": "Collection of smart contracts for the Gnosis prediction market platform",
   "scripts": {
@@ -50,12 +50,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gnosis/hg-contracts.git"
+    "url": "git+https://github.com/gnosis/conditional-tokens-contracts.git"
   },
   "bugs": {
-    "url": "https://github.com/gnosis/hg-contracts/issues"
+    "url": "https://github.com/gnosis/conditional-tokens-contracts/issues"
   },
-  "homepage": "https://github.com/gnosis/hg-contracts#readme",
+  "homepage": "https://github.com/gnosis/conditional-tokens-contracts#readme",
   "husky": {
     "hooks": {
       "pre-commit": "lint-staged"
