@@ -12,7 +12,7 @@ Prediction Market Contracts
    :target: https://travis-ci.org/gnosis/conditional-tokens-contracts
    :alt: Build Status
 
-.. image:: https://badges.greenkeeper.io/gnosis/conditional-tokens-contracts.svg
+.. image:: https://badges.greenkeeper.io/gnosis/hg-contracts.svg
    :target: https://greenkeeper.io/
    :alt: Greenkeeper badge
 
