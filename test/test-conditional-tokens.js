@@ -5,6 +5,7 @@ const { asciiToHex, toBN, fromWei, soliditySha3 } = web3.utils;
 
 const ConditionalTokens = artifacts.require("ConditionalTokens");
 const ERC20Mintable = artifacts.require("MockCoin");
+const ERC1155Mock = artifacts.require("ERC1155Mock");
 const Forwarder = artifacts.require("Forwarder");
 const DefaultCallbackHandler = artifacts.require("DefaultCallbackHandler.sol");
 const GnosisSafe = artifacts.require("GnosisSafe");
@@ -34,15 +35,21 @@ function combineCollectionIds(collectionIds) {
   );
 }
 
-function getPositionId(collateralToken, collectionId) {
+function getPositionId(collateralToken, collateralTokenID, collectionId) {
+  if (collectionId == null)
+    return soliditySha3(
+      { t: "address", v: collateralToken },
+      { t: "uint", v: collateralTokenID }
+    );
   return soliditySha3(
     { t: "address", v: collateralToken },
-    { t: "bytes32", v: collectionId }
+    { t: "uint", v: collateralTokenID },
+    { t: "uint", v: collectionId }
   );
 }
 
 contract("ConditionalTokens", function(accounts) {
-  let collateralToken;
+  let collateralToken, collateralMultiToken;
   const minter = accounts[0];
   let oracle, questionId, outcomeSlotCount, conditionalTokens;
   let conditionId;
@@ -50,6 +57,7 @@ contract("ConditionalTokens", function(accounts) {
   before(async () => {
     conditionalTokens = await ConditionalTokens.deployed();
     collateralToken = await ERC20Mintable.new({ from: minter });
+    collateralMultiToken = await ERC1155Mock.new({ from: minter });
 
     // prepare condition
     oracle = accounts[1];
@@ -200,6 +208,137 @@ contract("ConditionalTokens", function(accounts) {
           trader.address,
           getPositionId(
             collateralToken.address,
+            getCollectionId(conditionId, 0b10)
+          )
+        ),
+        0
+      );
+    });
+
+    it("should split and merge positions with ERC-1155 collateral tokens", async () => {
+      const collateralTokenCount = toBN(1e19);
+      const collateralTokenID = toBN("432189705");
+      await collateralMultiToken.mint(
+        trader.address,
+        collateralTokenID,
+        collateralTokenCount,
+        "0x",
+        {
+          from: minter
+        }
+      );
+      assert(
+        collateralTokenCount.eq(
+          await collateralMultiToken.balanceOf(
+            trader.address,
+            collateralTokenID
+          )
+        )
+      );
+
+      for (let i = 0; i < 5; i++) {
+        await trader.execCall(
+          collateralMultiToken,
+          "safeTransferFrom",
+          trader.address,
+          conditionalTokens.address,
+          collateralTokenID,
+          collateralTokenCount.divn(10),
+          web3.eth.abi.encodeParameters(
+            ["bytes32", "uint256[]"],
+            [conditionId, [0b01, 0b10]]
+          )
+        );
+      }
+
+      await trader.execCall(
+        collateralMultiToken,
+        "setApprovalForAll",
+        conditionalTokens.address,
+        true
+      );
+
+      for (let i = 0; i < 5; i++) {
+        await trader.execCall(
+          conditionalTokens,
+          "split1155Position",
+          collateralMultiToken.address,
+          collateralTokenID,
+          asciiToHex(0),
+          conditionId,
+          [0b01, 0b10],
+          collateralTokenCount.divn(10)
+        );
+      }
+
+      assert.equal(
+        collateralTokenCount.toString(),
+        (await collateralMultiToken.balanceOf(
+          conditionalTokens.address,
+          collateralTokenID
+        )).toString()
+      );
+      assert.equal(
+        await collateralMultiToken.balanceOf(trader.address, collateralTokenID),
+        0
+      );
+
+      assert(
+        collateralTokenCount.eq(
+          await conditionalTokens.balanceOf.call(
+            trader.address,
+            getPositionId(
+              collateralMultiToken.address,
+              collateralTokenID,
+              getCollectionId(conditionId, 0b01)
+            )
+          )
+        )
+      );
+
+      await trader.execCall(
+        conditionalTokens,
+        "merge1155Positions",
+        collateralMultiToken.address,
+        collateralTokenID,
+        asciiToHex(0),
+        conditionId,
+        [0b01, 0b10],
+        collateralTokenCount
+      );
+      assert(
+        collateralTokenCount.eq(
+          await collateralMultiToken.balanceOf(
+            trader.address,
+            collateralTokenID
+          )
+        )
+      );
+      assert.equal(
+        await collateralMultiToken.balanceOf(
+          conditionalTokens.address,
+          collateralTokenID
+        ),
+        0
+      );
+
+      assert.equal(
+        await conditionalTokens.balanceOf.call(
+          trader.address,
+          getPositionId(
+            collateralToken.address,
+            collateralTokenID,
+            getCollectionId(conditionId, 0b01)
+          )
+        ),
+        0
+      );
+      assert.equal(
+        await conditionalTokens.balanceOf.call(
+          trader.address,
+          getPositionId(
+            collateralToken.address,
+            collateralTokenID,
             getCollectionId(conditionId, 0b10)
           )
         ),
