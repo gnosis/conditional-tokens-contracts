@@ -365,7 +365,8 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
     {
         if(operator != address(this)) {
             (bytes32 conditionId, uint[] memory partition) = abi.decode(data, (bytes32, uint[]));
-            mintSet(operator, CollateralTypes.ERC1155, msg.sender, id, bytes32(0), conditionId, partition, value);
+            (uint fullIndexSet, uint freeIndexSet) = mintSet(operator, CollateralTypes.ERC1155, msg.sender, id, bytes32(0), conditionId, partition, value);
+            require(freeIndexSet == 0, "must partition entire outcome slot set");
         }
 
         return this.onERC1155Received.selector;
