@@ -65,10 +65,6 @@
     "*.js": [
       "eslint --fix",
       "git add"
-    ],
-    "*.sol": [
-      "solium --fix -f",
-      "git add"
     ]
   }
 }

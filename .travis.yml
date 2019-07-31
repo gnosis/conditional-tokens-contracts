@@ -9,7 +9,6 @@ before_install:
 before_script: greenkeeper-lockfile-update
 script:
 - npm run lint
-- npm run lint-contracts
 - npm test
 - npx codechecks
 after_script: greenkeeper-lockfile-upload
