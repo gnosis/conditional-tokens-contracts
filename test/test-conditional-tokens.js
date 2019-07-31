@@ -631,6 +631,166 @@ contract("ConditionalTokens", function(accounts) {
     );
   });
 
+  it("should split ERC-1155-backed positions, set outcome slot values, and redeem outcome tokens for conditions", async () => {
+    // Mint outcome slots
+    const trader = accounts[2];
+    const recipient = accounts[7];
+    const collateralTokenID = 642383;
+    const collateralTokenCount = 10;
+    await collateralMultiToken.mint(
+      trader,
+      collateralTokenID,
+      collateralTokenCount,
+      "0x",
+      { from: minter }
+    );
+    assert.equal(
+      await collateralMultiToken.balanceOf(trader, collateralTokenID),
+      collateralTokenCount
+    );
+    await collateralMultiToken.safeTransferFrom(
+      trader,
+      conditionalTokens.address,
+      collateralTokenID,
+      collateralTokenCount,
+      web3.eth.abi.encodeParameters(
+        ["bytes32", "uint256[]"],
+        [conditionId, [0b01, 0b10]]
+      ),
+      { from: trader }
+    );
+
+    assert.equal(
+      (await collateralMultiToken.balanceOf(
+        conditionalTokens.address,
+        collateralTokenID
+      )).valueOf(),
+      collateralTokenCount
+    );
+    assert.equal(
+      await collateralMultiToken.balanceOf(trader, collateralTokenID),
+      0
+    );
+
+    assert.equal(
+      await conditionalTokens.balanceOf.call(
+        trader,
+        getPositionId(
+          collateralMultiToken.address,
+          collateralTokenID,
+          getCollectionId(conditionId, 0b01)
+        )
+      ),
+      collateralTokenCount
+    );
+    assert.equal(
+      await conditionalTokens.balanceOf.call(
+        trader,
+        getPositionId(
+          collateralMultiToken.address,
+          collateralTokenID,
+          getCollectionId(conditionId, 0b10)
+        )
+      ),
+      collateralTokenCount
+    );
+
+    // Outcome set in previous test case for condition
+    // await conditionalTokens.reportPayouts(questionId, [3, 7], { from: oracle });
+    assert.equal(
+      await conditionalTokens.payoutDenominator.call(conditionId),
+      10
+    );
+    assert.equal(
+      await conditionalTokens.payoutNumerators.call(conditionId, 0),
+      3
+    );
+    assert.equal(
+      await conditionalTokens.payoutNumerators.call(conditionId, 1),
+      7
+    );
+
+    await conditionalTokens.safeTransferFrom(
+      trader,
+      recipient,
+      getPositionId(
+        collateralMultiToken.address,
+        collateralTokenID,
+        getCollectionId(conditionId, 0b01)
+      ),
+      collateralTokenCount,
+      "0x",
+      { from: trader }
+    );
+
+    const buyerPayout = getParamFromTxEvent(
+      await conditionalTokens.redeem1155Positions(
+        collateralMultiToken.address,
+        collateralTokenID,
+        asciiToHex(0),
+        conditionId,
+        [0b10],
+        { from: trader }
+      ),
+      "payout",
+      null,
+      "PayoutRedemption"
+    );
+
+    assert.equal(buyerPayout.valueOf(), (collateralTokenCount * 7) / 10);
+    assert.equal(
+      await conditionalTokens.balanceOf.call(
+        recipient,
+        getPositionId(
+          collateralMultiToken.address,
+          collateralTokenID,
+          getCollectionId(conditionId, 0b01)
+        )
+      ),
+      collateralTokenCount
+    );
+    assert.equal(
+      await conditionalTokens.balanceOf.call(
+        trader,
+        getPositionId(
+          collateralMultiToken.address,
+          collateralTokenID,
+          getCollectionId(conditionId, 0b10)
+        )
+      ),
+      0
+    );
+
+    const recipientPayout = getParamFromTxEvent(
+      await conditionalTokens.redeem1155Positions(
+        collateralMultiToken.address,
+        collateralTokenID,
+        asciiToHex(0),
+        conditionId,
+        [0b01],
+        { from: recipient }
+      ),
+      "payout",
+      null,
+      "PayoutRedemption"
+    );
+
+    assert.equal(
+      (await collateralMultiToken.balanceOf(
+        recipient,
+        collateralTokenID
+      )).toNumber(),
+      recipientPayout.valueOf()
+    );
+    assert.equal(
+      (await collateralMultiToken.balanceOf(
+        trader,
+        collateralTokenID
+      )).toNumber(),
+      buyerPayout.valueOf()
+    );
+  });
+
   it("should redeem outcome tokens in more complex scenarios", async () => {
     // Setup a more complex scenario
     const _oracle = accounts[1];

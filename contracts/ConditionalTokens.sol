@@ -72,6 +72,15 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         uint[] indexSets,
         uint payout
     );
+    event PayoutRedemption(
+        address indexed redeemer,
+        IERC1155 collateralToken,
+        uint collateralTokenID,
+        bytes32 indexed parentCollectionId,
+        bytes32 conditionId,
+        uint[] indexSets,
+        uint payout
+    );
 
     enum CollateralTypes { ERC20, ERC1155 }
 
@@ -351,6 +360,51 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
             }
         }
         emit PayoutRedemption(msg.sender, collateralToken, parentCollectionId, conditionId, indexSets, totalPayout);
+    }
+
+    function redeem1155Positions(
+        IERC1155 collateralToken,
+        uint collateralTokenID,
+        bytes32 parentCollectionId,
+        bytes32 conditionId,
+        uint[] calldata indexSets
+    ) external {
+        uint den = payoutDenominator[conditionId];
+        require(den > 0, "result for condition not received yet");
+        uint outcomeSlotCount = payoutNumerators[conditionId].length;
+        require(outcomeSlotCount > 0, "condition not prepared yet");
+
+        uint totalPayout = 0;
+
+        uint fullIndexSet = (1 << outcomeSlotCount) - 1;
+        for (uint i = 0; i < indexSets.length; i++) {
+            uint indexSet = indexSets[i];
+            require(indexSet > 0 && indexSet < fullIndexSet, "got invalid index set");
+            uint positionId = getPositionId(collateralToken, collateralTokenID,
+                getCollectionId(parentCollectionId, conditionId, indexSet));
+
+            uint payoutNumerator = 0;
+            for (uint j = 0; j < outcomeSlotCount; j++) {
+                if (indexSet & (1 << j) != 0) {
+                    payoutNumerator = payoutNumerator.add(payoutNumerators[conditionId][j]);
+                }
+            }
+
+            uint payoutStake = balanceOf(msg.sender, positionId);
+            if (payoutStake > 0) {
+                totalPayout = totalPayout.add(payoutStake.mul(payoutNumerator).div(den));
+                _burn(msg.sender, positionId, payoutStake);
+            }
+        }
+
+        if (totalPayout > 0) {
+            if (parentCollectionId == bytes32(0)) {
+                collateralToken.safeTransferFrom(address(this), msg.sender, collateralTokenID, totalPayout, "");
+            } else {
+                _mint(msg.sender, getPositionId(collateralToken, collateralTokenID, parentCollectionId), totalPayout, "");
+            }
+        }
+        emit PayoutRedemption(msg.sender, collateralToken, collateralTokenID, parentCollectionId, conditionId, indexSets, totalPayout);
     }
 
     function onERC1155Received(
