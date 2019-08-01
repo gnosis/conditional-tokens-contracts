@@ -88,7 +88,11 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
 
     /// Mapping key is an condition ID. Value represents numerators of the payout vector associated with the condition. This array is initialized with a length equal to the outcome slot count.
     mapping(bytes32 => uint[]) public payoutNumerators;
-    mapping(bytes32 => uint) public payoutDenominatorForCondition;
+    mapping(bytes32 => uint) _payoutDenominator;
+
+    function payoutDenominator(bytes32 conditionId) external view returns (uint) {
+        return _payoutDenominator[conditionId];
+    }
 
     /// @dev This function prepares a condition by initializing a payout vector associated with the condition.
     /// @param oracle The account assigned to report the result for the prepared condition.
@@ -102,7 +106,7 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         bytes32 conditionId = getConditionId(oracle, questionId, payoutDenominator, outcomeSlotCount);
         require(payoutNumerators[conditionId].length == 0, "condition already prepared");
         payoutNumerators[conditionId] = new uint[](outcomeSlotCount);
-        payoutDenominatorForCondition[conditionId] = payoutDenominator;
+        _payoutDenominator[conditionId] = payoutDenominator;
         emit ConditionPreparation(conditionId, oracle, questionId, payoutDenominator, outcomeSlotCount);
     }
 
@@ -328,7 +332,7 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
     }
 
     function redeemPositions(IERC20 collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint[] calldata indexSets) external {
-        uint den = payoutDenominatorForCondition[conditionId];
+        uint den = _payoutDenominator[conditionId];
         require(den > 0, "payout denominator for condition not set yet");
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0 && den > 0, "condition not prepared yet");
@@ -373,7 +377,7 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         bytes32 conditionId,
         uint[] calldata indexSets
     ) external {
-        uint den = payoutDenominatorForCondition[conditionId];
+        uint den = _payoutDenominator[conditionId];
         require(den > 0, "payout denominator for condition not set yet");
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0 && den > 0, "condition not prepared yet");

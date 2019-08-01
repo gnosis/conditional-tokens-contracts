@@ -124,9 +124,7 @@ contract("ConditionalTokens", function(accounts) {
       outcomeSlotCount
     );
     assert.equal(
-      (await conditionalTokens.payoutDenominatorForCondition(
-        conditionId
-      )).valueOf(),
+      (await conditionalTokens.payoutDenominator(conditionId)).valueOf(),
       payoutDenominator
     );
   });
@@ -590,10 +588,7 @@ contract("ConditionalTokens", function(accounts) {
       [3, 7],
       { from: oracle }
     );
-    assert.equal(
-      await conditionalTokens.payoutDenominatorForCondition(conditionId),
-      10
-    );
+    assert.equal(await conditionalTokens.payoutDenominator(conditionId), 10);
     assert.equal(
       await conditionalTokens.payoutNumerators.call(conditionId, 0),
       3
@@ -739,10 +734,7 @@ contract("ConditionalTokens", function(accounts) {
 
     // Outcome set in previous test case for condition
     // await conditionalTokens.reportPayouts(questionId, [3, 7], { from: oracle });
-    assert.equal(
-      await conditionalTokens.payoutDenominatorForCondition(conditionId),
-      10
-    );
+    assert.equal(await conditionalTokens.payoutDenominator(conditionId), 10);
     assert.equal(
       await conditionalTokens.payoutNumerators.call(conditionId, 0),
       3
@@ -861,9 +853,7 @@ contract("ConditionalTokens", function(accounts) {
       );
     }
     assert.equal(
-      (await conditionalTokens.payoutDenominatorForCondition(
-        _conditionId
-      )).valueOf(),
+      (await conditionalTokens.payoutDenominator(_conditionId)).valueOf(),
       _payoutDenominator
     );
     assert.notEqual(conditionId, _conditionId);
@@ -927,7 +917,7 @@ contract("ConditionalTokens", function(accounts) {
       }
     );
     assert.equal(
-      await conditionalTokens.payoutDenominatorForCondition
+      await conditionalTokens.payoutDenominator
         .call(_conditionId)
         .then(res => res.toString()),
       1000
@@ -951,7 +941,7 @@ contract("ConditionalTokens", function(accounts) {
         payoutsForOutcomeSlots[i]
       );
       assert.equal(
-        await conditionalTokens.payoutDenominatorForCondition(_conditionId),
+        await conditionalTokens.payoutDenominator(_conditionId),
         1000
       );
     }
@@ -1624,9 +1614,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
     );
 
     assert.equal(
-      await conditionalTokens
-        .payoutDenominatorForCondition(conditionId3)
-        .valueOf(),
+      await conditionalTokens.payoutDenominator(conditionId3).valueOf(),
       1000
     );
     // await assertRejects(
@@ -1778,9 +1766,7 @@ contract("Complex splitting and merging scenario #1.", function(accounts) {
       }
     );
     assert.equal(
-      await conditionalTokens
-        .payoutDenominatorForCondition(conditionId1)
-        .valueOf(),
+      await conditionalTokens.payoutDenominator(conditionId1).valueOf(),
       1
     );
 
