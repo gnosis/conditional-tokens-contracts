@@ -112,12 +112,13 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
 
     /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, payoutDenominator, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, payoutDenominator is the final sum of the payout numerators and also one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
     /// @param questionId The question ID the oracle is answering for
+    /// @param payoutDenominator What the payouts reported by the oracle must eventually sum up to, used to derive the condition ID
     /// @param payouts The oracle's answer
     function reportPayouts(bytes32 questionId, uint payoutDenominator, uint[] calldata payouts) external {
         uint outcomeSlotCount = payouts.length;
         require(outcomeSlotCount > 1, "there should be more than one outcome slot");
         bytes32 conditionId = getConditionId(msg.sender, questionId, payoutDenominator, outcomeSlotCount);
-        require(payoutNumerators[conditionId].length == outcomeSlotCount, "condition not prepared or found");
+        require(payoutNumerators[conditionId].length == outcomeSlotCount && _payoutDenominator[conditionId] == payoutDenominator, "condition not prepared or found");
         uint den = 0;
         for (uint i = 0; i < outcomeSlotCount; i++) {
             uint num = payouts[i];
