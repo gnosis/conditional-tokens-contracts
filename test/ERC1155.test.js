@@ -9,7 +9,7 @@ const { ZERO_ADDRESS } = constants;
 const { shouldBehaveLikeERC1155 } = require("./ERC1155.behavior");
 const ERC1155Mock = artifacts.require("ERC1155Mock");
 
-contract("ERC1155", function([, creator, tokenOwner, ...accounts]) {
+contract.skip("ERC1155", function([, creator, tokenOwner, ...accounts]) {
   beforeEach(async function() {
     this.token = await ERC1155Mock.new({ from: creator });
   });

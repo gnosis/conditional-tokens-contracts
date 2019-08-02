@@ -1,4 +1,5 @@
 require("chai/register-should");
+require("chai").use(require("chai-as-promised"));
 
 const config = {
   networks: {
