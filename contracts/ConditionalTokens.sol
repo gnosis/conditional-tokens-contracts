@@ -208,6 +208,7 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         uint[] calldata partition,
         uint amount
     ) external {
+        require(partition.length > 1, "got empty or singleton partition");
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0, "condition not prepared yet");
 
@@ -257,6 +258,7 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         uint[] calldata partition,
         uint amount
     ) external {
+        require(partition.length > 1, "got empty or singleton partition");
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0, "condition not prepared yet");
 
@@ -309,6 +311,7 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         uint[] memory partition,
         uint amount
     ) private returns (uint fullIndexSet, uint freeIndexSet) {
+        require(partition.length > 1, "got empty or singleton partition");
         {
             uint outcomeSlotCount = payoutNumerators[conditionId].length;
             require(outcomeSlotCount > 0, "condition not prepared yet");
@@ -430,6 +433,8 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
             (bytes32 conditionId, uint[] memory partition) = abi.decode(data, (bytes32, uint[]));
             (uint fullIndexSet, uint freeIndexSet) = mintSet(operator, CollateralTypes.ERC1155, msg.sender, id, bytes32(0), conditionId, partition, value);
             require(freeIndexSet == 0, "must partition entire outcome slot set");
+
+            emit PositionSplit(operator, IERC1155(msg.sender), id, bytes32(0), conditionId, partition, value);
         }
 
         return this.onERC1155Received.selector;

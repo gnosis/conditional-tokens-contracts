@@ -253,7 +253,7 @@ contract("ConditionalTokens", function(accounts) {
             ).should.be.rejected;
           });
 
-          it.skip("should not split if given an incomplete singleton partition", async function() {
+          it("should not split if given an incomplete singleton partition", async function() {
             await doSplit.call(
               this,
               conditionId,
@@ -274,7 +274,7 @@ contract("ConditionalTokens", function(accounts) {
               ));
             });
 
-            it.skip("should emit a PositionSplit event", async function() {
+            it("should emit a PositionSplit event", async function() {
               await expectEvent.inTransaction(
                 this.splitTx,
                 ConditionalTokens,
