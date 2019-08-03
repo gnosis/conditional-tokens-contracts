@@ -1,6 +1,8 @@
 pragma solidity ^0.5.0;
 
-contract Forwarder {
+import { ERC1155TokenReceiver } from "../contracts/ERC1155/ERC1155TokenReceiver.sol";
+
+contract Forwarder is ERC1155TokenReceiver {
     function call(address to, bytes calldata data) external {
         (bool success, bytes memory retData) = to.call(data);
         require(success, string(retData));
