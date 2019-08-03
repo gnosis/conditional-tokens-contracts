@@ -119,16 +119,35 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         require(outcomeSlotCount > 1, "there should be more than one outcome slot");
         bytes32 conditionId = getConditionId(msg.sender, questionId, payoutDenominator, outcomeSlotCount);
         require(payoutNumerators[conditionId].length == outcomeSlotCount && _payoutDenominator[conditionId] == payoutDenominator, "condition not prepared or found");
-        uint den = 0;
-        for (uint i = 0; i < outcomeSlotCount; i++) {
-            uint num = payouts[i];
-            den = den.add(num);
 
-            require(payoutNumerators[conditionId][i] <= num, "can't lower existing payout numerator");
-            payoutNumerators[conditionId][i] = num;
+        uint emptySlots = 0;
+        uint den = 0;
+        bool didUpdate = false;
+        for (uint i = 0; i < outcomeSlotCount; i++) {
+            uint oldNum = payoutNumerators[conditionId][i];
+            uint newNum = payouts[i];
+            if(oldNum == 0) {
+                if(newNum == 0)
+                    emptySlots++;
+                else {
+                    payoutNumerators[conditionId][i] = newNum;
+                    den = den.add(newNum);
+                    didUpdate = true;
+                }
+            } else {
+                require(oldNum == newNum, "can't change existing payout");
+                den = den.add(newNum);
+            }
+
+            payoutNumerators[conditionId][i] = newNum;
         }
+
         require(den > 0, "payout is all zeroes");
-        require(den <= payoutDenominator, "payouts can't exceed denominator");
+        require(didUpdate, "didn't update anything");
+        if(emptySlots > 1)
+            require(den <= payoutDenominator, "payouts can't exceed denominator");
+        else
+            require(den == payoutDenominator, "final report must sum up to denominator");
         emit ConditionResolution(conditionId, msg.sender, questionId, outcomeSlotCount, payoutNumerators[conditionId]);
     }
 
@@ -341,6 +360,15 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0 && den > 0, "condition not prepared yet");
 
+        bool isCompletelyResolved;
+        {
+            uint denSoFar;
+            for (uint j = 0; j < outcomeSlotCount; j++) {
+                denSoFar = denSoFar.add(payoutNumerators[conditionId][j]);
+            }
+            isCompletelyResolved = (den == denSoFar);
+        }
+
         uint totalPayout = 0;
 
         uint fullIndexSet = (1 << outcomeSlotCount) - 1;
@@ -353,6 +381,8 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
             uint payoutNumerator = 0;
             for (uint j = 0; j < outcomeSlotCount; j++) {
                 if (indexSet & (1 << j) != 0) {
+                    if(!isCompletelyResolved)
+                        require(payoutNumerators[conditionId][j] > 0, "can't redeem zero slots yet");
                     payoutNumerator = payoutNumerator.add(payoutNumerators[conditionId][j]);
                 }
             }
@@ -386,6 +416,15 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0 && den > 0, "condition not prepared yet");
 
+        bool isCompletelyResolved;
+        {
+            uint denSoFar;
+            for (uint j = 0; j < outcomeSlotCount; j++) {
+                denSoFar = denSoFar.add(payoutNumerators[conditionId][j]);
+            }
+            isCompletelyResolved = (den == denSoFar);
+        }
+
         uint totalPayout = 0;
 
         uint fullIndexSet = (1 << outcomeSlotCount) - 1;
@@ -398,6 +437,8 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
             uint payoutNumerator = 0;
             for (uint j = 0; j < outcomeSlotCount; j++) {
                 if (indexSet & (1 << j) != 0) {
+                    if(!isCompletelyResolved)
+                        require(payoutNumerators[conditionId][j] > 0, "can't redeem zero slots yet");
                     payoutNumerator = payoutNumerator.add(payoutNumerators[conditionId][j]);
                 }
             }
