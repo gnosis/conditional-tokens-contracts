@@ -834,6 +834,81 @@ contract("ConditionalTokens", function(accounts) {
           }
         });
       });
+
+      context("with direct ERC-1155 batch transfers", function() {
+        const collateralTokenID = toBN(randomHex(32));
+
+        shouldWorkWithSplittingAndMerging({
+          async prepareTokens() {
+            this.collateralMultiToken = await ERC1155Mock.new({
+              from: minter
+            });
+            await this.collateralMultiToken.mint(
+              trader.address,
+              collateralTokenID,
+              collateralTokenCount,
+              "0x",
+              { from: minter }
+            );
+          },
+          async doSplit(conditionId, partition, amount) {
+            return await trader.execCall(
+              this.collateralMultiToken,
+              "safeBatchTransferFrom",
+              trader.address,
+              this.conditionalTokens.address,
+              [collateralTokenID],
+              [amount],
+              web3.eth.abi.encodeParameters(
+                ["bytes32", "uint256[]"],
+                [conditionId, partition]
+              )
+            );
+          },
+          async doMerge(conditionId, partition, amount) {
+            return await trader.execCall(
+              this.conditionalTokens,
+              "merge1155Positions",
+              this.collateralMultiToken.address,
+              collateralTokenID,
+              NULL_BYTES32,
+              conditionId,
+              partition,
+              amount
+            );
+          },
+          async doRedeem(conditionId, indexSets) {
+            return await trader.execCall(
+              this.conditionalTokens,
+              "redeem1155Positions",
+              this.collateralMultiToken.address,
+              collateralTokenID,
+              NULL_BYTES32,
+              conditionId,
+              indexSets
+            );
+          },
+          async collateralBalanceOf(address) {
+            return await this.collateralMultiToken.balanceOf(
+              address,
+              collateralTokenID
+            );
+          },
+          getPositionForCollection(collectionId) {
+            return getPositionId(
+              this.collateralMultiToken.address,
+              collateralTokenID,
+              collectionId
+            );
+          },
+          getExpectedEventCollateralProperties() {
+            return {
+              collateralToken: this.collateralMultiToken.address,
+              collateralTokenID
+            };
+          }
+        });
+      });
     }
 
     context("with an EOA", function() {

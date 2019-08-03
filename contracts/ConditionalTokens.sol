@@ -450,7 +450,23 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         external
         returns (bytes4)
     {
-        revert("operation not supported");
+        if(operator != address(this)) {
+            require(ids.length == values.length, "received values mismatch");
+            (bytes32 conditionId, uint[] memory partition) = abi.decode(data, (bytes32, uint[]));
+
+            for(uint i = 0; i < ids.length; i++) {
+                uint freeIndexSet;
+                {
+                    uint tmp = values[i];
+                    (tmp, freeIndexSet) = mintSet(operator, CollateralTypes.ERC1155, msg.sender, ids[i], bytes32(0), conditionId, partition, tmp);
+                }
+                require(freeIndexSet == 0, "must partition entire outcome slot set");
+
+                emit PositionSplit(operator, IERC1155(msg.sender), ids[i], bytes32(0), conditionId, partition, values[i]);
+            }
+        }
+
+        return this.onERC1155BatchReceived.selector;
     }
 
     /// @dev Gets the outcome slot count of a condition.
