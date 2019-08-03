@@ -84,8 +84,6 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         uint payout
     );
 
-    enum CollateralTypes { ERC20, ERC1155 }
-
     /// Mapping key is an condition ID. Value represents numerators of the payout vector associated with the condition. This array is initialized with a length equal to the outcome slot count.
     mapping(bytes32 => uint[]) public payoutNumerators;
     mapping(bytes32 => uint) _payoutDenominator;
@@ -164,7 +162,24 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         uint[] calldata partition,
         uint amount
     ) external {
-        (uint fullIndexSet, uint freeIndexSet) = mintSet(msg.sender, CollateralTypes.ERC20, address(collateralToken), 0, parentCollectionId, conditionId, partition, amount);
+        require(partition.length > 1, "got empty or singleton partition");
+        uint outcomeSlotCount = payoutNumerators[conditionId].length;
+        require(outcomeSlotCount > 0, "condition not prepared yet");
+
+        uint fullIndexSet = (1 << outcomeSlotCount) - 1;
+        uint freeIndexSet = fullIndexSet;
+        for (uint i = 0; i < partition.length; i++) {
+            uint indexSet = partition[i];
+            require(indexSet > 0 && indexSet < fullIndexSet, "got invalid index set");
+            require((indexSet & freeIndexSet) == indexSet, "partition not disjoint");
+            freeIndexSet ^= indexSet;
+            _mint(
+                msg.sender,
+                getPositionId(collateralToken, getCollectionId(parentCollectionId, conditionId, indexSet)),
+                amount,
+                ""
+            );
+        }
 
         if (freeIndexSet == 0) {
             if (parentCollectionId == bytes32(0)) {
@@ -196,7 +211,25 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         uint[] calldata partition,
         uint amount
     ) external {
-        (uint fullIndexSet, uint freeIndexSet) = mintSet(msg.sender, CollateralTypes.ERC1155, address(collateralToken), collateralTokenID, parentCollectionId, conditionId, partition, amount);
+        require(partition.length > 1, "got empty or singleton partition");
+        uint outcomeSlotCount = payoutNumerators[conditionId].length;
+        require(outcomeSlotCount > 0, "condition not prepared yet");
+
+        uint fullIndexSet = (1 << outcomeSlotCount) - 1;
+        uint freeIndexSet = fullIndexSet;
+        for (uint i = 0; i < partition.length; i++) {
+            uint indexSet = partition[i];
+            require(indexSet > 0 && indexSet < fullIndexSet, "got invalid index set");
+            require((indexSet & freeIndexSet) == indexSet, "partition not disjoint");
+            freeIndexSet ^= indexSet;
+            _mint(
+                msg.sender,
+                getPositionId(collateralToken, collateralTokenID,
+                    getCollectionId(parentCollectionId, conditionId, indexSet)),
+                amount,
+                ""
+            );
+        }
 
         if (freeIndexSet == 0) {
             if (parentCollectionId == bytes32(0)) {
@@ -320,40 +353,6 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         emit PositionsMerge(msg.sender, collateralToken, collateralTokenID, parentCollectionId, conditionId, partition, amount);
     }
 
-    function mintSet(
-        address recipient,
-        CollateralTypes collateralType,
-        address collateralToken,
-        uint collateralTokenID,
-        bytes32 parentCollectionId,
-        bytes32 conditionId,
-        uint[] memory partition,
-        uint amount
-    ) private returns (uint fullIndexSet, uint freeIndexSet) {
-        require(partition.length > 1, "got empty or singleton partition");
-        {
-            uint outcomeSlotCount = payoutNumerators[conditionId].length;
-            require(outcomeSlotCount > 0, "condition not prepared yet");
-            fullIndexSet = (1 << outcomeSlotCount) - 1;
-            freeIndexSet = fullIndexSet;
-        }
-
-        for (uint i = 0; i < partition.length; i++) {
-            uint indexSet = partition[i];
-            require(indexSet > 0 && indexSet < fullIndexSet, "got invalid index set");
-            require((indexSet & freeIndexSet) == indexSet, "partition not disjoint");
-            freeIndexSet ^= indexSet;
-            _mint(
-                recipient,
-                collateralType == CollateralTypes.ERC20 ?
-                    getPositionId(IERC20(collateralToken), getCollectionId(parentCollectionId, conditionId, indexSet)) :
-                    getPositionId(IERC1155(collateralToken), collateralTokenID, getCollectionId(parentCollectionId, conditionId, indexSet)),
-                amount,
-                ""
-            );
-        }
-    }
-
     function redeemPositions(IERC20 collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint[] calldata indexSets) external {
         uint den = _payoutDenominator[conditionId];
         require(den > 0, "payout denominator for condition not set yet");
@@ -472,7 +471,30 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
     {
         if(operator != address(this)) {
             (bytes32 conditionId, uint[] memory partition) = abi.decode(data, (bytes32, uint[]));
-            (uint fullIndexSet, uint freeIndexSet) = mintSet(operator, CollateralTypes.ERC1155, msg.sender, id, bytes32(0), conditionId, partition, value);
+
+            require(partition.length > 1, "got empty or singleton partition");
+            uint fullIndexSet;
+            uint freeIndexSet;
+            {
+                uint outcomeSlotCount = payoutNumerators[conditionId].length;
+                require(outcomeSlotCount > 0, "condition not prepared yet");
+                fullIndexSet = (1 << outcomeSlotCount) - 1;
+                freeIndexSet = fullIndexSet;
+            }
+
+            for (uint i = 0; i < partition.length; i++) {
+                uint indexSet = partition[i];
+                require(indexSet > 0 && indexSet < fullIndexSet, "got invalid index set");
+                require((indexSet & freeIndexSet) == indexSet, "partition not disjoint");
+                freeIndexSet ^= indexSet;
+                _mint(
+                    operator,
+                    getPositionId(IERC1155(msg.sender), id, getCollectionId(bytes32(0), conditionId, indexSet)),
+                    value,
+                    ""
+                );
+            }
+
             require(freeIndexSet == 0, "must partition entire outcome slot set");
 
             emit PositionSplit(operator, IERC1155(msg.sender), id, bytes32(0), conditionId, partition, value);
@@ -493,17 +515,46 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
     {
         if(operator != address(this)) {
             require(ids.length == values.length, "received values mismatch");
-            (bytes32 conditionId, uint[] memory partition) = abi.decode(data, (bytes32, uint[]));
+            bytes32[] memory collectionIds;
+            {
+                (bytes32 conditionId, uint[] memory partition) = abi.decode(data, (bytes32, uint[]));
+                require(partition.length > 1, "got empty or singleton partition");
+
+                collectionIds = new bytes32[](partition.length);
+                {
+                    uint fullIndexSet;
+                    uint freeIndexSet;
+                    {
+                        uint outcomeSlotCount = payoutNumerators[conditionId].length;
+                        require(outcomeSlotCount > 0, "condition not prepared yet");
+                        fullIndexSet = (1 << outcomeSlotCount) - 1;
+                        freeIndexSet = fullIndexSet;
+                    }
+
+                    for (uint j = 0; j < partition.length; j++) {
+                        require(partition[j] > 0 && partition[j] < fullIndexSet, "got invalid index set");
+                        require((partition[j] & freeIndexSet) == partition[j], "partition not disjoint");
+                        freeIndexSet ^= partition[j];
+                        collectionIds[j] = getCollectionId(bytes32(0), conditionId, partition[j]);
+                    }
+
+                    require(freeIndexSet == 0, "must partition entire outcome slot set");
+                }
+
+                for(uint i = 0; i < ids.length; i++) {
+                    emit PositionSplit(operator, IERC1155(msg.sender), ids[i], bytes32(0), conditionId, partition, values[i]);
+                }
+            }
 
             for(uint i = 0; i < ids.length; i++) {
-                uint freeIndexSet;
-                {
-                    uint tmp = values[i];
-                    (tmp, freeIndexSet) = mintSet(operator, CollateralTypes.ERC1155, msg.sender, ids[i], bytes32(0), conditionId, partition, tmp);
+                for (uint j = 0; j < collectionIds.length; j++) {
+                    _mint(
+                        operator,
+                        getPositionId(IERC1155(msg.sender), ids[i], collectionIds[j]),
+                        values[i],
+                        ""
+                    );
                 }
-                require(freeIndexSet == 0, "must partition entire outcome slot set");
-
-                emit PositionSplit(operator, IERC1155(msg.sender), ids[i], bytes32(0), conditionId, partition, values[i]);
             }
         }
 
