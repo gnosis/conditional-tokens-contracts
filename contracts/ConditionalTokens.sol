@@ -136,8 +136,6 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
                 require(oldNum == newNum, "can't change existing payout");
                 den = den.add(newNum);
             }
-
-            payoutNumerators[conditionId][i] = newNum;
         }
 
         require(den > 0, "payout is all zeroes");
@@ -355,7 +353,6 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
 
     function redeemPositions(IERC20 collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint[] calldata indexSets) external {
         uint den = _payoutDenominator[conditionId];
-        require(den > 0, "payout denominator for condition not set yet");
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0 && den > 0, "condition not prepared yet");
 
@@ -411,7 +408,6 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         uint[] calldata indexSets
     ) external {
         uint den = _payoutDenominator[conditionId];
-        require(den > 0, "payout denominator for condition not set yet");
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0 && den > 0, "condition not prepared yet");
 
