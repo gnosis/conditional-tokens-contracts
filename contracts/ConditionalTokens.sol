@@ -84,8 +84,6 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         uint payout
     );
 
-    enum CollateralTypes { ERC20, ERC1155 }
-
     /// Mapping key is an condition ID. Value represents numerators of the payout vector associated with the condition. This array is initialized with a length equal to the outcome slot count.
     mapping(bytes32 => uint[]) public payoutNumerators;
     mapping(bytes32 => uint) _payoutDenominator;
@@ -119,16 +117,33 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         require(outcomeSlotCount > 1, "there should be more than one outcome slot");
         bytes32 conditionId = getConditionId(msg.sender, questionId, payoutDenominator, outcomeSlotCount);
         require(payoutNumerators[conditionId].length == outcomeSlotCount && _payoutDenominator[conditionId] == payoutDenominator, "condition not prepared or found");
-        uint den = 0;
-        for (uint i = 0; i < outcomeSlotCount; i++) {
-            uint num = payouts[i];
-            den = den.add(num);
 
-            require(payoutNumerators[conditionId][i] <= num, "can't lower existing payout numerator");
-            payoutNumerators[conditionId][i] = num;
+        uint emptySlots = 0;
+        uint den = 0;
+        bool didUpdate = false;
+        for (uint i = 0; i < outcomeSlotCount; i++) {
+            uint oldNum = payoutNumerators[conditionId][i];
+            uint newNum = payouts[i];
+            if(oldNum == 0) {
+                if(newNum == 0)
+                    emptySlots++;
+                else {
+                    payoutNumerators[conditionId][i] = newNum;
+                    den = den.add(newNum);
+                    didUpdate = true;
+                }
+            } else {
+                require(oldNum == newNum, "can't change existing payout");
+                den = den.add(newNum);
+            }
         }
+
         require(den > 0, "payout is all zeroes");
-        require(den <= payoutDenominator, "payouts can't exceed denominator");
+        require(didUpdate, "didn't update anything");
+        if(emptySlots > 1)
+            require(den <= payoutDenominator, "payouts can't exceed denominator");
+        else
+            require(den == payoutDenominator, "final report must sum up to denominator");
         emit ConditionResolution(conditionId, msg.sender, questionId, outcomeSlotCount, payoutNumerators[conditionId]);
     }
 
@@ -145,7 +160,24 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         uint[] calldata partition,
         uint amount
     ) external {
-        (uint fullIndexSet, uint freeIndexSet) = mintSet(msg.sender, CollateralTypes.ERC20, address(collateralToken), 0, parentCollectionId, conditionId, partition, amount);
+        require(partition.length > 1, "got empty or singleton partition");
+        uint outcomeSlotCount = payoutNumerators[conditionId].length;
+        require(outcomeSlotCount > 0, "condition not prepared yet");
+
+        uint fullIndexSet = (1 << outcomeSlotCount) - 1;
+        uint freeIndexSet = fullIndexSet;
+        for (uint i = 0; i < partition.length; i++) {
+            uint indexSet = partition[i];
+            require(indexSet > 0 && indexSet < fullIndexSet, "got invalid index set");
+            require((indexSet & freeIndexSet) == indexSet, "partition not disjoint");
+            freeIndexSet ^= indexSet;
+            _mint(
+                msg.sender,
+                getPositionId(collateralToken, getCollectionId(parentCollectionId, conditionId, indexSet)),
+                amount,
+                ""
+            );
+        }
 
         if (freeIndexSet == 0) {
             if (parentCollectionId == bytes32(0)) {
@@ -177,7 +209,25 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         uint[] calldata partition,
         uint amount
     ) external {
-        (uint fullIndexSet, uint freeIndexSet) = mintSet(msg.sender, CollateralTypes.ERC1155, address(collateralToken), collateralTokenID, parentCollectionId, conditionId, partition, amount);
+        require(partition.length > 1, "got empty or singleton partition");
+        uint outcomeSlotCount = payoutNumerators[conditionId].length;
+        require(outcomeSlotCount > 0, "condition not prepared yet");
+
+        uint fullIndexSet = (1 << outcomeSlotCount) - 1;
+        uint freeIndexSet = fullIndexSet;
+        for (uint i = 0; i < partition.length; i++) {
+            uint indexSet = partition[i];
+            require(indexSet > 0 && indexSet < fullIndexSet, "got invalid index set");
+            require((indexSet & freeIndexSet) == indexSet, "partition not disjoint");
+            freeIndexSet ^= indexSet;
+            _mint(
+                msg.sender,
+                getPositionId(collateralToken, collateralTokenID,
+                    getCollectionId(parentCollectionId, conditionId, indexSet)),
+                amount,
+                ""
+            );
+        }
 
         if (freeIndexSet == 0) {
             if (parentCollectionId == bytes32(0)) {
@@ -208,6 +258,7 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         uint[] calldata partition,
         uint amount
     ) external {
+        require(partition.length > 1, "got empty or singleton partition");
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0, "condition not prepared yet");
 
@@ -257,6 +308,7 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         uint[] calldata partition,
         uint amount
     ) external {
+        require(partition.length > 1, "got empty or singleton partition");
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0, "condition not prepared yet");
 
@@ -299,44 +351,19 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         emit PositionsMerge(msg.sender, collateralToken, collateralTokenID, parentCollectionId, conditionId, partition, amount);
     }
 
-    function mintSet(
-        address recipient,
-        CollateralTypes collateralType,
-        address collateralToken,
-        uint collateralTokenID,
-        bytes32 parentCollectionId,
-        bytes32 conditionId,
-        uint[] memory partition,
-        uint amount
-    ) private returns (uint fullIndexSet, uint freeIndexSet) {
-        {
-            uint outcomeSlotCount = payoutNumerators[conditionId].length;
-            require(outcomeSlotCount > 0, "condition not prepared yet");
-            fullIndexSet = (1 << outcomeSlotCount) - 1;
-            freeIndexSet = fullIndexSet;
-        }
-
-        for (uint i = 0; i < partition.length; i++) {
-            uint indexSet = partition[i];
-            require(indexSet > 0 && indexSet < fullIndexSet, "got invalid index set");
-            require((indexSet & freeIndexSet) == indexSet, "partition not disjoint");
-            freeIndexSet ^= indexSet;
-            _mint(
-                recipient,
-                collateralType == CollateralTypes.ERC20 ?
-                    getPositionId(IERC20(collateralToken), getCollectionId(parentCollectionId, conditionId, indexSet)) :
-                    getPositionId(IERC1155(collateralToken), collateralTokenID, getCollectionId(parentCollectionId, conditionId, indexSet)),
-                amount,
-                ""
-            );
-        }
-    }
-
     function redeemPositions(IERC20 collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint[] calldata indexSets) external {
         uint den = _payoutDenominator[conditionId];
-        require(den > 0, "payout denominator for condition not set yet");
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0 && den > 0, "condition not prepared yet");
+
+        bool isCompletelyResolved;
+        {
+            uint denSoFar;
+            for (uint j = 0; j < outcomeSlotCount; j++) {
+                denSoFar = denSoFar.add(payoutNumerators[conditionId][j]);
+            }
+            isCompletelyResolved = (den == denSoFar);
+        }
 
         uint totalPayout = 0;
 
@@ -350,6 +377,8 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
             uint payoutNumerator = 0;
             for (uint j = 0; j < outcomeSlotCount; j++) {
                 if (indexSet & (1 << j) != 0) {
+                    if(!isCompletelyResolved)
+                        require(payoutNumerators[conditionId][j] > 0, "can't redeem zero slots yet");
                     payoutNumerator = payoutNumerator.add(payoutNumerators[conditionId][j]);
                 }
             }
@@ -379,9 +408,17 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         uint[] calldata indexSets
     ) external {
         uint den = _payoutDenominator[conditionId];
-        require(den > 0, "payout denominator for condition not set yet");
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0 && den > 0, "condition not prepared yet");
+
+        bool isCompletelyResolved;
+        {
+            uint denSoFar;
+            for (uint j = 0; j < outcomeSlotCount; j++) {
+                denSoFar = denSoFar.add(payoutNumerators[conditionId][j]);
+            }
+            isCompletelyResolved = (den == denSoFar);
+        }
 
         uint totalPayout = 0;
 
@@ -395,6 +432,8 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
             uint payoutNumerator = 0;
             for (uint j = 0; j < outcomeSlotCount; j++) {
                 if (indexSet & (1 << j) != 0) {
+                    if(!isCompletelyResolved)
+                        require(payoutNumerators[conditionId][j] > 0, "can't redeem zero slots yet");
                     payoutNumerator = payoutNumerator.add(payoutNumerators[conditionId][j]);
                 }
             }
@@ -428,8 +467,33 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
     {
         if(operator != address(this)) {
             (bytes32 conditionId, uint[] memory partition) = abi.decode(data, (bytes32, uint[]));
-            (uint fullIndexSet, uint freeIndexSet) = mintSet(operator, CollateralTypes.ERC1155, msg.sender, id, bytes32(0), conditionId, partition, value);
+
+            require(partition.length > 1, "got empty or singleton partition");
+            uint fullIndexSet;
+            uint freeIndexSet;
+            {
+                uint outcomeSlotCount = payoutNumerators[conditionId].length;
+                require(outcomeSlotCount > 0, "condition not prepared yet");
+                fullIndexSet = (1 << outcomeSlotCount) - 1;
+                freeIndexSet = fullIndexSet;
+            }
+
+            for (uint i = 0; i < partition.length; i++) {
+                uint indexSet = partition[i];
+                require(indexSet > 0 && indexSet < fullIndexSet, "got invalid index set");
+                require((indexSet & freeIndexSet) == indexSet, "partition not disjoint");
+                freeIndexSet ^= indexSet;
+                _mint(
+                    operator,
+                    getPositionId(IERC1155(msg.sender), id, getCollectionId(bytes32(0), conditionId, indexSet)),
+                    value,
+                    ""
+                );
+            }
+
             require(freeIndexSet == 0, "must partition entire outcome slot set");
+
+            emit PositionSplit(operator, IERC1155(msg.sender), id, bytes32(0), conditionId, partition, value);
         }
 
         return this.onERC1155Received.selector;
@@ -445,7 +509,52 @@ contract ConditionalTokens is ERC1155, ERC1155TokenReceiver {
         external
         returns (bytes4)
     {
-        revert("operation not supported");
+        if(operator != address(this)) {
+            require(ids.length == values.length, "received values mismatch");
+            bytes32[] memory collectionIds;
+            {
+                (bytes32 conditionId, uint[] memory partition) = abi.decode(data, (bytes32, uint[]));
+                require(partition.length > 1, "got empty or singleton partition");
+
+                collectionIds = new bytes32[](partition.length);
+                {
+                    uint fullIndexSet;
+                    uint freeIndexSet;
+                    {
+                        uint outcomeSlotCount = payoutNumerators[conditionId].length;
+                        require(outcomeSlotCount > 0, "condition not prepared yet");
+                        fullIndexSet = (1 << outcomeSlotCount) - 1;
+                        freeIndexSet = fullIndexSet;
+                    }
+
+                    for (uint j = 0; j < partition.length; j++) {
+                        require(partition[j] > 0 && partition[j] < fullIndexSet, "got invalid index set");
+                        require((partition[j] & freeIndexSet) == partition[j], "partition not disjoint");
+                        freeIndexSet ^= partition[j];
+                        collectionIds[j] = getCollectionId(bytes32(0), conditionId, partition[j]);
+                    }
+
+                    require(freeIndexSet == 0, "must partition entire outcome slot set");
+                }
+
+                for(uint i = 0; i < ids.length; i++) {
+                    emit PositionSplit(operator, IERC1155(msg.sender), ids[i], bytes32(0), conditionId, partition, values[i]);
+                }
+            }
+
+            for(uint i = 0; i < ids.length; i++) {
+                for (uint j = 0; j < collectionIds.length; j++) {
+                    _mint(
+                        operator,
+                        getPositionId(IERC1155(msg.sender), ids[i], collectionIds[j]),
+                        values[i],
+                        ""
+                    );
+                }
+            }
+        }
+
+        return this.onERC1155BatchReceived.selector;
     }
 
     /// @dev Gets the outcome slot count of a condition.

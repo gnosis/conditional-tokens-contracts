@@ -203,7 +203,8 @@ contract("ConditionalTokens", function(accounts) {
         doRedeem,
         collateralBalanceOf,
         getPositionForCollection,
-        getExpectedEventCollateralProperties
+        getExpectedEventCollateralProperties,
+        deeperTests
       }) {
         beforeEach(prepareTokens);
 
@@ -253,7 +254,7 @@ contract("ConditionalTokens", function(accounts) {
             ).should.be.rejected;
           });
 
-          it.skip("should not split if given an incomplete singleton partition", async function() {
+          it("should not split if given an incomplete singleton partition", async function() {
             await doSplit.call(
               this,
               conditionId,
@@ -274,7 +275,7 @@ contract("ConditionalTokens", function(accounts) {
               ));
             });
 
-            it.skip("should emit a PositionSplit event", async function() {
+            it("should emit a PositionSplit event", async function() {
               await expectEvent.inTransaction(
                 this.splitTx,
                 ConditionalTokens,
@@ -487,7 +488,7 @@ contract("ConditionalTokens", function(accounts) {
                     [3, 8],
                     { from: oracle }
                   ),
-                  "payouts can't exceed denominator"
+                  "final report must sum up to denominator"
                 );
               });
 
@@ -619,6 +620,359 @@ contract("ConditionalTokens", function(accounts) {
             });
           });
         });
+
+        if (deeperTests)
+          context("with many conditions prepared", async function() {
+            const conditions = [
+              {
+                oracle,
+                questionId: randomHex(32),
+                payoutDenominator: toBN(1000),
+                outcomeSlotCount: toBN(4)
+              }
+            ];
+
+            conditions.forEach(condition => {
+              condition.id = getConditionId(
+                condition.oracle,
+                condition.questionId,
+                condition.payoutDenominator,
+                condition.outcomeSlotCount
+              );
+            });
+
+            beforeEach(async function() {
+              for (const {
+                oracle,
+                questionId,
+                payoutDenominator,
+                outcomeSlotCount
+              } of conditions) {
+                await this.conditionalTokens.prepareCondition(
+                  oracle,
+                  questionId,
+                  payoutDenominator,
+                  outcomeSlotCount
+                );
+              }
+            });
+
+            context("when trader has collateralized a condition", function() {
+              const condition = conditions[0];
+              const {
+                oracle,
+                questionId,
+                payoutDenominator,
+                outcomeSlotCount
+              } = condition;
+              const conditionId = condition.id;
+              const finalReport = [0, 33, 289, 678].map(toBN);
+              const partition = [0b0111, 0b1000];
+              const positionIndexSet = partition[0];
+
+              beforeEach(async function() {
+                finalReport
+                  .reduce((a, b) => a.add(b))
+                  .should.be.bignumber.equal(payoutDenominator);
+
+                await doSplit.call(
+                  this,
+                  conditionId,
+                  partition,
+                  collateralTokenCount
+                );
+                await trader.execCall(
+                  this.conditionalTokens,
+                  "safeTransferFrom",
+                  trader.address,
+                  counterparty,
+                  getPositionForCollection.call(
+                    this,
+                    getCollectionId(conditionId, partition[1])
+                  ),
+                  collateralTokenCount,
+                  "0x"
+                );
+              });
+
+              it("should not allow full-slots report with payout sum below denominator", async function() {
+                const lowReport = finalReport.map(x => x.divn(2));
+                await expectRevert(
+                  this.conditionalTokens.reportPayouts(
+                    questionId,
+                    payoutDenominator,
+                    lowReport,
+                    { from: oracle }
+                  ),
+                  "final report must sum up to denominator"
+                );
+              });
+
+              it("should not allow missing-one report with payout sum below denominator", async function() {
+                const missingOneReport = finalReport.slice();
+                missingOneReport[3] = missingOneReport[3].subn(1);
+                await expectRevert(
+                  this.conditionalTokens.reportPayouts(
+                    questionId,
+                    payoutDenominator,
+                    missingOneReport,
+                    { from: oracle }
+                  ),
+                  "final report must sum up to denominator"
+                );
+              });
+
+              context("with valid partial report", function() {
+                const partialReport = finalReport.map((x, i) =>
+                  i === 2 ? x : toBN(0)
+                );
+
+                beforeEach(async function() {
+                  ({
+                    logs: this.reportLogs
+                  } = await this.conditionalTokens.reportPayouts(
+                    questionId,
+                    payoutDenominator,
+                    partialReport,
+                    { from: oracle }
+                  ));
+                });
+
+                it("should emit ConditionResolution event", function() {
+                  expectEvent.inLogs(this.reportLogs, "ConditionResolution", {
+                    conditionId,
+                    oracle,
+                    questionId,
+                    outcomeSlotCount
+                  });
+                });
+
+                it("should reflect partial report via payoutNumerators", async function() {
+                  for (let i = 0; i < partialReport.length; i++) {
+                    (await this.conditionalTokens.payoutNumerators(
+                      conditionId,
+                      i
+                    )).should.be.bignumber.equal(partialReport[i]);
+                  }
+                });
+
+                it("should not allow update report with set payout missing", async function() {
+                  const badUpdateReport = finalReport.map((x, i) =>
+                    i === 1 ? x : toBN(0)
+                  );
+                  await expectRevert(
+                    this.conditionalTokens.reportPayouts(
+                      questionId,
+                      payoutDenominator,
+                      badUpdateReport,
+                      { from: oracle }
+                    ),
+                    "can't change existing payout"
+                  );
+                });
+
+                it("should not allow update report which changes existing payout", async function() {
+                  const badUpdateReport = partialReport.slice();
+                  badUpdateReport[1] = finalReport[1];
+                  badUpdateReport[2] = badUpdateReport[2].addn(42);
+                  await expectRevert(
+                    this.conditionalTokens.reportPayouts(
+                      questionId,
+                      payoutDenominator,
+                      badUpdateReport,
+                      { from: oracle }
+                    ),
+                    "can't change existing payout"
+                  );
+                });
+
+                it("should not allow update report identical to previous report", async function() {
+                  await expectRevert(
+                    this.conditionalTokens.reportPayouts(
+                      questionId,
+                      payoutDenominator,
+                      partialReport,
+                      { from: oracle }
+                    ),
+                    "didn't update anything"
+                  );
+                });
+
+                it("should not allow trader to redeem with slots that are unset", async function() {
+                  await doRedeem.call(this, conditionId, [
+                    positionIndexSet
+                  ]).should.be.rejected;
+                });
+
+                context("with valid update report", async function() {
+                  const updateReport = finalReport.map((x, i) =>
+                    i === 1 || i === 2 ? x : toBN(0)
+                  );
+
+                  beforeEach(async function() {
+                    ({
+                      logs: this.updateReportLogs
+                    } = await this.conditionalTokens.reportPayouts(
+                      questionId,
+                      payoutDenominator,
+                      updateReport,
+                      { from: oracle }
+                    ));
+                  });
+
+                  it("should emit ConditionResolution event", function() {
+                    expectEvent.inLogs(
+                      this.updateReportLogs,
+                      "ConditionResolution",
+                      {
+                        conditionId,
+                        oracle,
+                        questionId,
+                        outcomeSlotCount
+                      }
+                    );
+                  });
+
+                  it("should reflect update report via payoutNumerators", async function() {
+                    for (let i = 0; i < updateReport.length; i++) {
+                      (await this.conditionalTokens.payoutNumerators(
+                        conditionId,
+                        i
+                      )).should.be.bignumber.equal(updateReport[i]);
+                    }
+                  });
+
+                  it("should not allow trader to redeem with zero slots when payout is not final", async function() {
+                    await doRedeem.call(this, conditionId, [
+                      positionIndexSet
+                    ]).should.be.rejected;
+                  });
+
+                  context(
+                    "redeeming split targeting non-zero slots",
+                    function() {
+                      const targetedPartition = [0b0110, 0b0001];
+                      const targetedIndexSet = 0b0110;
+                      const payout = collateralTokenCount
+                        .mul(
+                          updateReport.reduce(
+                            (acc, term, i) =>
+                              targetedIndexSet & (1 << i) ? acc.add(term) : acc,
+                            toBN(0)
+                          )
+                        )
+                        .div(payoutDenominator);
+
+                      beforeEach(async function() {
+                        await doSplit.call(
+                          this,
+                          conditionId,
+                          targetedPartition,
+                          collateralTokenCount
+                        );
+                        ({ tx: this.targetedRedeemTx } = await doRedeem.call(
+                          this,
+                          conditionId,
+                          [targetedIndexSet]
+                        ));
+                      });
+
+                      it("should emit PayoutRedemption event", async function() {
+                        await expectEvent.inTransaction(
+                          this.targetedRedeemTx,
+                          ConditionalTokens,
+                          "PayoutRedemption",
+                          Object.assign(
+                            {
+                              redeemer: trader.address,
+                              parentCollectionId: NULL_BYTES32,
+                              conditionId,
+                              // indexSets: partition,
+                              payout
+                            },
+                            getExpectedEventCollateralProperties.call(this)
+                          )
+                        );
+                      });
+                    }
+                  );
+
+                  context("with valid final report", async function() {
+                    beforeEach(async function() {
+                      ({
+                        logs: this.finalReportLogs
+                      } = await this.conditionalTokens.reportPayouts(
+                        questionId,
+                        payoutDenominator,
+                        finalReport,
+                        { from: oracle }
+                      ));
+                    });
+
+                    it("should emit ConditionResolution event", async function() {
+                      expectEvent.inLogs(
+                        this.finalReportLogs,
+                        "ConditionResolution",
+                        {
+                          conditionId,
+                          oracle,
+                          questionId,
+                          outcomeSlotCount
+                        }
+                      );
+                    });
+
+                    it("should reflect update report via payoutNumerators", async function() {
+                      for (let i = 0; i < finalReport.length; i++) {
+                        (await this.conditionalTokens.payoutNumerators(
+                          conditionId,
+                          i
+                        )).should.be.bignumber.equal(finalReport[i]);
+                      }
+                    });
+
+                    context("with valid redemption", async function() {
+                      const payout = collateralTokenCount
+                        .mul(
+                          finalReport.reduce(
+                            (acc, term, i) =>
+                              positionIndexSet & (1 << i) ? acc.add(term) : acc,
+                            toBN(0)
+                          )
+                        )
+                        .div(payoutDenominator);
+
+                      beforeEach(async function() {
+                        ({ tx: this.redeemTx } = await doRedeem.call(
+                          this,
+                          conditionId,
+                          [positionIndexSet]
+                        ));
+                      });
+
+                      it("should emit PayoutRedemption event", async function() {
+                        await expectEvent.inTransaction(
+                          this.redeemTx,
+                          ConditionalTokens,
+                          "PayoutRedemption",
+                          Object.assign(
+                            {
+                              redeemer: trader.address,
+                              parentCollectionId: NULL_BYTES32,
+                              conditionId,
+                              // indexSets: partition,
+                              payout
+                            },
+                            getExpectedEventCollateralProperties.call(this)
+                          )
+                        );
+                      });
+                    });
+                  });
+                });
+              });
+            });
+          });
       }
 
       context("with an ERC-20 collateral allowance", function() {
@@ -677,7 +1031,8 @@ contract("ConditionalTokens", function(accounts) {
           },
           getExpectedEventCollateralProperties() {
             return { collateralToken: this.collateralToken.address };
-          }
+          },
+          deeperTests: true
         });
       });
 
@@ -756,7 +1111,8 @@ contract("ConditionalTokens", function(accounts) {
               collateralToken: this.collateralMultiToken.address,
               collateralTokenID
             };
-          }
+          },
+          deeperTests: true
         });
       });
 
@@ -831,7 +1187,84 @@ contract("ConditionalTokens", function(accounts) {
               collateralToken: this.collateralMultiToken.address,
               collateralTokenID
             };
-          }
+          },
+          deeperTests: false
+        });
+      });
+
+      context("with direct ERC-1155 batch transfers", function() {
+        const collateralTokenID = toBN(randomHex(32));
+
+        shouldWorkWithSplittingAndMerging({
+          async prepareTokens() {
+            this.collateralMultiToken = await ERC1155Mock.new({
+              from: minter
+            });
+            await this.collateralMultiToken.mint(
+              trader.address,
+              collateralTokenID,
+              collateralTokenCount,
+              "0x",
+              { from: minter }
+            );
+          },
+          async doSplit(conditionId, partition, amount) {
+            return await trader.execCall(
+              this.collateralMultiToken,
+              "safeBatchTransferFrom",
+              trader.address,
+              this.conditionalTokens.address,
+              [collateralTokenID],
+              [amount],
+              web3.eth.abi.encodeParameters(
+                ["bytes32", "uint256[]"],
+                [conditionId, partition]
+              )
+            );
+          },
+          async doMerge(conditionId, partition, amount) {
+            return await trader.execCall(
+              this.conditionalTokens,
+              "merge1155Positions",
+              this.collateralMultiToken.address,
+              collateralTokenID,
+              NULL_BYTES32,
+              conditionId,
+              partition,
+              amount
+            );
+          },
+          async doRedeem(conditionId, indexSets) {
+            return await trader.execCall(
+              this.conditionalTokens,
+              "redeem1155Positions",
+              this.collateralMultiToken.address,
+              collateralTokenID,
+              NULL_BYTES32,
+              conditionId,
+              indexSets
+            );
+          },
+          async collateralBalanceOf(address) {
+            return await this.collateralMultiToken.balanceOf(
+              address,
+              collateralTokenID
+            );
+          },
+          getPositionForCollection(collectionId) {
+            return getPositionId(
+              this.collateralMultiToken.address,
+              collateralTokenID,
+              collectionId
+            );
+          },
+          getExpectedEventCollateralProperties() {
+            return {
+              collateralToken: this.collateralMultiToken.address,
+              collateralTokenID
+            };
+          },
+          deeperTests: false
         });
       });
     }
