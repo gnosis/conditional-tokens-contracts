@@ -531,6 +531,7 @@ contract("ConditionalTokens", function(accounts) {
                     conditionId,
                     oracle,
                     questionId,
+                    payoutDenominator,
                     outcomeSlotCount
                   });
                 });
@@ -742,6 +743,7 @@ contract("ConditionalTokens", function(accounts) {
                     conditionId,
                     oracle,
                     questionId,
+                    payoutDenominator,
                     outcomeSlotCount
                   });
                 });
@@ -827,6 +829,7 @@ contract("ConditionalTokens", function(accounts) {
                         conditionId,
                         oracle,
                         questionId,
+                        payoutDenominator,
                         outcomeSlotCount
                       }
                     );
@@ -916,6 +919,7 @@ contract("ConditionalTokens", function(accounts) {
                           conditionId,
                           oracle,
                           questionId,
+                          payoutDenominator,
                           outcomeSlotCount
                         }
                       );

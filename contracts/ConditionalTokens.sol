@@ -23,6 +23,7 @@ contract ConditionalTokens is ERC1155 {
         bytes32 indexed conditionId,
         address indexed oracle,
         bytes32 indexed questionId,
+        uint payoutDenominator,
         uint outcomeSlotCount,
         uint[] payoutNumerators
     );
@@ -114,7 +115,7 @@ contract ConditionalTokens is ERC1155 {
             require(den <= payoutDenominator, "payouts can't exceed denominator");
         else
             require(den == payoutDenominator, "final report must sum up to denominator");
-        emit ConditionResolution(conditionId, msg.sender, questionId, outcomeSlotCount, payoutNumerators[conditionId]);
+        emit ConditionResolution(conditionId, msg.sender, questionId, payoutDenominator, outcomeSlotCount, payoutNumerators[conditionId]);
     }
 
     /// @dev This function splits a position. If splitting from the collateral, this contract will attempt to transfer `amount` collateral from the message sender to itself. Otherwise, this contract will burn `amount` stake held by the message sender in the position being split. Regardless, if successful, `amount` stake will be minted in the split target positions. If any of the transfers, mints, or burns fail, the transaction will revert. The transaction will also revert if the given partition is trivial, invalid, or refers to more slots than the condition is prepared with.
