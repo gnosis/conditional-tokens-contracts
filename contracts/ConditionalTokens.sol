@@ -9,13 +9,11 @@ contract ConditionalTokens is ERC1155 {
     /// @param conditionId The condition's ID. This ID may be derived from the other three parameters via ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``.
     /// @param oracle The account assigned to report the result for the prepared condition.
     /// @param questionId An identifier for the question to be answered by the oracle.
-    /// @param payoutDenominator What the payouts reported by the oracle must eventually sum up to.
     /// @param outcomeSlotCount The number of outcome slots which should be used for this condition. Must not exceed 256.
     event ConditionPreparation(
         bytes32 indexed conditionId,
         address indexed oracle,
         bytes32 indexed questionId,
-        uint payoutDenominator,
         uint outcomeSlotCount
     );
 
@@ -23,7 +21,6 @@ contract ConditionalTokens is ERC1155 {
         bytes32 indexed conditionId,
         address indexed oracle,
         bytes32 indexed questionId,
-        uint payoutDenominator,
         uint outcomeSlotCount,
         uint[] payoutNumerators
     );
@@ -57,65 +54,42 @@ contract ConditionalTokens is ERC1155 {
 
     /// Mapping key is an condition ID. Value represents numerators of the payout vector associated with the condition. This array is initialized with a length equal to the outcome slot count.
     mapping(bytes32 => uint[]) public payoutNumerators;
-    mapping(bytes32 => uint) _payoutDenominator;
-
-    function payoutDenominator(bytes32 conditionId) external view returns (uint) {
-        return _payoutDenominator[conditionId];
-    }
+    mapping(bytes32 => uint) public payoutDenominator;
 
     /// @dev This function prepares a condition by initializing a payout vector associated with the condition.
     /// @param oracle The account assigned to report the result for the prepared condition.
     /// @param questionId An identifier for the question to be answered by the oracle.
-    /// @param payoutDenominator What the payouts reported by the oracle must eventually sum up to.
     /// @param outcomeSlotCount The number of outcome slots which should be used for this condition. Must not exceed 256.
-    function prepareCondition(address oracle, bytes32 questionId, uint payoutDenominator, uint outcomeSlotCount) external {
+    function prepareCondition(address oracle, bytes32 questionId, uint outcomeSlotCount) external {
         require(outcomeSlotCount <= 256, "too many outcome slots");
         require(outcomeSlotCount > 1, "there should be more than one outcome slot");
-        require(payoutDenominator > 0, "payout denominator invalid");
-        bytes32 conditionId = getConditionId(oracle, questionId, payoutDenominator, outcomeSlotCount);
+        bytes32 conditionId = getConditionId(oracle, questionId, outcomeSlotCount);
         require(payoutNumerators[conditionId].length == 0, "condition already prepared");
         payoutNumerators[conditionId] = new uint[](outcomeSlotCount);
-        _payoutDenominator[conditionId] = payoutDenominator;
-        emit ConditionPreparation(conditionId, oracle, questionId, payoutDenominator, outcomeSlotCount);
+        emit ConditionPreparation(conditionId, oracle, questionId, outcomeSlotCount);
     }
 
-    /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, payoutDenominator, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, payoutDenominator is the final sum of the payout numerators and also one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
+    /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
     /// @param questionId The question ID the oracle is answering for
-    /// @param payoutDenominator What the payouts reported by the oracle must eventually sum up to, used to derive the condition ID
     /// @param payouts The oracle's answer
-    function reportPayouts(bytes32 questionId, uint payoutDenominator, uint[] calldata payouts) external {
+    function reportPayouts(bytes32 questionId, uint[] calldata payouts) external {
         uint outcomeSlotCount = payouts.length;
         require(outcomeSlotCount > 1, "there should be more than one outcome slot");
-        bytes32 conditionId = getConditionId(msg.sender, questionId, payoutDenominator, outcomeSlotCount);
-        require(payoutNumerators[conditionId].length == outcomeSlotCount && _payoutDenominator[conditionId] == payoutDenominator, "condition not prepared or found");
+        bytes32 conditionId = getConditionId(msg.sender, questionId, outcomeSlotCount);
+        require(payoutNumerators[conditionId].length == outcomeSlotCount, "condition not prepared or found");
+        require(payoutDenominator[conditionId] == 0, "payout denominator already set");
 
-        uint emptySlots = 0;
         uint den = 0;
-        bool didUpdate = false;
         for (uint i = 0; i < outcomeSlotCount; i++) {
-            uint oldNum = payoutNumerators[conditionId][i];
-            uint newNum = payouts[i];
-            if(oldNum == 0) {
-                if(newNum == 0)
-                    emptySlots++;
-                else {
-                    payoutNumerators[conditionId][i] = newNum;
-                    den = den.add(newNum);
-                    didUpdate = true;
-                }
-            } else {
-                require(oldNum == newNum, "can't change existing payout");
-                den = den.add(newNum);
-            }
-        }
+            uint num = payouts[i];
+            den = den.add(num);
 
+            require(payoutNumerators[conditionId][i] == 0, "payout numerator already set");
+            payoutNumerators[conditionId][i] = num;
+        }
         require(den > 0, "payout is all zeroes");
-        require(didUpdate, "didn't update anything");
-        if(emptySlots > 1)
-            require(den <= payoutDenominator, "payouts can't exceed denominator");
-        else
-            require(den == payoutDenominator, "final report must sum up to denominator");
-        emit ConditionResolution(conditionId, msg.sender, questionId, payoutDenominator, outcomeSlotCount, payoutNumerators[conditionId]);
+        payoutDenominator[conditionId] = den;
+        emit ConditionResolution(conditionId, msg.sender, questionId, outcomeSlotCount, payoutNumerators[conditionId]);
     }
 
     /// @dev This function splits a position. If splitting from the collateral, this contract will attempt to transfer `amount` collateral from the message sender to itself. Otherwise, this contract will burn `amount` stake held by the message sender in the position being split. Regardless, if successful, `amount` stake will be minted in the split target positions. If any of the transfers, mints, or burns fail, the transaction will revert. The transaction will also revert if the given partition is trivial, invalid, or refers to more slots than the condition is prepared with.
@@ -222,18 +196,10 @@ contract ConditionalTokens is ERC1155 {
     }
 
     function redeemPositions(IERC20 collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint[] calldata indexSets) external {
-        uint den = _payoutDenominator[conditionId];
+        uint den = payoutDenominator[conditionId];
+        require(den > 0, "result for condition not received yet");
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
-        require(outcomeSlotCount > 0 && den > 0, "condition not prepared yet");
-
-        bool isCompletelyResolved;
-        {
-            uint denSoFar;
-            for (uint j = 0; j < outcomeSlotCount; j++) {
-                denSoFar = denSoFar.add(payoutNumerators[conditionId][j]);
-            }
-            isCompletelyResolved = (den == denSoFar);
-        }
+        require(outcomeSlotCount > 0, "condition not prepared yet");
 
         uint totalPayout = 0;
 
@@ -247,8 +213,6 @@ contract ConditionalTokens is ERC1155 {
             uint payoutNumerator = 0;
             for (uint j = 0; j < outcomeSlotCount; j++) {
                 if (indexSet & (1 << j) != 0) {
-                    if(!isCompletelyResolved)
-                        require(payoutNumerators[conditionId][j] > 0, "can't redeem zero slots yet");
                     payoutNumerator = payoutNumerator.add(payoutNumerators[conditionId][j]);
                 }
             }
@@ -280,10 +244,9 @@ contract ConditionalTokens is ERC1155 {
     /// @dev Constructs a condition ID from an oracle, a question ID, and the outcome slot count for the question.
     /// @param oracle The account assigned to report the result for the prepared condition.
     /// @param questionId An identifier for the question to be answered by the oracle.
-    /// @param payoutDenominator What the payouts reported by the oracle must eventually sum up to.
     /// @param outcomeSlotCount The number of outcome slots which should be used for this condition. Must not exceed 256.
-    function getConditionId(address oracle, bytes32 questionId, uint payoutDenominator, uint outcomeSlotCount) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(oracle, questionId, payoutDenominator, outcomeSlotCount));
+    function getConditionId(address oracle, bytes32 questionId, uint outcomeSlotCount) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount));
     }
 
     /// @dev Constructs an outcome collection ID from a parent collection and an outcome collection.

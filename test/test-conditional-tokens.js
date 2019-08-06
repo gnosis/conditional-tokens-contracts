@@ -11,16 +11,10 @@ const GnosisSafe = artifacts.require("GnosisSafe");
 
 const NULL_BYTES32 = `0x${"0".repeat(64)}`;
 
-function getConditionId(
-  oracle,
-  questionId,
-  payoutDenominator,
-  outcomeSlotCount
-) {
+function getConditionId(oracle, questionId, outcomeSlotCount) {
   return soliditySha3(
     { t: "address", v: oracle },
     { t: "bytes32", v: questionId },
-    { t: "uint", v: payoutDenominator },
     { t: "uint", v: outcomeSlotCount }
   );
 }
@@ -55,8 +49,6 @@ function getPositionId(collateralToken, collateralTokenID, collectionId) {
   );
 }
 
-const randint = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-
 contract("ConditionalTokens", function(accounts) {
   const [
     minter,
@@ -75,14 +67,12 @@ contract("ConditionalTokens", function(accounts) {
   describe("prepareCondition", function() {
     it("should not be able to prepare a condition with no outcome slots", async function() {
       const questionId = randomHex(32);
-      const payoutDenominator = randint(1, 1000);
       const outcomeSlotCount = 0;
 
       await expectRevert(
         this.conditionalTokens.prepareCondition(
           oracle,
           questionId,
-          payoutDenominator,
           outcomeSlotCount
         ),
         "there should be more than one outcome slot"
@@ -91,53 +81,28 @@ contract("ConditionalTokens", function(accounts) {
 
     it("should not be able to prepare a condition with just one outcome slots", async function() {
       const questionId = randomHex(32);
-      const payoutDenominator = randint(1, 1000);
       const outcomeSlotCount = 1;
 
       await expectRevert(
         this.conditionalTokens.prepareCondition(
           oracle,
           questionId,
-          payoutDenominator,
           outcomeSlotCount
         ),
         "there should be more than one outcome slot"
       );
     });
 
-    it("should not be able to prepare a condition with zero payout denominator", async function() {
-      const questionId = randomHex(32);
-      const payoutDenominator = 0;
-      const outcomeSlotCount = 10;
-
-      await expectRevert(
-        this.conditionalTokens.prepareCondition(
-          oracle,
-          questionId,
-          payoutDenominator,
-          outcomeSlotCount
-        ),
-        "payout denominator invalid"
-      );
-    });
-
     context("with valid parameters", function() {
       const questionId = randomHex(32);
-      const payoutDenominator = toBN(randint(1, 1000));
       const outcomeSlotCount = toBN(256);
 
-      const conditionId = getConditionId(
-        oracle,
-        questionId,
-        payoutDenominator,
-        outcomeSlotCount
-      );
+      const conditionId = getConditionId(oracle, questionId, outcomeSlotCount);
 
       beforeEach(async function() {
         ({ logs: this.logs } = await this.conditionalTokens.prepareCondition(
           oracle,
           questionId,
-          payoutDenominator,
           outcomeSlotCount
         ));
       });
@@ -147,7 +112,6 @@ contract("ConditionalTokens", function(accounts) {
           conditionId,
           oracle,
           questionId,
-          payoutDenominator,
           outcomeSlotCount
         });
       });
@@ -158,10 +122,10 @@ contract("ConditionalTokens", function(accounts) {
         )).should.be.bignumber.equal(outcomeSlotCount);
       });
 
-      it("should make payout denominator available via payoutDenominator", async function() {
+      it("should leave payout denominator unset", async function() {
         (await this.conditionalTokens.payoutDenominator(
           conditionId
-        )).should.be.bignumber.equal(payoutDenominator);
+        )).should.be.bignumber.equal("0");
       });
 
       it("should not be able to prepare the same condition more than once", async function() {
@@ -169,7 +133,6 @@ contract("ConditionalTokens", function(accounts) {
           this.conditionalTokens.prepareCondition(
             oracle,
             questionId,
-            payoutDenominator,
             outcomeSlotCount
           ),
           "condition already prepared"
@@ -181,15 +144,9 @@ contract("ConditionalTokens", function(accounts) {
   describe("splitting and merging", function() {
     function shouldSplitAndMergePositions(trader) {
       const questionId = randomHex(32);
-      const payoutDenominator = toBN(10);
       const outcomeSlotCount = toBN(2);
 
-      const conditionId = getConditionId(
-        oracle,
-        questionId,
-        payoutDenominator,
-        outcomeSlotCount
-      );
+      const conditionId = getConditionId(oracle, questionId, outcomeSlotCount);
 
       const collateralTokenCount = toBN(1e19);
       const splitAmount = toBN(4e18);
@@ -221,7 +178,6 @@ contract("ConditionalTokens", function(accounts) {
             await this.conditionalTokens.prepareCondition(
               oracle,
               questionId,
-              payoutDenominator,
               outcomeSlotCount
             );
           });
@@ -409,7 +365,6 @@ contract("ConditionalTokens", function(accounts) {
                 await expectRevert(
                   this.conditionalTokens.reportPayouts(
                     questionId,
-                    payoutDenominator,
                     payoutNumerators,
                     { from: notOracle }
                   ),
@@ -422,20 +377,6 @@ contract("ConditionalTokens", function(accounts) {
                 await expectRevert(
                   this.conditionalTokens.reportPayouts(
                     wrongQuestionId,
-                    payoutDenominator,
-                    payoutNumerators,
-                    { from: oracle }
-                  ),
-                  "condition not prepared or found"
-                );
-              });
-
-              it("should not allow report with wrong payoutDenominator", async function() {
-                const wrongPayoutDenominator = 1;
-                await expectRevert(
-                  this.conditionalTokens.reportPayouts(
-                    questionId,
-                    wrongPayoutDenominator,
                     payoutNumerators,
                     { from: oracle }
                   ),
@@ -445,49 +386,28 @@ contract("ConditionalTokens", function(accounts) {
 
               it("should not allow report with no slots", async function() {
                 await expectRevert(
-                  this.conditionalTokens.reportPayouts(
-                    questionId,
-                    payoutDenominator,
-                    [],
-                    { from: oracle }
-                  ),
+                  this.conditionalTokens.reportPayouts(questionId, [], {
+                    from: oracle
+                  }),
                   "there should be more than one outcome slot"
                 );
               });
 
               it("should not allow report with wrong number of slots", async function() {
                 await expectRevert(
-                  this.conditionalTokens.reportPayouts(
-                    questionId,
-                    payoutDenominator,
-                    [2, 3, 5],
-                    { from: oracle }
-                  ),
+                  this.conditionalTokens.reportPayouts(questionId, [2, 3, 5], {
+                    from: oracle
+                  }),
                   "condition not prepared or found"
                 );
               });
 
               it("should not allow report with zero payouts in all slots", async function() {
                 await expectRevert(
-                  this.conditionalTokens.reportPayouts(
-                    questionId,
-                    payoutDenominator,
-                    [0, 0],
-                    { from: oracle }
-                  ),
+                  this.conditionalTokens.reportPayouts(questionId, [0, 0], {
+                    from: oracle
+                  }),
                   "payout is all zeroes"
-                );
-              });
-
-              it("should not allow report with payouts exceeding denominator", async function() {
-                await expectRevert(
-                  this.conditionalTokens.reportPayouts(
-                    questionId,
-                    payoutDenominator,
-                    [3, 8],
-                    { from: oracle }
-                  ),
-                  "final report must sum up to denominator"
                 );
               });
 
@@ -511,7 +431,6 @@ contract("ConditionalTokens", function(accounts) {
                     logs: this.reportLogs
                   } = await this.conditionalTokens.reportPayouts(
                     questionId,
-                    payoutDenominator,
                     payoutNumerators,
                     { from: oracle }
                   ));
@@ -531,7 +450,6 @@ contract("ConditionalTokens", function(accounts) {
                     conditionId,
                     oracle,
                     questionId,
-                    payoutDenominator,
                     outcomeSlotCount
                   });
                 });
@@ -546,6 +464,10 @@ contract("ConditionalTokens", function(accounts) {
                 });
 
                 describe("redeeming", function() {
+                  const payoutDenominator = payoutNumerators.reduce(
+                    (a, b) => a.add(b),
+                    toBN(0)
+                  );
                   const payout = [
                     splitAmount.sub(transferAmount),
                     splitAmount
@@ -627,7 +549,6 @@ contract("ConditionalTokens", function(accounts) {
               {
                 oracle,
                 questionId: randomHex(32),
-                payoutDenominator: toBN(1000),
                 outcomeSlotCount: toBN(4)
               }
             ];
@@ -636,7 +557,6 @@ contract("ConditionalTokens", function(accounts) {
               condition.id = getConditionId(
                 condition.oracle,
                 condition.questionId,
-                condition.payoutDenominator,
                 condition.outcomeSlotCount
               );
             });
@@ -645,13 +565,11 @@ contract("ConditionalTokens", function(accounts) {
               for (const {
                 oracle,
                 questionId,
-                payoutDenominator,
                 outcomeSlotCount
               } of conditions) {
                 await this.conditionalTokens.prepareCondition(
                   oracle,
                   questionId,
-                  payoutDenominator,
                   outcomeSlotCount
                 );
               }
@@ -659,22 +577,14 @@ contract("ConditionalTokens", function(accounts) {
 
             context("when trader has collateralized a condition", function() {
               const condition = conditions[0];
-              const {
-                oracle,
-                questionId,
-                payoutDenominator,
-                outcomeSlotCount
-              } = condition;
+              const { oracle, questionId, outcomeSlotCount } = condition;
               const conditionId = condition.id;
               const finalReport = [0, 33, 289, 678].map(toBN);
+              const payoutDenominator = finalReport.reduce((a, b) => a.add(b));
               const partition = [0b0111, 0b1000];
               const positionIndexSet = partition[0];
 
               beforeEach(async function() {
-                finalReport
-                  .reduce((a, b) => a.add(b))
-                  .should.be.bignumber.equal(payoutDenominator);
-
                 await doSplit.call(
                   this,
                   conditionId,
@@ -695,45 +605,13 @@ contract("ConditionalTokens", function(accounts) {
                 );
               });
 
-              it("should not allow full-slots report with payout sum below denominator", async function() {
-                const lowReport = finalReport.map(x => x.divn(2));
-                await expectRevert(
-                  this.conditionalTokens.reportPayouts(
-                    questionId,
-                    payoutDenominator,
-                    lowReport,
-                    { from: oracle }
-                  ),
-                  "final report must sum up to denominator"
-                );
-              });
-
-              it("should not allow missing-one report with payout sum below denominator", async function() {
-                const missingOneReport = finalReport.slice();
-                missingOneReport[3] = missingOneReport[3].subn(1);
-                await expectRevert(
-                  this.conditionalTokens.reportPayouts(
-                    questionId,
-                    payoutDenominator,
-                    missingOneReport,
-                    { from: oracle }
-                  ),
-                  "final report must sum up to denominator"
-                );
-              });
-
-              context("with valid partial report", function() {
-                const partialReport = finalReport.map((x, i) =>
-                  i === 2 ? x : toBN(0)
-                );
-
+              context("with valid report", function() {
                 beforeEach(async function() {
                   ({
                     logs: this.reportLogs
                   } = await this.conditionalTokens.reportPayouts(
                     questionId,
-                    payoutDenominator,
-                    partialReport,
+                    finalReport,
                     { from: oracle }
                   ));
                 });
@@ -743,234 +621,68 @@ contract("ConditionalTokens", function(accounts) {
                     conditionId,
                     oracle,
                     questionId,
-                    payoutDenominator,
                     outcomeSlotCount
                   });
                 });
 
-                it("should reflect partial report via payoutNumerators", async function() {
-                  for (let i = 0; i < partialReport.length; i++) {
+                it("should reflect report via payoutNumerators", async function() {
+                  for (let i = 0; i < finalReport.length; i++) {
                     (await this.conditionalTokens.payoutNumerators(
                       conditionId,
                       i
-                    )).should.be.bignumber.equal(partialReport[i]);
+                    )).should.be.bignumber.equal(finalReport[i]);
                   }
                 });
 
-                it("should not allow update report with set payout missing", async function() {
+                it("should not allow an update to the report", async function() {
                   const badUpdateReport = finalReport.map((x, i) =>
                     i === 1 ? x : toBN(0)
                   );
                   await expectRevert(
                     this.conditionalTokens.reportPayouts(
                       questionId,
-                      payoutDenominator,
                       badUpdateReport,
                       { from: oracle }
                     ),
-                    "can't change existing payout"
+                    "payout denominator already set"
                   );
                 });
 
-                it("should not allow update report which changes existing payout", async function() {
-                  const badUpdateReport = partialReport.slice();
-                  badUpdateReport[1] = finalReport[1];
-                  badUpdateReport[2] = badUpdateReport[2].addn(42);
-                  await expectRevert(
-                    this.conditionalTokens.reportPayouts(
-                      questionId,
-                      payoutDenominator,
-                      badUpdateReport,
-                      { from: oracle }
-                    ),
-                    "can't change existing payout"
-                  );
-                });
-
-                it("should not allow update report identical to previous report", async function() {
-                  await expectRevert(
-                    this.conditionalTokens.reportPayouts(
-                      questionId,
-                      payoutDenominator,
-                      partialReport,
-                      { from: oracle }
-                    ),
-                    "didn't update anything"
-                  );
-                });
-
-                it("should not allow trader to redeem with slots that are unset", async function() {
-                  await doRedeem.call(this, conditionId, [
-                    positionIndexSet
-                  ]).should.be.rejected;
-                });
-
-                context("with valid update report", async function() {
-                  const updateReport = finalReport.map((x, i) =>
-                    i === 1 || i === 2 ? x : toBN(0)
-                  );
+                context("with valid redemption", async function() {
+                  const payout = collateralTokenCount
+                    .mul(
+                      finalReport.reduce(
+                        (acc, term, i) =>
+                          positionIndexSet & (1 << i) ? acc.add(term) : acc,
+                        toBN(0)
+                      )
+                    )
+                    .div(payoutDenominator);
 
                   beforeEach(async function() {
-                    ({
-                      logs: this.updateReportLogs
-                    } = await this.conditionalTokens.reportPayouts(
-                      questionId,
-                      payoutDenominator,
-                      updateReport,
-                      { from: oracle }
+                    ({ tx: this.redeemTx } = await doRedeem.call(
+                      this,
+                      conditionId,
+                      [positionIndexSet]
                     ));
                   });
 
-                  it("should emit ConditionResolution event", function() {
-                    expectEvent.inLogs(
-                      this.updateReportLogs,
-                      "ConditionResolution",
-                      {
-                        conditionId,
-                        oracle,
-                        questionId,
-                        payoutDenominator,
-                        outcomeSlotCount
-                      }
-                    );
-                  });
-
-                  it("should reflect update report via payoutNumerators", async function() {
-                    for (let i = 0; i < updateReport.length; i++) {
-                      (await this.conditionalTokens.payoutNumerators(
-                        conditionId,
-                        i
-                      )).should.be.bignumber.equal(updateReport[i]);
-                    }
-                  });
-
-                  it("should not allow trader to redeem with zero slots when payout is not final", async function() {
-                    await doRedeem.call(this, conditionId, [
-                      positionIndexSet
-                    ]).should.be.rejected;
-                  });
-
-                  context(
-                    "redeeming split targeting non-zero slots",
-                    function() {
-                      const targetedPartition = [0b0110, 0b0001];
-                      const targetedIndexSet = 0b0110;
-                      const payout = collateralTokenCount
-                        .mul(
-                          updateReport.reduce(
-                            (acc, term, i) =>
-                              targetedIndexSet & (1 << i) ? acc.add(term) : acc,
-                            toBN(0)
-                          )
-                        )
-                        .div(payoutDenominator);
-
-                      beforeEach(async function() {
-                        await doSplit.call(
-                          this,
-                          conditionId,
-                          targetedPartition,
-                          collateralTokenCount
-                        );
-                        ({ tx: this.targetedRedeemTx } = await doRedeem.call(
-                          this,
-                          conditionId,
-                          [targetedIndexSet]
-                        ));
-                      });
-
-                      it("should emit PayoutRedemption event", async function() {
-                        await expectEvent.inTransaction(
-                          this.targetedRedeemTx,
-                          ConditionalTokens,
-                          "PayoutRedemption",
-                          Object.assign(
-                            {
-                              redeemer: trader.address,
-                              parentCollectionId: NULL_BYTES32,
-                              conditionId,
-                              // indexSets: partition,
-                              payout
-                            },
-                            getExpectedEventCollateralProperties.call(this)
-                          )
-                        );
-                      });
-                    }
-                  );
-
-                  context("with valid final report", async function() {
-                    beforeEach(async function() {
-                      ({
-                        logs: this.finalReportLogs
-                      } = await this.conditionalTokens.reportPayouts(
-                        questionId,
-                        payoutDenominator,
-                        finalReport,
-                        { from: oracle }
-                      ));
-                    });
-
-                    it("should emit ConditionResolution event", async function() {
-                      expectEvent.inLogs(
-                        this.finalReportLogs,
-                        "ConditionResolution",
+                  it("should emit PayoutRedemption event", async function() {
+                    await expectEvent.inTransaction(
+                      this.redeemTx,
+                      ConditionalTokens,
+                      "PayoutRedemption",
+                      Object.assign(
                         {
+                          redeemer: trader.address,
+                          parentCollectionId: NULL_BYTES32,
                           conditionId,
-                          oracle,
-                          questionId,
-                          payoutDenominator,
-                          outcomeSlotCount
-                        }
-                      );
-                    });
-
-                    it("should reflect update report via payoutNumerators", async function() {
-                      for (let i = 0; i < finalReport.length; i++) {
-                        (await this.conditionalTokens.payoutNumerators(
-                          conditionId,
-                          i
-                        )).should.be.bignumber.equal(finalReport[i]);
-                      }
-                    });
-
-                    context("with valid redemption", async function() {
-                      const payout = collateralTokenCount
-                        .mul(
-                          finalReport.reduce(
-                            (acc, term, i) =>
-                              positionIndexSet & (1 << i) ? acc.add(term) : acc,
-                            toBN(0)
-                          )
-                        )
-                        .div(payoutDenominator);
-
-                      beforeEach(async function() {
-                        ({ tx: this.redeemTx } = await doRedeem.call(
-                          this,
-                          conditionId,
-                          [positionIndexSet]
-                        ));
-                      });
-
-                      it("should emit PayoutRedemption event", async function() {
-                        await expectEvent.inTransaction(
-                          this.redeemTx,
-                          ConditionalTokens,
-                          "PayoutRedemption",
-                          Object.assign(
-                            {
-                              redeemer: trader.address,
-                              parentCollectionId: NULL_BYTES32,
-                              conditionId,
-                              // indexSets: partition,
-                              payout
-                            },
-                            getExpectedEventCollateralProperties.call(this)
-                          )
-                        );
-                      });
-                    });
+                          // indexSets: partition,
+                          payout
+                        },
+                        getExpectedEventCollateralProperties.call(this)
+                      )
+                    );
                   });
                 });
               });
