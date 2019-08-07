@@ -53,15 +53,10 @@ contract ConditionalTokens is ERC1155 {
     );
 
     
-    /// Mapping key is an condition ID. Value represents numerators of the payout vector associated with the condition. This array is initialized with a length equal to the outcome slot count.
-    /// e.g Condition with 3 outcomes [A, B, C] and two of those correct [0.5, 0.5, 0]
-    /// In Ethereum there are no decimal values so, to represent 0.5 it has to be represented by a division of two intengers 1/2 == 0.5. That's why we need numerator and denominator values.
+    /// Mapping key is an condition ID. Value represents numerators of the payout vector associated with the condition. This array is initialized with a length equal to the outcome slot count. E.g. Condition with 3 outcomes [A, B, C] and two of those correct [0.5, 0.5, 0]. In Ethereum there are no decimal values, so here, 0.5 is represented by fractions like 1/2 == 0.5. That's why we need numerator and denominator values. Payout numerators are also used as a check of initialization. If the numerators array is empty (has length zero), the condition was not created/prepared. See getOutcomeSlotCount.
     mapping(bytes32 => uint[]) public payoutNumerators; 
+    /// Denominator is also used for checking if the condition has been resolved. If the denominator is non-zero, then the condition has been resolved.
     mapping(bytes32 => uint) public payoutDenominator;
-
-    // Note:
-    /// Numerator is also used as a check of initialization. If numerator is null, means condition was not created/prepared.
-    /// Denominator is used for checking if the condition has been resolved.
 
     /// @dev This function prepares a condition by initializing a payout vector associated with the condition.
     /// @param oracle The account assigned to report the result for the prepared condition.
@@ -101,28 +96,27 @@ contract ConditionalTokens is ERC1155 {
         emit ConditionResolution(conditionId, msg.sender, questionId, outcomeSlotCount, payoutNumerators[conditionId]);
     }
 
-    /// @dev This function splits a position. If splitting from the collateral, this contract will attempt to transfer `amount` collateral from the message sender to itself.
-    /// Otherwise, this contract will burn `amount` stake held by the message sender in the position being split worth of EIP 1155 tokens. Regardless, if successful, `amount`
-    /// stake will be minted in the split target positions. If any of the transfers, mints, or burns fail, the transaction will revert. The transaction will also revert if
-    /// the given partition is trivial, invalid, or refers to more slots than the condition is prepared with.
+    /// @dev This function splits a position. If splitting from the collateral, this contract will attempt to transfer `amount` collateral from the message sender to itself. Otherwise, this contract will burn `amount` stake held by the message sender in the position being split worth of EIP 1155 tokens. Regardless, if successful, `amount` stake will be minted in the split target positions. If any of the transfers, mints, or burns fail, the transaction will revert. The transaction will also revert if the given partition is trivial, invalid, or refers to more slots than the condition is prepared with.
     /// @param collateralToken The address of the positions' backing collateral token.
     /// @param parentCollectionId The ID of the outcome collections common to the position being split and the split target positions. May be null, in which only the collateral is shared.
     /// @param conditionId The ID of the condition to split on.
-    /// @param partition An array of disjoint index sets representing a nontrivial partition of the outcome slots of the given condition. E.g A|B and C but not A|B and B|C (is not disjoint).
+    /// @param partition An array of disjoint index sets representing a nontrivial partition of the outcome slots of the given condition. E.g. A|B and C but not A|B and B|C (is not disjoint). Each element's a number which, together with the condition, represents the outcome collection. E.g. 0b110 is A|B, 0b010 is B, etc.
     /// @param amount The amount of collateral or stake to split.
     function splitPosition(
         IERC20 collateralToken,
         bytes32 parentCollectionId,
         bytes32 conditionId,
-        uint[] calldata partition, // It's a number that represents the outcome slot collection. 111 it's A|B|C 010 is B...
+        uint[] calldata partition,
         uint amount
     ) external {
         require(partition.length > 1, "got empty or singleton partition");
         uint outcomeSlotCount = payoutNumerators[conditionId].length;
         require(outcomeSlotCount > 0, "condition not prepared yet");
 
-        uint fullIndexSet = (1 << outcomeSlotCount) - 1; // For a condition with 4 outcomes it's 1111, for 5 it's 11111...
-        uint freeIndexSet = fullIndexSet; // Starts as the full collection
+        // For a condition with 4 outcomes fullIndexSet's 0b1111; for 5 it's 0b11111...
+        uint fullIndexSet = (1 << outcomeSlotCount) - 1;
+        // freeIndexSet starts as the full collection
+        uint freeIndexSet = fullIndexSet;
         // This loop checks that all condition sets are disjoint (the same outcome is not part of more than 1 set)
         for (uint i = 0; i < partition.length; i++) {
             uint indexSet = partition[i];
@@ -138,7 +132,8 @@ contract ConditionalTokens is ERC1155 {
             );
         }
 
-        if (freeIndexSet == 0) { // This is the full set. A|B and C
+        if (freeIndexSet == 0) {
+            // Partitioning the full set of outcomes for the condition in this branch
             if (parentCollectionId == bytes32(0)) {
                 require(collateralToken.transferFrom(msg.sender, address(this), amount), "could not receive collateral tokens");
             } else {
@@ -149,7 +144,9 @@ contract ConditionalTokens is ERC1155 {
                 );
             }
         } else {
-            // In this branch you cannot enter with individual outcomes from the root level
+            // Partitioning a subset of outcomes for the condition in this branch.
+            // For example, for a condition with three outcomes A, B, and C, this branch
+            // allows the splitting of a position $:(A|C) to positions $:(A) and $:(C).
             _burn(
                 msg.sender,
                 getPositionId(collateralToken,
