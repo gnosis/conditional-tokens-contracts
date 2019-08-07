@@ -276,7 +276,7 @@ Collateral ``$`` can be split into outcome tokens in positions ``$:(A)``, ``$:(B
         // This is just DollaCoin's address
         '0xD011ad011ad011AD011ad011Ad011Ad011Ad011A',
         // For splitting from collateral, pass bytes32(0)
-        '0x00',
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
         // "Choice" condition ID:
         // see A Categorical Example for derivation
         '0x67eb23e8932765c1d7a094838c928476df8c50d1d3898f278ef1fb2a62afab63',
@@ -307,7 +307,7 @@ The set of ``(A)``, ``(B)``, and ``(C)`` is not the only nontrivial partition of
 
     await conditionalTokens.splitPosition(
         '0xD011ad011ad011AD011ad011Ad011Ad011Ad011A',
-        '0x00',
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
         '0x67eb23e8932765c1d7a094838c928476df8c50d1d3898f278ef1fb2a62afab63',
         // This partition differs from the previous example
         [0b010, 0b101],
@@ -370,7 +370,7 @@ Supplying a partition which does not cover the set of all outcome slots for a co
         '0xD011ad011ad011AD011ad011Ad011Ad011Ad011A',
         // Note that we also supply zeroes here, as the only aspect shared
         // between $:(B|C), $:(B) and $:(C) is the collateral token
-        '0x00',
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
         '0x67eb23e8932765c1d7a094838c928476df8c50d1d3898f278ef1fb2a62afab63',
         // This partition does not cover the first outcome slot
         [0b010, 0b100],
