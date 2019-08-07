@@ -98,7 +98,7 @@ The condition ID may be determined off-chain from the parameters via ``web3``:
 
 A helper function for determining the condition ID also exists on the contract:
 
-.. autosolfunction:: ConditionalTokens.getConditionID
+.. autosolfunction:: ConditionalTokens.getConditionId
 
 This yields a condition ID of ``0x67eb23e8932765c1d7a094838c928476df8c50d1d3898f278ef1fb2a62afab63``.
 
@@ -174,6 +174,8 @@ This results in a collection ID of ``0x52ff54f0f5616e34a2d4f56fb68ab4cc636bf0d92
 
 We may also combine collection IDs for outcome collections for different conditions by adding their values modulo 2^256 (equivalently, by adding their values and then taking the lowest 256 bits).
 
+.. note:: This truncated sum is used to combine collection IDs because it is commutative. Bitwise XOR is not used in this scenario because the operation makes the root collection ID ``bytes32(0)`` accessible by XOR-ing combining collection IDs with themselves.
+
 To illustrate, let's denote the slots for range ends 0 and 1000 from our scalar condition example as ``LO`` and ``HI``. We can find the collection ID for ``(LO)`` to be ``0xd79c1d3f71f6c9d998353ba2a848e596f0c6c1a9f6fa633f2c9ec65aaa097cdc``.
 
 The combined collection ID for ``(A|B)&(LO)`` can be calculated via:
@@ -191,7 +193,7 @@ This calculation yields the value ``0x2a9b72306758380e3b0a31125ed39a635432b28318
 
 Similar to with conditions, the contract also provides a helper function for calculating outcome collection IDs:
 
-.. autosolfunction:: ConditionalTokens.getCollectionID
+.. autosolfunction:: ConditionalTokens.getCollectionId
 
 .. _BigInt: https://tc39.github.io/proposal-bigint/
 .. _BN.js: https://github.com/indutny/bn.js/
@@ -227,7 +229,7 @@ Similarly, the ID for ``$:(LO)`` can be found to be ``0xfdad82d898904026ae6c01a5
 
 A helper function for calculating positions also exists:
 
-.. autosolfunction:: ConditionalTokens.getPositionID
+.. autosolfunction:: ConditionalTokens.getPositionId
 
 .. _ERC20: https://theethereum.wiki/w/index.php/ERC20_Token_Standard
 
@@ -262,7 +264,7 @@ To decipher this function, let's consider what would be considered a valid split
 Basic Splits
 ~~~~~~~~~~~~
 
-Collateral ``$`` can be split into outcome tokens in positions ``$:(A)``, ``$:(B)``, and ``$:(C)``. To do so, use the following code:
+Collateral ``$`` can be split into conditional tokens in positions ``$:(A)``, ``$:(B)``, and ``$:(C)``. To do so, use the following code:
 
 .. code-block:: js
 
@@ -276,7 +278,7 @@ Collateral ``$`` can be split into outcome tokens in positions ``$:(A)``, ``$:(B
         // This is just DollaCoin's address
         '0xD011ad011ad011AD011ad011Ad011Ad011Ad011A',
         // For splitting from collateral, pass bytes32(0)
-        '0x00',
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
         // "Choice" condition ID:
         // see A Categorical Example for derivation
         '0x67eb23e8932765c1d7a094838c928476df8c50d1d3898f278ef1fb2a62afab63',
@@ -285,11 +287,11 @@ Collateral ``$`` can be split into outcome tokens in positions ``$:(A)``, ``$:(B
         [0b001, 0b010, 0b100],
         // Amount of collateral token to submit for holding
         // in exchange for minting the same amount of
-        // outcome token in each of the target positions
+        // conditional token in each of the target positions
         amount,
     )
 
-The effect of this transaction is to transfer ``amount`` DollaCoin from the message sender to the ``conditionalTokens`` to hold, and to mint ``amount`` of outcome token for the following positions:
+The effect of this transaction is to transfer ``amount`` DollaCoin from the message sender to the ``conditionalTokens`` to hold, and to mint ``amount`` of conditional token for the following positions:
 
 ========= ======================================================================
  Symbol                               Position ID
@@ -307,14 +309,14 @@ The set of ``(A)``, ``(B)``, and ``(C)`` is not the only nontrivial partition of
 
     await conditionalTokens.splitPosition(
         '0xD011ad011ad011AD011ad011Ad011Ad011Ad011A',
-        '0x00',
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
         '0x67eb23e8932765c1d7a094838c928476df8c50d1d3898f278ef1fb2a62afab63',
         // This partition differs from the previous example
         [0b010, 0b101],
         amount,
     )
 
-This transaction also transfers ``amount`` DollaCoin from the message sender to the ``conditionalTokens`` to hold, but it mints ``amount`` of outcome token for the following positions instead:
+This transaction also transfers ``amount`` DollaCoin from the message sender to the ``conditionalTokens`` to hold, but it mints ``amount`` of conditional token for the following positions instead:
 
 =========== ======================================================================
   Symbol                                  Position ID
@@ -330,7 +332,7 @@ This transaction also transfers ``amount`` DollaCoin from the message sender to 
 Splits to Deeper Positions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It's also possible to split from a position, burning outcome tokens in that position in order to acquire outcome tokens in deeper positions. For example, you can split ``$:(A|B)`` to target ``$:(A|B)&(LO)`` and ``$:(A|B)&(HI)``:
+It's also possible to split from a position, burning conditional tokens in that position in order to acquire conditional tokens in deeper positions. For example, you can split ``$:(A|B)`` to target ``$:(A|B)&(LO)`` and ``$:(A|B)&(HI)``:
 
 .. code-block:: js
 
@@ -350,7 +352,7 @@ It's also possible to split from a position, burning outcome tokens in that posi
         amount,
     )
 
-This transaction burns ``amount`` of outcome token in position ``$:(A|B)`` (position ID ``0x6147e75d1048cea497aeee64d1a4777e286764ded497e545e88efc165c9fc4f0``) in order to mint ``amount`` of outcome token in the following positions:
+This transaction burns ``amount`` of conditional token in position ``$:(A|B)`` (position ID ``0x6147e75d1048cea497aeee64d1a4777e286764ded497e545e88efc165c9fc4f0``) in order to mint ``amount`` of conditional token in the following positions:
 
 ================ ======================================================================
   Symbol                                  Position ID
@@ -358,6 +360,32 @@ This transaction burns ``amount`` of outcome token in position ``$:(A|B)`` (posi
 ``$:(A|B)&(LO)`` ``0xcc77e750b61d29e158aa3193faa3673b2686ba9f6a16f51b5cdbea2a4f694be0``
 ``$:(A|B)&(HI)`` ``0xbacf3ddf0474d567cd254ea0674fe52ab20a3e2ebca00ec71a846f3c48c5de9d``
 ================ ======================================================================
+
+Because the collection ID for ``(A|B)&(LO)`` is just the sum of the collection IDs for ``(A|B)`` and ``(LO)``, we could have split from ``(LO)`` to get ``(A|B)&(LO)`` and ``(C)&(LO)``:
+
+.. code-block:: js
+
+    await conditionalTokens.splitPosition(
+        '0xD011ad011ad011AD011ad011Ad011Ad011Ad011A',
+        // The collection ID for (LO).
+        // This collection contains an outcome collection from the example scalar condition
+        // instead of from the example categorical condition.
+        '0xd79c1d3f71f6c9d998353ba2a848e596f0c6c1a9f6fa633f2c9ec65aaa097cdc',
+        // This is the condition ID for the example categorical condition
+        // as opposed to the example scalar condition.
+        '0x67eb23e8932765c1d7a094838c928476df8c50d1d3898f278ef1fb2a62afab63',
+        // This partitions { A, B, C } into [{ A, B }, { C }]
+        [0b011, 0b100],
+        amount,
+    )
+
+The ``$:(A|B)&(LO)`` position reached is the same both ways.
+
+.. figure:: /_static/v2-cond-market-ot-compare.png
+    :alt: There is a single class of conditional tokens which resolves to collateral if Alice gets chosen and the score is high.
+    :align: center
+
+    There are many ways to split to a deep position.
 
 Splits on Partial Partitions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -370,7 +398,7 @@ Supplying a partition which does not cover the set of all outcome slots for a co
         '0xD011ad011ad011AD011ad011Ad011Ad011Ad011A',
         // Note that we also supply zeroes here, as the only aspect shared
         // between $:(B|C), $:(B) and $:(C) is the collateral token
-        '0x00',
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
         '0x67eb23e8932765c1d7a094838c928476df8c50d1d3898f278ef1fb2a62afab63',
         // This partition does not cover the first outcome slot
         [0b010, 0b100],
@@ -380,7 +408,7 @@ Supplying a partition which does not cover the set of all outcome slots for a co
 Merging Positions
 ~~~~~~~~~~~~~~~~~
 
-Merging positions does precisely the opposite of what splitting a position does. It burns outcome tokens in the deeper positions to either mint outcome tokens in a shallower position or send collateral to the message sender:
+Merging positions does precisely the opposite of what splitting a position does. It burns conditional tokens in the deeper positions to either mint conditional tokens in a shallower position or send collateral to the message sender:
 
 .. figure:: /_static/merge-positions.png
     :alt: A couple examples of merging positions.
@@ -402,20 +430,21 @@ If successful, the function will emit this event:
 Querying and Transferring Stake
 -------------------------------
 
-Outcome tokens in positions are not ERC20 tokens, but rather part of an `ERC1155 multitoken`_.
-
-In addition to a holder address, each token is indexed by an ID in this standard. In particular, position IDs are used to index outcome tokens. This is reflected in the balance querying function:
+The ConditionalTokens contract implements the `ERC1155 multitoken`_ interface. In addition to a holder address, each token is indexed by an ID in this standard. In particular, position IDs are used to index conditional tokens. This is reflected in the balance querying function:
 
 .. sol:function:: balanceOf(address owner, uint256 positionId) external view returns (uint256)
 
-To transfer outcome tokens, the following functions may be used, as per ERC1155:
+To transfer conditional tokens, the following functions may be used, as per ERC1155:
 
 .. sol:function::
     safeTransferFrom(address from, address to, uint256 positionId, uint256 value, bytes data) external
     safeBatchTransferFrom(address from, address to, uint256[] positionIds, uint256[] values, bytes data) external
-    safeMulticastTransferFrom(address[] from, address[] to, uint256[] positionIds, uint256[] values, bytes data) external
 
-Approving an operator account to transfer outcome tokens on your behalf may also be done via:
+These transfer functions ignore the ``data`` parameter.
+
+.. note:: When sending to contract accounts, transfers will be rejected unless the recipient implements the ``ERC1155TokenReceiver`` interface and returns the expected magic values. See the `ERC1155 multitoken`_ spec for more information.
+
+Approving an operator account to transfer conditional tokens on your behalf may also be done via:
 
 .. sol:function:: setApprovalForAll(address operator, bool approved) external
 

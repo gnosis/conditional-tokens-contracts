@@ -20,7 +20,7 @@ Experimental smart contracts for conditional prediction markets.
 
 `→ Online Documentation`_
 
-.. _→ Online Documentation: https://gnosis-mercury.readthedocs.io/en/latest/
+.. _→ Online Documentation: https://gnosis-conditional-tokens.readthedocs.io/en/latest/
 .. _Gnosis: https://gnosis.pm
 
 
