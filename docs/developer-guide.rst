@@ -98,7 +98,7 @@ The condition ID may be determined off-chain from the parameters via ``web3``:
 
 A helper function for determining the condition ID also exists on the contract:
 
-.. autosolfunction:: ConditionalTokens.getConditionID
+.. autosolfunction:: ConditionalTokens.getConditionId
 
 This yields a condition ID of ``0x67eb23e8932765c1d7a094838c928476df8c50d1d3898f278ef1fb2a62afab63``.
 
@@ -191,7 +191,7 @@ This calculation yields the value ``0x2a9b72306758380e3b0a31125ed39a635432b28318
 
 Similar to with conditions, the contract also provides a helper function for calculating outcome collection IDs:
 
-.. autosolfunction:: ConditionalTokens.getCollectionID
+.. autosolfunction:: ConditionalTokens.getCollectionId
 
 .. _BigInt: https://tc39.github.io/proposal-bigint/
 .. _BN.js: https://github.com/indutny/bn.js/
@@ -227,7 +227,7 @@ Similarly, the ID for ``$:(LO)`` can be found to be ``0xfdad82d898904026ae6c01a5
 
 A helper function for calculating positions also exists:
 
-.. autosolfunction:: ConditionalTokens.getPositionID
+.. autosolfunction:: ConditionalTokens.getPositionId
 
 .. _ERC20: https://theethereum.wiki/w/index.php/ERC20_Token_Standard
 
