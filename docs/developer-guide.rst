@@ -174,6 +174,8 @@ This results in a collection ID of ``0x52ff54f0f5616e34a2d4f56fb68ab4cc636bf0d92
 
 We may also combine collection IDs for outcome collections for different conditions by adding their values modulo 2^256 (equivalently, by adding their values and then taking the lowest 256 bits).
 
+.. note:: This truncated sum is used to combine collection IDs because it is commutative. Bitwise XOR is not used in this scenario because the operation makes the root collection ID ``bytes32(0)`` accessible by XOR-ing combining collection IDs with themselves.
+
 To illustrate, let's denote the slots for range ends 0 and 1000 from our scalar condition example as ``LO`` and ``HI``. We can find the collection ID for ``(LO)`` to be ``0xd79c1d3f71f6c9d998353ba2a848e596f0c6c1a9f6fa633f2c9ec65aaa097cdc``.
 
 The combined collection ID for ``(A|B)&(LO)`` can be calculated via:
@@ -358,6 +360,32 @@ This transaction burns ``amount`` of outcome token in position ``$:(A|B)`` (posi
 ``$:(A|B)&(LO)`` ``0xcc77e750b61d29e158aa3193faa3673b2686ba9f6a16f51b5cdbea2a4f694be0``
 ``$:(A|B)&(HI)`` ``0xbacf3ddf0474d567cd254ea0674fe52ab20a3e2ebca00ec71a846f3c48c5de9d``
 ================ ======================================================================
+
+Because the collection ID for ``(A|B)&(LO)`` is just the sum of the collection IDs for ``(A|B)`` and ``(LO)``, we could have split from ``(LO)`` to get ``(A|B)&(LO)`` and ``(C)&(LO)``:
+
+.. code-block:: js
+
+    await conditionalTokens.splitPosition(
+        '0xD011ad011ad011AD011ad011Ad011Ad011Ad011A',
+        // The collection ID for (LO).
+        // This collection contains an outcome collection from the example scalar condition
+        // instead of from the example categorical condition.
+        '0xd79c1d3f71f6c9d998353ba2a848e596f0c6c1a9f6fa633f2c9ec65aaa097cdc',
+        // This is the condition ID for the example categorical condition
+        // as opposed to the example scalar condition.
+        '0x67eb23e8932765c1d7a094838c928476df8c50d1d3898f278ef1fb2a62afab63',
+        // This partitions { A, B, C } into [{ A, B }, { C }]
+        [0b011, 0b100],
+        amount,
+    )
+
+The ``$:(A|B)&(LO)`` position reached is the same both ways.
+
+.. figure:: /_static/v2-cond-market-ot-compare.png
+    :alt: There is a single class of outcome tokens which resolves to collateral if Alice gets chosen and the score is high.
+    :align: center
+
+    There are many ways to split to a deep position.
 
 Splits on Partial Partitions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
