@@ -34,31 +34,31 @@ Because there's no reference to any collateral token in the specification of a c
 Conditional Market Support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In v1, conditional markets may be set up by creating events which uses the outcome tokens of another event as collateral tokens, creating a deeper set of outcome tokens.
+In v1, conditional markets may be set up by creating events which uses the conditional tokens of another event as collateral tokens, creating a deeper set of conditional tokens.
 
 For example, let's suppose there are two oracles which report on the following questions:
 
 1. Which **choice** out of Alice, Bob, and Carol will be made?
 2. Will the **score** be high or low?
 
-There are two ways to create outcome tokens backed by a collateral token denoted as ``$``, where the value of these outcome tokens depend on *both* of the reports of these oracles on their respective assigned questions:
+There are two ways to create conditional tokens backed by a collateral token denoted as ``$``, where the value of these conditional tokens depend on *both* of the reports of these oracles on their respective assigned questions:
 
 .. figure:: /_static/v1-cond-market-abc-hilo.png
-    :alt: Conditional markets in v1 where events depending on the outcome of the "score" question use outcome tokens from an event depending on the "choice" question as collateral
+    :alt: Conditional markets in v1 where events depending on the outcome of the "score" question use conditional tokens from an event depending on the "choice" question as collateral
     :align: center
 
     **Choice**, then **Score**
 
 .. figure:: /_static/v1-cond-market-hilo-abc.png
-    :alt: Another v1 setup where instead events depending on the outcome of the "choice" question use outcome tokens from an event depending on the "score" question as collateral
+    :alt: Another v1 setup where instead events depending on the outcome of the "choice" question use conditional tokens from an event depending on the "score" question as collateral
     :align: center
 
     **Score**, then **Choice**
 
-Although the outcome tokens in the second layer may have the same value in collateral under the same conditions, they are in reality separate entities:
+Although the conditional tokens in the second layer may have the same value in collateral under the same conditions, they are in reality separate entities:
 
 .. figure:: /_static/v1-cond-market-ot-compare.png
-    :alt: The two different outcome tokens which resolves to collateral if Alice gets chosen and the score is high.
+    :alt: The two different conditional tokens which resolves to collateral if Alice gets chosen and the score is high.
     :align: center
 
     These tokens should be the same, but aren't.
@@ -66,13 +66,13 @@ Although the outcome tokens in the second layer may have the same value in colla
 In v2, because all core prediction market data is held in a single contract, and because conditions are not tied to a specific collateral token, this discrepancy may be addressed. The situation in v2 looks more like this:
 
 .. figure:: /_static/v2-cond-market-slots-only.png
-    :alt: Conditional markets in v2, where the second layer of outcome tokens may resolve to outcome tokens of either condition.
+    :alt: Conditional markets in v2, where the second layer of conditional tokens may resolve to conditional tokens of either condition.
     :align: center
 
-It can be seen that the outcome tokens from v1 which were different are now the same in v2:
+It can be seen that the conditional tokens from v1 which were different are now the same in v2:
 
 .. figure:: /_static/v2-cond-market-ot-compare.png
-    :alt: There is a single class of outcome tokens which resolves to collateral if Alice gets chosen and the score is high.
+    :alt: There is a single class of conditional tokens which resolves to collateral if Alice gets chosen and the score is high.
     :align: center
 
     Contrast this with v1.

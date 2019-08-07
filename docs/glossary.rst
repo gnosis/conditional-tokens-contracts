@@ -13,7 +13,7 @@ Condition
     *Identified by keccak256(oracle . questionId . outcomeSlotCount)*
 
     **Outcome Slot**
-        Defines the redemption rate of Outcome Tokens. Outcome Tokens convert to a proportion of collateral depending on the outcome resolution of a set of conditions. 
+        Defines the redemption rate of Conditional Tokens. Conditional Tokens convert to a proportion of collateral depending on the outcome resolution of a set of conditions. 
 
         Outcome Slots can either be unresolved (when the condition hasn’t been reported on) or resolved (after condition resolution). 
 
@@ -34,7 +34,7 @@ Condition
 *********
 Position
 *********
-    A set of conditions, along with a non-empty proper subset of Outcome Slots for each condition (represents a combination of one or many Outcome Slots from multiple conditions) represented as a DAG (Directed Acyclic Graph) and tied to a specific stakeholder, Collateral Token, and amount of Outcome Tokens. 
+    A set of conditions, along with a non-empty proper subset of Outcome Slots for each condition (represents a combination of one or many Outcome Slots from multiple conditions) represented as a DAG (Directed Acyclic Graph) and tied to a specific stakeholder, Collateral Token, and amount of Conditional Tokens. 
 
     Representing a specific stakeholders stake in a certain condition(s) Outcome Slots as an ERC1155 token.
 
@@ -44,7 +44,7 @@ Position
         Condition(s)
         IndexSet(s)
         CollateralToken
-        Outcome Tokens
+        Conditional Tokens
 
     *Identified by the hash of a H(Collateral Token, Collection Identifier)*
 
@@ -62,10 +62,10 @@ Position
     **Collateral Token**
         An ERC20 token used to create stake in positions.
 
-    **Outcome Tokens**
-        For a given Collection Identifier, a stakeholder may express a belief in what that Collection Identifier of Outcome Slots represents by using a collateral token to create a position from the Collection Identifier and holding Outcome Tokens in that slot.
+    **Conditional Tokens**
+        For a given Collection Identifier, a stakeholder may express a belief in what that Collection Identifier of Outcome Slots represents by using a collateral token to create a position from the Collection Identifier and holding Conditional Tokens in that slot.
 
-        For non-root positions, redemption will convert Outcome Tokens into stake in a shallower position. For root positions, redemption will convert Outcome Tokens into Collateral Tokens.
+        For non-root positions, redemption will convert Conditional Tokens into stake in a shallower position. For root positions, redemption will convert Conditional Tokens into Collateral Tokens.
 
     **Position Depth**
         The number of conditions a position is based off of. Terminology is chosen because positions form a DAG which is very tree-like. Shallow positions have few conditions, and deep positions have many conditions.
@@ -82,25 +82,25 @@ Position
     **Splitting a Position**
         Stakeholders can split a position on an optional collection identifier and a condition.
 
-        For Root Positions, a collection identifier is not given (instead it is 0), and the stakeholder transfers an input amount of collateral tokens in order to get an equal amount of outcome tokens in each of the condition’s outcome slots.
+        For Root Positions, a collection identifier is not given (instead it is 0), and the stakeholder transfers an input amount of collateral tokens in order to get an equal amount of conditional tokens in each of the condition’s outcome slots.
 
-        For Non-Root Positions, a parent Collection Identifier is provided, and the stakeholder transfers an input amount of Outcome Tokens from the Position corresponding to the parent Collection Identifier down to a set of new Non-Root Position(s). 
+        For Non-Root Positions, a parent Collection Identifier is provided, and the stakeholder transfers an input amount of Conditional Tokens from the Position corresponding to the parent Collection Identifier down to a set of new Non-Root Position(s). 
 
-        Results in outcome tokens being transferred from the position being split to the positions resulting from the split. 
+        Results in conditional tokens being transferred from the position being split to the positions resulting from the split. 
 
     **Merging a Position**
         Basically the opposite of splitting a position. Stakeholders can merge a position on an optional Outcome Slot and a Collection Identifier for non-root positions.
 
-        For Root Positions, if an Outcome Slot is not given, the stakeholder inputs an equal amount of Outcome Tokens in each of the condition’s root Outcome Slots to receive an equal amount of Collateral Tokens.
+        For Root Positions, if an Outcome Slot is not given, the stakeholder inputs an equal amount of Conditional Tokens in each of the condition’s root Outcome Slots to receive an equal amount of Collateral Tokens.
 
-        For Non-Root Positions, a parent Collection Identifier is provided, and the stakeholder transfers an input amount of Outcome Tokens from all the Outcome Slots input in the partition[] either up to a position identified by the parent Collection Identifier or merged into a single Position. 
+        For Non-Root Positions, a parent Collection Identifier is provided, and the stakeholder transfers an input amount of Conditional Tokens from all the Outcome Slots input in the partition[] either up to a position identified by the parent Collection Identifier or merged into a single Position. 
 
-        Results in outcome tokens being transferred from the positions being merged to the position resulting from the merge. 
+        Results in conditional tokens being transferred from the positions being merged to the position resulting from the merge. 
 
     **Redeeming Positions**
         Redeems (1 - all Index Sets) of Positions that are predicated on a single Condition and collection identifier.
 
-        Resulting in either more Outcome Tokens in a shallower position, or a conversion of Outcome Tokens into the Collateral Token, depending on whether it’s a Root Position or Non-Root Position. 
+        Resulting in either more Conditional Tokens in a shallower position, or a conversion of Conditional Tokens into the Collateral Token, depending on whether it’s a Root Position or Non-Root Position. 
 	
         To redeem a position, you need:
          1. The Collateral Token that position is tied to. 

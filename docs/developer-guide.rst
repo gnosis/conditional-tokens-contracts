@@ -264,7 +264,7 @@ To decipher this function, let's consider what would be considered a valid split
 Basic Splits
 ~~~~~~~~~~~~
 
-Collateral ``$`` can be split into outcome tokens in positions ``$:(A)``, ``$:(B)``, and ``$:(C)``. To do so, use the following code:
+Collateral ``$`` can be split into conditional tokens in positions ``$:(A)``, ``$:(B)``, and ``$:(C)``. To do so, use the following code:
 
 .. code-block:: js
 
@@ -287,11 +287,11 @@ Collateral ``$`` can be split into outcome tokens in positions ``$:(A)``, ``$:(B
         [0b001, 0b010, 0b100],
         // Amount of collateral token to submit for holding
         // in exchange for minting the same amount of
-        // outcome token in each of the target positions
+        // conditional token in each of the target positions
         amount,
     )
 
-The effect of this transaction is to transfer ``amount`` DollaCoin from the message sender to the ``conditionalTokens`` to hold, and to mint ``amount`` of outcome token for the following positions:
+The effect of this transaction is to transfer ``amount`` DollaCoin from the message sender to the ``conditionalTokens`` to hold, and to mint ``amount`` of conditional token for the following positions:
 
 ========= ======================================================================
  Symbol                               Position ID
@@ -316,7 +316,7 @@ The set of ``(A)``, ``(B)``, and ``(C)`` is not the only nontrivial partition of
         amount,
     )
 
-This transaction also transfers ``amount`` DollaCoin from the message sender to the ``conditionalTokens`` to hold, but it mints ``amount`` of outcome token for the following positions instead:
+This transaction also transfers ``amount`` DollaCoin from the message sender to the ``conditionalTokens`` to hold, but it mints ``amount`` of conditional token for the following positions instead:
 
 =========== ======================================================================
   Symbol                                  Position ID
@@ -332,7 +332,7 @@ This transaction also transfers ``amount`` DollaCoin from the message sender to 
 Splits to Deeper Positions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It's also possible to split from a position, burning outcome tokens in that position in order to acquire outcome tokens in deeper positions. For example, you can split ``$:(A|B)`` to target ``$:(A|B)&(LO)`` and ``$:(A|B)&(HI)``:
+It's also possible to split from a position, burning conditional tokens in that position in order to acquire conditional tokens in deeper positions. For example, you can split ``$:(A|B)`` to target ``$:(A|B)&(LO)`` and ``$:(A|B)&(HI)``:
 
 .. code-block:: js
 
@@ -352,7 +352,7 @@ It's also possible to split from a position, burning outcome tokens in that posi
         amount,
     )
 
-This transaction burns ``amount`` of outcome token in position ``$:(A|B)`` (position ID ``0x6147e75d1048cea497aeee64d1a4777e286764ded497e545e88efc165c9fc4f0``) in order to mint ``amount`` of outcome token in the following positions:
+This transaction burns ``amount`` of conditional token in position ``$:(A|B)`` (position ID ``0x6147e75d1048cea497aeee64d1a4777e286764ded497e545e88efc165c9fc4f0``) in order to mint ``amount`` of conditional token in the following positions:
 
 ================ ======================================================================
   Symbol                                  Position ID
@@ -382,7 +382,7 @@ Because the collection ID for ``(A|B)&(LO)`` is just the sum of the collection I
 The ``$:(A|B)&(LO)`` position reached is the same both ways.
 
 .. figure:: /_static/v2-cond-market-ot-compare.png
-    :alt: There is a single class of outcome tokens which resolves to collateral if Alice gets chosen and the score is high.
+    :alt: There is a single class of conditional tokens which resolves to collateral if Alice gets chosen and the score is high.
     :align: center
 
     There are many ways to split to a deep position.
@@ -408,7 +408,7 @@ Supplying a partition which does not cover the set of all outcome slots for a co
 Merging Positions
 ~~~~~~~~~~~~~~~~~
 
-Merging positions does precisely the opposite of what splitting a position does. It burns outcome tokens in the deeper positions to either mint outcome tokens in a shallower position or send collateral to the message sender:
+Merging positions does precisely the opposite of what splitting a position does. It burns conditional tokens in the deeper positions to either mint conditional tokens in a shallower position or send collateral to the message sender:
 
 .. figure:: /_static/merge-positions.png
     :alt: A couple examples of merging positions.
@@ -430,13 +430,11 @@ If successful, the function will emit this event:
 Querying and Transferring Stake
 -------------------------------
 
-Outcome tokens in positions are not ERC20 tokens, but rather part of an `ERC1155 multitoken`_.
-
-In addition to a holder address, each token is indexed by an ID in this standard. In particular, position IDs are used to index outcome tokens. This is reflected in the balance querying function:
+The ConditionalTokens contract implements the `ERC1155 multitoken`_ interface. In addition to a holder address, each token is indexed by an ID in this standard. In particular, position IDs are used to index conditional tokens. This is reflected in the balance querying function:
 
 .. sol:function:: balanceOf(address owner, uint256 positionId) external view returns (uint256)
 
-To transfer outcome tokens, the following functions may be used, as per ERC1155:
+To transfer conditional tokens, the following functions may be used, as per ERC1155:
 
 .. sol:function::
     safeTransferFrom(address from, address to, uint256 positionId, uint256 value, bytes data) external
@@ -446,7 +444,7 @@ These transfer functions ignore the ``data`` parameter.
 
 .. note:: When sending to contract accounts, transfers will be rejected unless the recipient implements the ``ERC1155TokenReceiver`` interface and returns the expected magic values. See the `ERC1155 multitoken`_ spec for more information.
 
-Approving an operator account to transfer outcome tokens on your behalf may also be done via:
+Approving an operator account to transfer conditional tokens on your behalf may also be done via:
 
 .. sol:function:: setApprovalForAll(address operator, bool approved) external
 
