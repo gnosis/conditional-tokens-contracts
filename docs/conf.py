@@ -19,7 +19,7 @@ import os
 
 # -- Project information -----------------------------------------------------
 
-project = 'Gnosis Mercury'
+project = 'Gnosis Conditional Tokens'
 copyright = '2018, Gnosis Ltd'
 author = 'Gnosis'
 
@@ -106,7 +106,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'GnosisMercurydoc'
+htmlhelp_basename = 'GnosisConditionalTokensdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -134,8 +134,8 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc,
-     'GnosisMercury.tex',
-     'Gnosis Mercury Documentation',
+     'GnosisConditionalTokens.tex',
+     'Gnosis Conditional Tokens Documentation',
      'Gnosis', 'manual'),
 ]
 
@@ -145,8 +145,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'gnosismercury',
-     'Gnosis Mercury Documentation',
+    (master_doc, 'gnosisconditionaltokens',
+     'Gnosis Conditional Tokens Documentation',
      [author], 1)
 ]
 
@@ -157,9 +157,9 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'GnosisMercury',
-     'Gnosis Mercury Documentation',
-     author, 'GnosisMercury',
+    (master_doc, 'GnosisConditionalTokens',
+     'Gnosis Conditional Tokens Documentation',
+     author, 'GnosisConditionalTokens',
      'One line description of project.',
      'Miscellaneous'),
 ]
