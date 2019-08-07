@@ -413,7 +413,10 @@ To transfer outcome tokens, the following functions may be used, as per ERC1155:
 .. sol:function::
     safeTransferFrom(address from, address to, uint256 positionId, uint256 value, bytes data) external
     safeBatchTransferFrom(address from, address to, uint256[] positionIds, uint256[] values, bytes data) external
-    safeMulticastTransferFrom(address[] from, address[] to, uint256[] positionIds, uint256[] values, bytes data) external
+
+These transfer functions ignore the ``data`` parameter.
+
+.. note:: When sending to contract accounts, transfers will be rejected unless the recipient implements the ``ERC1155TokenReceiver`` interface and returns the expected magic values. See the `ERC1155 multitoken`_ spec for more information.
 
 Approving an operator account to transfer outcome tokens on your behalf may also be done via:
 
