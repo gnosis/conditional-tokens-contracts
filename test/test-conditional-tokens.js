@@ -25,6 +25,8 @@ const altBN128P = toBN(
 const altBN128PRed = BN.red(altBN128P);
 const altBN128B = toBN(3).toRed(altBN128PRed);
 const onePRed = toBN(1).toRed(altBN128PRed);
+const twoPRed = toBN(2).toRed(altBN128PRed);
+const fourPRed = toBN(4).toRed(altBN128PRed);
 const oddToggle = toBN(1).ushln(254);
 
 function getCollectionId(conditionId, indexSet) {
@@ -51,15 +53,77 @@ function getCollectionId(conditionId, indexSet) {
   return `0x${ecHash.toString(16, 64)}`;
 }
 
-// function combineCollectionIds(collectionIds) {
-//   return (
-//     "0x" +
-//     collectionIds
-//       .reduce((acc, collectionId) => acc.add(toBN(collectionId)), toBN(0))
-//       .maskn(256)
-//       .toString(16, 64)
-//   );
-// }
+function combineCollectionIds(collectionIds) {
+  const points = collectionIds.map(id => {
+    let x = toBN(id);
+    const odd = x.and(oddToggle).eq(oddToggle);
+    if (odd) x.ixor(oddToggle);
+    x = x.toRed(altBN128PRed);
+    let y, yy;
+    yy = x.redSqr();
+    yy.redIMul(x);
+    yy = yy.mod(altBN128P); // this might be a BN.js bug workaround
+    yy.redIAdd(altBN128B);
+    y = yy.redSqrt();
+    if (!y.redSqr().eq(yy)) throw new Error(`got invalid collection ID ${id}`);
+    if (odd !== y.isOdd()) y = y.redNeg();
+    return [x, y];
+  });
+
+  const [X, Y, Z] = points.reduce(([X1, Y1, Z1], [x2, y2]) => {
+    // https://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#addition-madd-2007-bl
+    if (Z1 == null) {
+      Z1 = onePRed;
+    }
+
+    // source 2007 Bernstein--Lange
+    // assume Z2=1
+
+    // compute Z1Z1 = Z1^2
+    const Z1Z1 = Z1.redSqr();
+    // compute U2 = X2 Z1Z1
+    const U2 = x2.redMul(Z1Z1);
+    // compute S2 = Y2 Z1 Z1Z1
+    const S2 = y2.redMul(Z1).redMul(Z1Z1);
+    // compute H = U2-X1
+    const H = U2.redSub(X1);
+    // compute HH = H^2
+    const HH = H.redSqr();
+    // compute I = 4 HH
+    const I = HH.redMul(fourPRed);
+    // compute J = H I
+    const J = H.redMul(I);
+    // compute r = 2 (S2-Y1)
+    const r = twoPRed.redMul(S2.redSub(Y1));
+    // compute V = X1 I
+    const V = X1.redMul(I);
+    // compute X3 = r^2-J-2 V
+    const X3 = r
+      .redSqr()
+      .redSub(J)
+      .redSub(twoPRed.redMul(V));
+    // compute Y3 = r (V-X3)-2 Y1 J
+    const Y3 = r.redMul(V.redSub(X3)).redSub(twoPRed.redMul(Y1).redMul(J));
+    // compute Z3 = (Z1+H)^2-Z1Z1-HH
+    const Z3 = Z1.redAdd(H)
+      .redSqr()
+      .redSub(Z1Z1)
+      .redSub(HH);
+
+    return [X3, Y3, Z3];
+  });
+
+  const invZ = Z.redInvm();
+  const invZZ = invZ.redSqr();
+  const invZZZ = invZZ.redMul(invZ);
+
+  const x = X.redMul(invZZ);
+  const y = Y.redMul(invZZZ);
+
+  const ecHash = x.fromRed();
+  if (y.isOdd()) ecHash.ixor(oddToggle);
+  return `0x${ecHash.toString(16, 64)}`;
+}
 
 function getPositionId(collateralToken, collateralTokenID, collectionId) {
   if (collectionId == null)
@@ -570,13 +634,11 @@ contract("ConditionalTokens", function(accounts) {
 
         if (deeperTests)
           context("with many conditions prepared", async function() {
-            const conditions = [
-              {
-                oracle,
-                questionId: randomHex(32),
-                outcomeSlotCount: toBN(4)
-              }
-            ];
+            const conditions = Array.from({ length: 3 }, () => ({
+              oracle,
+              questionId: randomHex(32),
+              outcomeSlotCount: toBN(4)
+            }));
 
             conditions.forEach(condition => {
               condition.id = getConditionId(
@@ -629,6 +691,88 @@ contract("ConditionalTokens", function(accounts) {
                   "0x"
                 );
               });
+
+              context(
+                "when trader splits to a deeper position with another condition",
+                function() {
+                  const conditionId2 = conditions[1].id;
+                  const partition2 = [0b0001, 0b0010, 0b1100];
+                  const deepSplitAmount = toBN(4e18);
+                  const parentCollectionId = getCollectionId(
+                    conditionId,
+                    positionIndexSet
+                  );
+
+                  beforeEach(async function() {
+                    ({ tx: this.deepSplitTx } = await doSplit.call(
+                      this,
+                      conditionId2,
+                      partition2,
+                      deepSplitAmount,
+                      parentCollectionId
+                    ));
+                  });
+
+                  it("combines collection IDs", async function() {
+                    for (const indexSet of partition2) {
+                      (await this.conditionalTokens.getCollectionId(
+                        parentCollectionId,
+                        conditionId2,
+                        indexSet
+                      )).should.be.equal(
+                        combineCollectionIds([
+                          parentCollectionId,
+                          getCollectionId(conditionId2, indexSet)
+                        ])
+                      );
+                    }
+                  });
+
+                  it("emits PositionSplit event", async function() {
+                    await expectEvent.inTransaction(
+                      this.deepSplitTx,
+                      ConditionalTokens,
+                      "PositionSplit",
+                      Object.assign(
+                        {
+                          stakeholder: trader.address,
+                          parentCollectionId,
+                          conditionId: conditionId2,
+                          // partition: partition2,
+                          amount: deepSplitAmount
+                        },
+                        getExpectedEventCollateralProperties.call(this)
+                      )
+                    );
+                  });
+
+                  it("burns value in the parent position", async function() {
+                    (await this.conditionalTokens.balanceOf(
+                      trader.address,
+                      getPositionForCollection.call(this, parentCollectionId)
+                    )).should.be.bignumber.equal(
+                      collateralTokenCount.sub(deepSplitAmount)
+                    );
+                  });
+
+                  it("mints values in the child positions", async function() {
+                    for (const indexSet of partition2) {
+                      const positionId = getPositionForCollection.call(
+                        this,
+                        combineCollectionIds([
+                          parentCollectionId,
+                          getCollectionId(conditionId2, indexSet)
+                        ])
+                      );
+
+                      (await this.conditionalTokens.balanceOf(
+                        trader.address,
+                        positionId
+                      )).should.be.bignumber.equal(deepSplitAmount);
+                    }
+                  });
+                }
+              );
 
               context("with valid report", function() {
                 beforeEach(async function() {
@@ -731,34 +875,34 @@ contract("ConditionalTokens", function(accounts) {
               collateralTokenCount
             );
           },
-          async doSplit(conditionId, partition, amount) {
+          async doSplit(conditionId, partition, amount, parentCollectionId) {
             return await trader.execCall(
               this.conditionalTokens,
               "splitPosition",
               this.collateralToken.address,
-              NULL_BYTES32,
+              parentCollectionId || NULL_BYTES32,
               conditionId,
               partition,
               amount
             );
           },
-          async doMerge(conditionId, partition, amount) {
+          async doMerge(conditionId, partition, amount, parentCollectionId) {
             return await trader.execCall(
               this.conditionalTokens,
               "mergePositions",
               this.collateralToken.address,
-              NULL_BYTES32,
+              parentCollectionId || NULL_BYTES32,
               conditionId,
               partition,
               amount
             );
           },
-          async doRedeem(conditionId, indexSets) {
+          async doRedeem(conditionId, indexSets, parentCollectionId) {
             return await trader.execCall(
               this.conditionalTokens,
               "redeemPositions",
               this.collateralToken.address,
-              NULL_BYTES32,
+              parentCollectionId || NULL_BYTES32,
               conditionId,
               indexSets
             );
