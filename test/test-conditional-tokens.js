@@ -1,7 +1,7 @@
 const ethSigUtil = require("eth-sig-util");
 
 const { expectEvent, expectRevert } = require("openzeppelin-test-helpers");
-const { toBN, soliditySha3, randomHex } = web3.utils;
+const { BN, toBN, soliditySha3, randomHex } = web3.utils;
 
 const ConditionalTokens = artifacts.require("ConditionalTokens");
 const ERC20Mintable = artifacts.require("MockCoin");
@@ -19,11 +19,36 @@ function getConditionId(oracle, questionId, outcomeSlotCount) {
   );
 }
 
+const altBN128P = toBN(
+  "21888242871839275222246405745257275088696311157297823662689037894645226208583"
+);
+const altBN128PRed = BN.red(altBN128P);
+const altBN128B = toBN(3).toRed(altBN128PRed);
+const onePRed = toBN(1).toRed(altBN128PRed);
+const oddToggle = toBN(1).ushln(254);
+
 function getCollectionId(conditionId, indexSet) {
-  return soliditySha3(
+  const initHash = soliditySha3(
     { t: "bytes32", v: conditionId },
     { t: "uint", v: indexSet }
   );
+  const odd = "89abcdef".includes(initHash[2]);
+
+  const x = toBN(initHash).toRed(altBN128PRed);
+
+  let y, yy;
+  do {
+    x.redIAdd(onePRed);
+    yy = x.redSqr();
+    yy.redIMul(x);
+    yy = yy.mod(altBN128P);
+    yy.redIAdd(altBN128B);
+    y = yy.redSqrt();
+  } while (!y.redSqr().eq(yy));
+
+  const ecHash = x.fromRed();
+  if (odd) ecHash.ixor(oddToggle);
+  return `0x${ecHash.toString(16, 64)}`;
 }
 
 // function combineCollectionIds(collectionIds) {
