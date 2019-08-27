@@ -185,6 +185,26 @@ contract ERC1155 is ERC165, IERC1155
     }
 
     /**
+     * @dev Internal function to batch mint amounts of tokens with the given IDs
+     * @param to The address that will own the minted token
+     * @param ids IDs of the tokens to be minted
+     * @param values Amounts of the tokens to be minted
+     * @param data Data forwarded to `onERC1155Received` if `to` is a contract receiver
+     */
+    function _batchMint(address to, uint256[] memory ids, uint256[] memory values, bytes memory data) internal {
+        require(to != address(0), "ERC1155: batch mint to the zero address");
+        require(ids.length == values.length, "ERC1155: IDs and values must have same lengths");
+
+        for(uint i = 0; i < ids.length; i++) {
+            _balances[ids[i]][to] = values[i].add(_balances[ids[i]][to]);
+        }
+
+        emit TransferBatch(msg.sender, address(0), to, ids, values);
+
+        _doSafeBatchTransferAcceptanceCheck(msg.sender, address(0), to, ids, values, data);
+    }
+
+    /**
      * @dev Internal function to burn an amount of a token with the given ID
      * @param owner Account which owns the token to be burnt
      * @param id ID of the token to be burnt
@@ -193,6 +213,22 @@ contract ERC1155 is ERC165, IERC1155
     function _burn(address owner, uint256 id, uint256 value) internal {
         _balances[id][owner] = _balances[id][owner].sub(value);
         emit TransferSingle(msg.sender, owner, address(0), id, value);
+    }
+
+    /**
+     * @dev Internal function to batch burn an amounts of tokens with the given IDs
+     * @param owner Account which owns the token to be burnt
+     * @param ids IDs of the tokens to be burnt
+     * @param values Amounts of the tokens to be burnt
+     */
+    function _batchBurn(address owner, uint256[] memory ids, uint256[] memory values) internal {
+        require(ids.length == values.length, "ERC1155: IDs and values must have same lengths");
+
+        for(uint i = 0; i < ids.length; i++) {
+            _balances[ids[i]][owner] = _balances[ids[i]][owner].sub(values[i]);
+        }
+
+        emit TransferBatch(msg.sender, owner, address(0), ids, values);
     }
 
     function _doSafeTransferAcceptanceCheck(
