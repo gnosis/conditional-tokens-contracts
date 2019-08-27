@@ -128,13 +128,6 @@ contract ConditionalTokens is ERC1155 {
             positionIds[i] = getPositionId(collateralToken, getCollectionId(parentCollectionId, conditionId, indexSet));
             amounts[i] = amount;
         }
-        _batchMint(
-            msg.sender,
-            // position ID is the ERC 1155 token ID
-            positionIds,
-            amounts,
-            ""
-        );
 
         if (freeIndexSet == 0) {
             // Partitioning the full set of outcomes for the condition in this branch
@@ -159,6 +152,13 @@ contract ConditionalTokens is ERC1155 {
             );
         }
 
+        _batchMint(
+            msg.sender,
+            // position ID is the ERC 1155 token ID
+            positionIds,
+            amounts,
+            ""
+        );
         emit PositionSplit(msg.sender, collateralToken, parentCollectionId, conditionId, partition, amount);
     }
 
