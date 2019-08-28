@@ -118,18 +118,15 @@ contract ConditionalTokens is ERC1155 {
         // freeIndexSet starts as the full collection
         uint freeIndexSet = fullIndexSet;
         // This loop checks that all condition sets are disjoint (the same outcome is not part of more than 1 set)
+        uint[] memory positionIds = new uint[](partition.length);
+        uint[] memory amounts = new uint[](partition.length);
         for (uint i = 0; i < partition.length; i++) {
             uint indexSet = partition[i];
             require(indexSet > 0 && indexSet < fullIndexSet, "got invalid index set");
             require((indexSet & freeIndexSet) == indexSet, "partition not disjoint");
             freeIndexSet ^= indexSet;
-            _mint(
-                msg.sender,
-                // position ID is the ERC 1155 token ID
-                getPositionId(collateralToken, getCollectionId(parentCollectionId, conditionId, indexSet)),
-                amount,
-                ""
-            );
+            positionIds[i] = getPositionId(collateralToken, getCollectionId(parentCollectionId, conditionId, indexSet));
+            amounts[i] = amount;
         }
 
         if (freeIndexSet == 0) {
@@ -155,6 +152,13 @@ contract ConditionalTokens is ERC1155 {
             );
         }
 
+        _batchMint(
+            msg.sender,
+            // position ID is the ERC 1155 token ID
+            positionIds,
+            amounts,
+            ""
+        );
         emit PositionSplit(msg.sender, collateralToken, parentCollectionId, conditionId, partition, amount);
     }
 
@@ -171,17 +175,21 @@ contract ConditionalTokens is ERC1155 {
 
         uint fullIndexSet = (1 << outcomeSlotCount) - 1;
         uint freeIndexSet = fullIndexSet;
+        uint[] memory positionIds = new uint[](partition.length);
+        uint[] memory amounts = new uint[](partition.length);
         for (uint i = 0; i < partition.length; i++) {
             uint indexSet = partition[i];
             require(indexSet > 0 && indexSet < fullIndexSet, "got invalid index set");
             require((indexSet & freeIndexSet) == indexSet, "partition not disjoint");
             freeIndexSet ^= indexSet;
-            _burn(
-                msg.sender,
-                getPositionId(collateralToken, getCollectionId(parentCollectionId, conditionId, indexSet)),
-                amount
-            );
+            positionIds[i] = getPositionId(collateralToken, getCollectionId(parentCollectionId, conditionId, indexSet));
+            amounts[i] = amount;
         }
+        _batchBurn(
+            msg.sender,
+            positionIds,
+            amounts
+        );
 
         if (freeIndexSet == 0) {
             if (parentCollectionId == bytes32(0)) {
