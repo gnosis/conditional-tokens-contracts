@@ -16,6 +16,7 @@ library CTHelpers {
 
     function sqrt(uint x) private pure returns (uint y) {
         uint p = P;
+        // solium-disable-next-line security/no-inline-assembly
         assembly {
             // add chain generated via https://crypto.stackexchange.com/q/27179/71252
             // and transformed to the following program:
@@ -418,7 +419,7 @@ library CTHelpers {
 
         if(y1 % 2 == 1)
             x1 ^= 1 << 254;
-        
+
         return bytes32(x1);
     }
 
