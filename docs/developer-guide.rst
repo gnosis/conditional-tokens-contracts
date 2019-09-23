@@ -96,7 +96,7 @@ The condition ID may be determined off-chain from the parameters via ``web3``:
         v: 3
     })
 
-A helper function for determining the condition ID also exists on the contract:
+A helper function for determining the condition ID also exists on both the contract and the ``CTHelpers`` library:
 
 .. autosolfunction:: ConditionalTokens.getConditionId
 
@@ -191,7 +191,7 @@ The combined collection ID for ``(A|B)&(LO)`` can be calculated via:
 
 This calculation yields the value ``0x2a9b72306758380e3b0a31125ed39a635432b283180c41b3fe8b5f5eb4971df4``.
 
-Similar to with conditions, the contract also provides a helper function for calculating outcome collection IDs:
+Similar to with conditions, the contract and the ``CTHelpers`` library also provide helper functions for calculating outcome collection IDs:
 
 .. autosolfunction:: ConditionalTokens.getCollectionId
 
@@ -227,7 +227,7 @@ The ID for ``$:(A|B)`` turns out to be ``0x6147e75d1048cea497aeee64d1a4777e28676
 
 Similarly, the ID for ``$:(LO)`` can be found to be ``0xfdad82d898904026ae6c01a5800c0a8ee9ada7e7862f9bb6428b6f81e06f53bb``, and ``$:(A|B)&(LO)`` has an ID of ``0xcc77e750b61d29e158aa3193faa3673b2686ba9f6a16f51b5cdbea2a4f694be0``.
 
-A helper function for calculating positions also exists:
+Helper functions for calculating positions also exist:
 
 .. autosolfunction:: ConditionalTokens.getPositionId
 
