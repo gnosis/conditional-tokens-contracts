@@ -2,6 +2,10 @@ test/python/
 requirements.txt
 .travis.yml
 
+# Documentation build #
+#######################
+docs/_build/
+
 # Coverage stuff #
 ##################
 
