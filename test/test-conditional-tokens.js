@@ -7,7 +7,7 @@ const {
   getCollectionId,
   combineCollectionIds,
   getPositionId
-} = require("./utils");
+} = require("../utils/id-helpers")(web3.utils);
 
 const ConditionalTokens = artifacts.require("ConditionalTokens");
 const ERC20Mintable = artifacts.require("MockCoin");
