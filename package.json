@@ -43,7 +43,7 @@
     "lint-staged": "^9.2.5",
     "lodash": "^4.17.15",
     "npm-prepublish": "^1.2.3",
-    "openzeppelin-test-helpers": "^0.4.3",
+    "openzeppelin-test-helpers": "^0.5.0",
     "prettier": "1.18.2",
     "run-with-testrpc": "^0.3.1",
     "truffle": "^5.0.36",
