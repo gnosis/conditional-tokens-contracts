@@ -1,12 +1,5 @@
-.. figure:: https://raw.githubusercontent.com/gnosis/conditional-tokens-contracts/master/assets/logo.png
-   :target: https://gnosis.pm
-   :alt: Gnosis Logo
-
-
-Gnosis Conditional Tokens Contracts
-===================================
-Prediction Market Contracts
----------------------------
+Conditional Tokens Contracts
+============================
 
 .. image:: https://travis-ci.org/gnosis/conditional-tokens-contracts.svg?branch=master
    :target: https://travis-ci.org/gnosis/conditional-tokens-contracts
@@ -16,12 +9,11 @@ Prediction Market Contracts
    :target: https://greenkeeper.io/
    :alt: Greenkeeper badge
 
-Experimental smart contracts for conditional prediction markets.
+Smart contracts for conditional tokens.
 
 `→ Online Documentation`_
 
-.. _→ Online Documentation: https://gnosis-conditional-tokens.readthedocs.io/en/latest/
-.. _Gnosis: https://gnosis.pm
+.. _→ Online Documentation: https://conditional-tokens.readthedocs.io/en/latest/
 
 
 License

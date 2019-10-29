@@ -1,7 +1,7 @@
 {
   "name": "@gnosis.pm/conditional-tokens-contracts",
   "version": "0.5.3",
-  "description": "Collection of smart contracts for the Gnosis prediction market platform",
+  "description": "Collection of smart contracts for the conditional tokens",
   "scripts": {
     "lint": "eslint .",
     "develop": "truffle develop",
@@ -22,7 +22,7 @@
     "Solidity",
     "Truffle"
   ],
-  "author": "Gnosis (https://gnosis.pm)",
+  "author": "Gnosis (https://gnosis.io)",
   "license": "LGPL-3.0",
   "dependencies": {
     "openzeppelin-solidity": "^2.3.0"
