@@ -1,10 +1,6 @@
 Developer Guide
 ===============
 
-.. warning::
-
-    This document refers to an experimental prediction market framework under active development. Some things may change. You may also be interested in the predecessor of this work: the original `Gnosis prediction market contracts <https://gnosis-pm-contracts.readthedocs.io>`_.
-
 Prerequisites
 -------------
 
