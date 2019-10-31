@@ -4,7 +4,7 @@ Glossary
 *********
 Condition
 *********
-    A question that a specific oracle reports on with a preset number of outcome slots. Analogous to events from PM contracts v1.
+    A question that a specific oracle reports on with a preset number of outcome slots. Analogous to events from Gnosis' first prediction market contracts.
 
     For example, a condition with a categorical outcome, that is, one of N outcomes, may have N outcome slots, where the resolution of the condition sets one of the outcome slots to receive the full payout.
 

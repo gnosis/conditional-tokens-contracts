@@ -4,8 +4,8 @@
    :maxdepth: 2
    :caption: Contents:
 
+   motivation
    developer-guide
-   changes-from-v1
    contributing
    glossary
 
