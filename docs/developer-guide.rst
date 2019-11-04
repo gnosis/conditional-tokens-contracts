@@ -1,10 +1,6 @@
 Developer Guide
 ===============
 
-.. warning::
-
-    This document refers to an experimental prediction market framework under active development. Some things may change. You may also be interested in the predecessor of this work: the original `Gnosis prediction market contracts <https://gnosis-pm-contracts.readthedocs.io>`_.
-
 Prerequisites
 -------------
 
@@ -334,7 +330,7 @@ The effect of this transaction is to transfer ``amount`` DollaCoin from the mess
 * ``$:(B)``
 * ``$:(C)``
 
-.. note:: The previous example, where collateral was split into shallow positions containing collections with one slot each, is similar to ``Event.buyAllOutcomes`` from v1.
+.. note:: The previous example, where collateral was split into shallow positions containing collections with one slot each, is similar to ``Event.buyAllOutcomes`` from Gnosis' first prediction market contracts.
 
 The set of ``(A)``, ``(B)``, and ``(C)`` is not the only nontrivial partition of outcome slots for the example categorical condition. For example, the set ``(B)`` (with index set ``0b010``) and ``(A|C)`` (with index set ``0b101``) also partitions these outcome slots, and consequently, splitting from ``$`` to ``$:(B)`` and ``$:(A|C)`` is also valid and can be done with the following code:
 
@@ -449,7 +445,7 @@ If successful, the function will emit this event:
 
 .. autosolevent:: ConditionalTokens.PositionsMerge
 
-.. note:: This generalizes ``sellAllOutcomes`` from v1 like ``splitPosition`` generalizes ``buyAllOutcomes``.
+.. note:: This generalizes ``sellAllOutcomes`` from Gnosis' first prediction market contracts like ``splitPosition`` generalizes ``buyAllOutcomes``.
 
 
 Querying and Transferring Stake

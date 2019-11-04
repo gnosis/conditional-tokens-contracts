@@ -5,7 +5,7 @@
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 SPHINXAUTOB   = sphinx-autobuild
-SPHINXPROJ    = GnosisPredictionMarketContracts
+SPHINXPROJ    = ConditionalTokens
 SOURCEDIR     = .
 BUILDDIR      = _build
 
