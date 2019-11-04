@@ -1,6 +1,6 @@
 {
   "name": "@gnosis.pm/conditional-tokens-contracts",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Collection of smart contracts for the conditional tokens",
   "scripts": {
     "lint": "eslint .",
