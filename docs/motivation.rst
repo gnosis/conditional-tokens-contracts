@@ -1,17 +1,17 @@
 Motivation
 ==========
 
-Conditional tokens were originally designed to enable combinatorial prediction markets more fully. These sorts of markets enable deeper information discovery with respect to conditional probabilities of events and conditional expected values. Prediction markets like this may be represented by nesting traditional prediction markets in systems like Augur or the first version of Gnosis prediction market contracts. However, they weren't designed to maximize fungibility in deeper combinatorial markets. 
+Conditional tokens were originally designed to enable combinatorial prediction markets more fully. These sorts of markets enable deeper information discovery with respect to conditional probabilities of events and conditional expected values. Prediction markets like this may be represented by nesting traditional prediction markets in systems like Augur or the first version of the Gnosis prediction market contracts. However, they weren't designed to maximize fungibility in deeper combinatorial markets. 
 
 Existing Approach to Combinatorial Markets
 ------------------------------------------
 
-For example, let's suppose there are two oracles which report on the following questions:
+Let's suppose there are two oracles which report on the following questions:
 
 1. Which **choice** out of Alice, Bob, and Carol will be made?
 2. Will the **score** be high or low?
 
-There are two ways to create conditional tokens backed by a collateral token denoted as ``$``, where the value of these conditional tokens depend on *both* of the reports of these oracles on their respective assigned questions:
+With some older prediction market systems, there would be two ways to create conditional tokens backed by a collateral token denoted as ``$``, where the value of these conditional tokens depend on *both* of the reports of these oracles on their respective assigned questions. In essence, you would create outcome tokens using one of the questions from some collateral, and then use the outcome tokens as collateral in multiple new markets based on the other question:
 
 .. figure:: /_static/v1-cond-market-abc-hilo.png
     :alt: Markets where events depending on the outcome of the "score" question use outcome tokens from an event depending on the "choice" question as collateral
@@ -25,7 +25,7 @@ There are two ways to create conditional tokens backed by a collateral token den
 
     **Score**, then **Choice**
 
-Although the outcome tokens in the second layer should represent value in collateral under the same conditions irrespective of the order in which the conditions are specified, they are in reality separate entities. Users may hold separate balances of each even though that balance should theoretically be redeemable under the same conditions.
+Although the outcome tokens in the second layer for both diagrams should represent value in collateral under the same conditions irrespective of the order in which the conditions are specified, they are in reality separate entities. Users may hold separate balances of each even though that balance should theoretically be redeemable under the same conditions.
 
 .. figure:: /_static/v1-cond-market-ot-compare.png
     :alt: The two different conditional tokens which resolves to collateral if Alice gets chosen and the score is high.
@@ -49,5 +49,3 @@ It can be seen that the deeper outcome tokens which were different tokens in old
 .. figure:: /_static/v2-cond-market-ot-compare.png
     :alt: There is a single class of conditional tokens which resolves to collateral if Alice gets chosen and the score is high.
     :align: center
-
-    Contrast this with the older approach.
