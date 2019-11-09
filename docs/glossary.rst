@@ -1,116 +1,65 @@
 Glossary
 ========
 
-*********
 Condition
-*********
-    A question that a specific oracle reports on with a preset number of outcome slots. Analogous to events from Gnosis' first prediction market contracts.
+---------
 
-    For example, a condition with a categorical outcome, that is, one of N outcomes, may have N outcome slots, where the resolution of the condition sets one of the outcome slots to receive the full payout.
+A condition is a question that a specific oracle reports on with a preset number of outcome slots. It is analogous to an *event* from Gnosis' first prediction market contracts.
 
-    Another example: a condition with a scalar outcome, that is an outcome X in some range [A, B], may have two outcome slots which correspond to the ends of the range A and B. Both slots are set to receive a proportion of the payout according to how close the outcome X is to A or B.
+A condition's ID may be calculated with the following expression::
 
-    *Identified by keccak256(oracle . questionId . outcomeSlotCount)*
+    keccak256(oracle . questionId . outcomeSlotCount)
 
-    **Outcome Slot**
-        Defines the redemption rate of Conditional Tokens. Conditional Tokens convert to a proportion of collateral depending on the outcome resolution of a set of conditions. 
+**Oracle**
+    The oracle for a condition is the account designated to resolve the condition by reporting the payout values for each outcome slot of the condition.
 
-        Outcome Slots can either be unresolved (when the condition hasn’t been reported on) or resolved (after condition resolution). 
+**Outcome slot**
+    Roughly speaking, an outcome slot of a condition is a degree of freedom for the oracle's answer to the question at hand.
 
-        **Index Set**
-            A bit array that represents a subset of Outcome Slots in one condition.
+    At the resolution of a condition, an oracle reports a payout value for each outcome slot of a condition.
 
-            Example: Condition1 has Outcome Slots: A,B,C. It would have 7 possible indexSets: A, B, C, A|B, A|C, B|C, A|B,C
+    For example, a condition that will result in one of N outcomes (i.e. categorical markets), may be expressed by N outcome slots, with the expection that the oracle will weight the correct outcome slot with all of the payout, and the incorrect outcome slots with no payout.
 
-        **Partition**
-            A specific way to separate the subsets of the Outcome Slots in a condition, using a combination of indexSets.
+    Another example: a condition with an result in some continuous range [A, B] (i.e. scalar markets), may have two outcome slots which correspond to the ends of the range A and B. Both slots are set to receive a proportion of the payout according to how close the outcome X is to A or B.
 
-    **Oracle**
-        The account which can report the results on the condition.
+**Condition resolution**
+    Conditions resolve when an oracle submits payout values for all of the condition’s outcome slots. Conditional tokens proportionally redeem to their underlying collateral depending on the payout values set in the condition resolution.
 
-    **Outcome Resolution**
-        The process in which an oracle reports results for the Outcome Slots in a condition, setting the Outcome Slot value for each of the condition’s Outcome Slots.
 
-*********
 Position
-*********
-    A set of conditions, along with a non-empty proper subset of Outcome Slots for each condition (represents a combination of one or many Outcome Slots from multiple conditions) represented as a DAG (Directed Acyclic Graph) and tied to a specific stakeholder, Collateral Token, and amount of Conditional Tokens. 
+--------
 
-    Representing a specific stakeholders stake in a certain condition(s) Outcome Slots as an ERC1155 token.
+Each conditional token is tied to a position.
 
-    A position is made up of: 
-     1. Stakeholder
-        Collection Identifier
-        Condition(s)
-        IndexSet(s)
-        CollateralToken
-        Conditional Tokens
+To form a position, first decide on the position's collateral token. Then consider a set of conditions. For each of these conditions, take some subset of that condition's outcome slots. Call these subsets outcome collections.
 
-    *Identified by the hash of a H(Collateral Token, Collection Identifier)*
+That position's conditional tokens can be redeemed for the collateral token if *every* condition associated with the position resolves in such a manner that all the outcome collections in the position contain some payout value.
 
-    **Collection Identifier**
-        An identifier used by positions to target Condition(s) and indexSet(s). 
+Roughly speaking, a position represents the collateral token if each of the position's outcome collections contain the correct outcome.
 
-        Rather than target individual Conditions and IndexSets. The Condition Identifier can identify a DAG (Directed Acyclic Graph) of dependant Condition(s) and indexSet(s).
+A position's ID may be calculated with the following expression::
 
-        It is the abstract structure that identifies what Conditions and IndexSets, a position is representing, along with their heirarchy. Without being tied to any specific stakeholder or Collateral Token.
+    keccak256(collateralToken . combinedCollectionIdentifier)
 
-        If the parentCollectionId is equal to 0, then it is a Root Position. 
+where ``combinedCollectionIdentifier`` is an hash of the set of identifiers for each outcome collection (see the developer guide for details).
 
-        Identified by a sum( parentCollectionIdentifier, hash(ConditionIdentifier . indexSet)
+**Index set**
+    A bit array that aids in representing an outcome collection for a condition. Represented as a ``uint256`` parameter, where the lowest bit's state (1) represents whether or not the first outcome slot is included in the set, the next lowest bit's state (2) represents whether or not the second outcome slot is included, the third lowest (4) the third slot's inclusion, etc.
 
-    **Collateral Token**
-        An ERC20 token used to create stake in positions.
+**Partition**
+    A way to split up the outcome slots for a condition into outcome collections. Represented by a list of disjoint index sets. The definition comes from mathematics (technically, *singleton partitions* aren't used though).
 
-    **Conditional Tokens**
-        For a given Collection Identifier, a stakeholder may express a belief in what that Collection Identifier of Outcome Slots represents by using a collateral token to create a position from the Collection Identifier and holding Conditional Tokens in that slot.
+**Collateral token**
+    The ERC20 token backing the position.
 
-        For non-root positions, redemption will convert Conditional Tokens into stake in a shallower position. For root positions, redemption will convert Conditional Tokens into Collateral Tokens.
+**Position depth**
+    The number of conditions a position is based off of. Terminology is chosen because positions form a DAG (directed acyclic graph) which is very tree-like. Shallow positions have few conditions, and deep positions have many conditions.
 
-    **Position Depth**
-        The number of conditions a position is based off of. Terminology is chosen because positions form a DAG which is very tree-like. Shallow positions have few conditions, and deep positions have many conditions.
+    **Root position**
+        A position based off of only a single condition. Pays out depending on the outcome of the condition. Redeems directly as collateral tokens
+    
+    **Non-root position**
+        A position based off of multiple conditions. Pays out depending on all of the outcomes of the multiple conditions. Can be redeemed to shallower positions.
 
-        **Root Position**
-            A position based off of only a single condition. Pays out depending on the outcome of the condition. Pays out directly to the Collateral Token
-        
-        **Non-Root Position**
-            A position based off of multiple conditions. Pays out depending on all of the outcomes of the multiple conditions. Pays out to a shallower Position.
-
-        **Atomic Position**
-            A position is atomic with respect to a set of conditions if it is contingent on all of the conditions in that set. Pays out to a shallower Position.
-
-    **Splitting a Position**
-        Stakeholders can split a position on an optional collection identifier and a condition.
-
-        For Root Positions, a collection identifier is not given (instead it is 0), and the stakeholder transfers an input amount of collateral tokens in order to get an equal amount of conditional tokens in each of the condition’s outcome slots.
-
-        For Non-Root Positions, a parent Collection Identifier is provided, and the stakeholder transfers an input amount of Conditional Tokens from the Position corresponding to the parent Collection Identifier down to a set of new Non-Root Position(s). 
-
-        Results in conditional tokens being transferred from the position being split to the positions resulting from the split. 
-
-    **Merging a Position**
-        Basically the opposite of splitting a position. Stakeholders can merge a position on an optional Outcome Slot and a Collection Identifier for non-root positions.
-
-        For Root Positions, if an Outcome Slot is not given, the stakeholder inputs an equal amount of Conditional Tokens in each of the condition’s root Outcome Slots to receive an equal amount of Collateral Tokens.
-
-        For Non-Root Positions, a parent Collection Identifier is provided, and the stakeholder transfers an input amount of Conditional Tokens from all the Outcome Slots input in the partition[] either up to a position identified by the parent Collection Identifier or merged into a single Position. 
-
-        Results in conditional tokens being transferred from the positions being merged to the position resulting from the merge. 
-
-    **Redeeming Positions**
-        Redeems (1 - all Index Sets) of Positions that are predicated on a single Condition and collection identifier.
-
-        Resulting in either more Conditional Tokens in a shallower position, or a conversion of Conditional Tokens into the Collateral Token, depending on whether it’s a Root Position or Non-Root Position. 
-	
-        To redeem a position, you need:
-         1. The Collateral Token that position is tied to. 
-            It’s parent positions Collection Identifier (if it has one), otherwise it would be a Root Position, and you would input 0 to receive back Collateral Tokens.
-            The condition you want to redeem.
-            The Index Sets[] you want to redeem. 
-
-        This will redeem all of the Index Sets[] slots listed in the given condition, for only positions with a parent position that has a Collection Idenfier equal to parentCollectionId. 
-
-
-
-
-
+    **Atomic position**
+        A position is atomic with respect to a set of conditions if it is contingent on all of the conditions in that set.
