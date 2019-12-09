@@ -1,1 +1,596 @@
-{}
+{
+  "ConditionalTokens": {
+    "1": {
+      "events": {
+        "0xab3760c3bd2bb38b5bcf54dc79802ed67338b4cf29f3054ded67ed24661e4177": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "name": "conditionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": true,
+              "name": "oracle",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "questionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": false,
+              "name": "outcomeSlotCount",
+              "type": "uint256"
+            }
+          ],
+          "name": "ConditionPreparation",
+          "type": "event",
+          "signature": "0xab3760c3bd2bb38b5bcf54dc79802ed67338b4cf29f3054ded67ed24661e4177"
+        },
+        "0xb44d84d3289691f71497564b85d4233648d9dbae8cbdbb4329f301c3a0185894": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "name": "conditionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": true,
+              "name": "oracle",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "questionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": false,
+              "name": "outcomeSlotCount",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "name": "payoutNumerators",
+              "type": "uint256[]"
+            }
+          ],
+          "name": "ConditionResolution",
+          "type": "event",
+          "signature": "0xb44d84d3289691f71497564b85d4233648d9dbae8cbdbb4329f301c3a0185894"
+        },
+        "0x2e6bb91f8cbcda0c93623c54d0403a43514fabc40084ec96b6d5379a74786298": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "name": "stakeholder",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "name": "collateralToken",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "parentCollectionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": true,
+              "name": "conditionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": false,
+              "name": "partition",
+              "type": "uint256[]"
+            },
+            {
+              "indexed": false,
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "PositionSplit",
+          "type": "event",
+          "signature": "0x2e6bb91f8cbcda0c93623c54d0403a43514fabc40084ec96b6d5379a74786298"
+        },
+        "0x6f13ca62553fcc2bcd2372180a43949c1e4cebba603901ede2f4e14f36b282ca": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "name": "stakeholder",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "name": "collateralToken",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "parentCollectionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": true,
+              "name": "conditionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": false,
+              "name": "partition",
+              "type": "uint256[]"
+            },
+            {
+              "indexed": false,
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "PositionsMerge",
+          "type": "event",
+          "signature": "0x6f13ca62553fcc2bcd2372180a43949c1e4cebba603901ede2f4e14f36b282ca"
+        },
+        "0x2682012a4a4f1973119f1c9b90745d1bd91fa2bab387344f044cb3586864d18d": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "name": "redeemer",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "collateralToken",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "parentCollectionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": false,
+              "name": "conditionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": false,
+              "name": "indexSets",
+              "type": "uint256[]"
+            },
+            {
+              "indexed": false,
+              "name": "payout",
+              "type": "uint256"
+            }
+          ],
+          "name": "PayoutRedemption",
+          "type": "event",
+          "signature": "0x2682012a4a4f1973119f1c9b90745d1bd91fa2bab387344f044cb3586864d18d"
+        },
+        "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "name": "operator",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "from",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "name": "value",
+              "type": "uint256"
+            }
+          ],
+          "name": "TransferSingle",
+          "type": "event",
+          "signature": "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62"
+        },
+        "0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "name": "operator",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "from",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "name": "ids",
+              "type": "uint256[]"
+            },
+            {
+              "indexed": false,
+              "name": "values",
+              "type": "uint256[]"
+            }
+          ],
+          "name": "TransferBatch",
+          "type": "event",
+          "signature": "0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb"
+        },
+        "0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "operator",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "name": "approved",
+              "type": "bool"
+            }
+          ],
+          "name": "ApprovalForAll",
+          "type": "event",
+          "signature": "0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31"
+        },
+        "0x6bb7ff708619ba0610cba295a58592e0451dee2622938c8755667688daf3529b": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "name": "value",
+              "type": "string"
+            },
+            {
+              "indexed": true,
+              "name": "id",
+              "type": "uint256"
+            }
+          ],
+          "name": "URI",
+          "type": "event",
+          "signature": "0x6bb7ff708619ba0610cba295a58592e0451dee2622938c8755667688daf3529b"
+        }
+      },
+      "links": {},
+      "address": "0xC59b0e4De5F1248C1140964E0fF287B192407E0C",
+      "transactionHash": "0x7e10ef2a2116a46153d52ad50d6428fa9f4b19c36c803ba2f707cd70b7434348"
+    },
+    "4": {
+      "events": {
+        "0xab3760c3bd2bb38b5bcf54dc79802ed67338b4cf29f3054ded67ed24661e4177": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "name": "conditionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": true,
+              "name": "oracle",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "questionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": false,
+              "name": "outcomeSlotCount",
+              "type": "uint256"
+            }
+          ],
+          "name": "ConditionPreparation",
+          "type": "event",
+          "signature": "0xab3760c3bd2bb38b5bcf54dc79802ed67338b4cf29f3054ded67ed24661e4177"
+        },
+        "0xb44d84d3289691f71497564b85d4233648d9dbae8cbdbb4329f301c3a0185894": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "name": "conditionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": true,
+              "name": "oracle",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "questionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": false,
+              "name": "outcomeSlotCount",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "name": "payoutNumerators",
+              "type": "uint256[]"
+            }
+          ],
+          "name": "ConditionResolution",
+          "type": "event",
+          "signature": "0xb44d84d3289691f71497564b85d4233648d9dbae8cbdbb4329f301c3a0185894"
+        },
+        "0x2e6bb91f8cbcda0c93623c54d0403a43514fabc40084ec96b6d5379a74786298": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "name": "stakeholder",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "name": "collateralToken",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "parentCollectionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": true,
+              "name": "conditionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": false,
+              "name": "partition",
+              "type": "uint256[]"
+            },
+            {
+              "indexed": false,
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "PositionSplit",
+          "type": "event",
+          "signature": "0x2e6bb91f8cbcda0c93623c54d0403a43514fabc40084ec96b6d5379a74786298"
+        },
+        "0x6f13ca62553fcc2bcd2372180a43949c1e4cebba603901ede2f4e14f36b282ca": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "name": "stakeholder",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "name": "collateralToken",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "parentCollectionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": true,
+              "name": "conditionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": false,
+              "name": "partition",
+              "type": "uint256[]"
+            },
+            {
+              "indexed": false,
+              "name": "amount",
+              "type": "uint256"
+            }
+          ],
+          "name": "PositionsMerge",
+          "type": "event",
+          "signature": "0x6f13ca62553fcc2bcd2372180a43949c1e4cebba603901ede2f4e14f36b282ca"
+        },
+        "0x2682012a4a4f1973119f1c9b90745d1bd91fa2bab387344f044cb3586864d18d": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "name": "redeemer",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "collateralToken",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "parentCollectionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": false,
+              "name": "conditionId",
+              "type": "bytes32"
+            },
+            {
+              "indexed": false,
+              "name": "indexSets",
+              "type": "uint256[]"
+            },
+            {
+              "indexed": false,
+              "name": "payout",
+              "type": "uint256"
+            }
+          ],
+          "name": "PayoutRedemption",
+          "type": "event",
+          "signature": "0x2682012a4a4f1973119f1c9b90745d1bd91fa2bab387344f044cb3586864d18d"
+        },
+        "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "name": "operator",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "from",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "indexed": false,
+              "name": "value",
+              "type": "uint256"
+            }
+          ],
+          "name": "TransferSingle",
+          "type": "event",
+          "signature": "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62"
+        },
+        "0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "name": "operator",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "from",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "name": "ids",
+              "type": "uint256[]"
+            },
+            {
+              "indexed": false,
+              "name": "values",
+              "type": "uint256[]"
+            }
+          ],
+          "name": "TransferBatch",
+          "type": "event",
+          "signature": "0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb"
+        },
+        "0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "name": "operator",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "name": "approved",
+              "type": "bool"
+            }
+          ],
+          "name": "ApprovalForAll",
+          "type": "event",
+          "signature": "0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31"
+        },
+        "0x6bb7ff708619ba0610cba295a58592e0451dee2622938c8755667688daf3529b": {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "name": "value",
+              "type": "string"
+            },
+            {
+              "indexed": true,
+              "name": "id",
+              "type": "uint256"
+            }
+          ],
+          "name": "URI",
+          "type": "event",
+          "signature": "0x6bb7ff708619ba0610cba295a58592e0451dee2622938c8755667688daf3529b"
+        }
+      },
+      "links": {},
+      "address": "0x36bede640D19981A82090519bC1626249984c908",
+      "transactionHash": "0x7db87634594160ae8acc745d38329f6e8902ae8cd98a9f1b10afb606b41c436b"
+    }
+  },
+  "Migrations": {
+    "1": {
+      "events": {},
+      "links": {},
+      "address": "0x03Ce050DAEB28021086Bf8e9B7843d6212c05F7B",
+      "transactionHash": "0x0ac0453238d2b4bb9ba0e393bb446c6453588fff9f259125c9a6cec4b0465336"
+    },
+    "4": {
+      "events": {},
+      "links": {},
+      "address": "0x06Fe100857e0cFE8B818E7476013C0203292D2A4",
+      "transactionHash": "0xa424fff196b8c0521bd902036a894fd9b6a3b9d10cc63533ae8bbfec4a393134"
+    }
+  }
+}
