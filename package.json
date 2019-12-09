@@ -13,7 +13,7 @@
     "injectnetinfo": "tnt iN",
     "extractnetinfo": "tnt eN",
     "resetnetinfo": "truffle networks --clean && tnt iN",
-    "prepack": "eslint . && npm run lint-contracts && truffle compile && truffle networks --clean && tnt iN"
+    "prepack": "eslint . && npm run lint-contracts && truffle compile && truffle networks --clean && tnt iN && npx tnt cleanBuild"
   },
   "keywords": [
     "Ethereum",
