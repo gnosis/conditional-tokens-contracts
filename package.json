@@ -46,7 +46,7 @@
     "openzeppelin-test-helpers": "^0.5.0",
     "prettier": "1.18.2",
     "run-with-testrpc": "^0.3.1",
-    "truffle": "^5.0.36",
+    "truffle": "^5.1.5",
     "web3": "^2.0.0-alpha.1"
   },
   "repository": {
