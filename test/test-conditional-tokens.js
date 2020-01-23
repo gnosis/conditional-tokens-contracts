@@ -85,15 +85,15 @@ contract("ConditionalTokens", function(accounts) {
       });
 
       it("should make outcome slot count available via getOutcomeSlotCount", async function() {
-        (await this.conditionalTokens.getOutcomeSlotCount(
-          conditionId
-        )).should.be.bignumber.equal(outcomeSlotCount);
+        (
+          await this.conditionalTokens.getOutcomeSlotCount(conditionId)
+        ).should.be.bignumber.equal(outcomeSlotCount);
       });
 
       it("should leave payout denominator unset", async function() {
-        (await this.conditionalTokens.payoutDenominator(
-          conditionId
-        )).should.be.bignumber.equal("0");
+        (
+          await this.conditionalTokens.payoutDenominator(conditionId)
+        ).should.be.bignumber.equal("0");
       });
 
       it("should not be able to prepare the same condition more than once", async function() {
@@ -217,16 +217,17 @@ contract("ConditionalTokens", function(accounts) {
             });
 
             it("should transfer split collateral from trader", async function() {
-              (await collateralBalanceOf.call(
-                this,
-                trader.address
-              )).should.be.bignumber.equal(
+              (
+                await collateralBalanceOf.call(this, trader.address)
+              ).should.be.bignumber.equal(
                 collateralTokenCount.sub(splitAmount)
               );
-              (await collateralBalanceOf.call(
-                this,
-                this.conditionalTokens.address
-              )).should.be.bignumber.equal(splitAmount);
+              (
+                await collateralBalanceOf.call(
+                  this,
+                  this.conditionalTokens.address
+                )
+              ).should.be.bignumber.equal(splitAmount);
             });
 
             it("should mint amounts in positions associated with partition", async function() {
@@ -236,10 +237,12 @@ contract("ConditionalTokens", function(accounts) {
                   getCollectionId(conditionId, indexSet)
                 );
 
-                (await this.conditionalTokens.balanceOf(
-                  trader.address,
-                  positionId
-                )).should.be.bignumber.equal(splitAmount);
+                (
+                  await this.conditionalTokens.balanceOf(
+                    trader.address,
+                    positionId
+                  )
+                ).should.be.bignumber.equal(splitAmount);
               }
             });
 
@@ -281,16 +284,17 @@ contract("ConditionalTokens", function(accounts) {
               });
 
               it("should transfer split collateral back to trader", async function() {
-                (await collateralBalanceOf.call(
-                  this,
-                  trader.address
-                )).should.be.bignumber.equal(
+                (
+                  await collateralBalanceOf.call(this, trader.address)
+                ).should.be.bignumber.equal(
                   collateralTokenCount.sub(splitAmount).add(mergeAmount)
                 );
-                (await collateralBalanceOf.call(
-                  this,
-                  this.conditionalTokens.address
-                )).should.be.bignumber.equal(splitAmount.sub(mergeAmount));
+                (
+                  await collateralBalanceOf.call(
+                    this,
+                    this.conditionalTokens.address
+                  )
+                ).should.be.bignumber.equal(splitAmount.sub(mergeAmount));
               });
 
               it("should burn amounts in positions associated with partition", async function() {
@@ -300,10 +304,12 @@ contract("ConditionalTokens", function(accounts) {
                     getCollectionId(conditionId, indexSet)
                   );
 
-                  (await this.conditionalTokens.balanceOf(
-                    trader.address,
-                    positionId
-                  )).should.be.bignumber.equal(splitAmount.sub(mergeAmount));
+                  (
+                    await this.conditionalTokens.balanceOf(
+                      trader.address,
+                      positionId
+                    )
+                  ).should.be.bignumber.equal(splitAmount.sub(mergeAmount));
                 }
               });
             });
@@ -424,10 +430,12 @@ contract("ConditionalTokens", function(accounts) {
 
                 it("should make reported payout numerators available", async function() {
                   for (let i = 0; i < payoutNumerators.length; i++) {
-                    (await this.conditionalTokens.payoutNumerators(
-                      conditionId,
-                      i
-                    )).should.be.bignumber.equal(payoutNumerators[i]);
+                    (
+                      await this.conditionalTokens.payoutNumerators(
+                        conditionId,
+                        i
+                      )
+                    ).should.be.bignumber.equal(payoutNumerators[i]);
                   }
                 });
 
@@ -479,10 +487,12 @@ contract("ConditionalTokens", function(accounts) {
                         this,
                         getCollectionId(conditionId, indexSet)
                       );
-                      (await this.conditionalTokens.balanceOf(
-                        trader.address,
-                        positionId
-                      )).should.be.bignumber.equal("0");
+                      (
+                        await this.conditionalTokens.balanceOf(
+                          trader.address,
+                          positionId
+                        )
+                      ).should.be.bignumber.equal("0");
                     }
                   });
 
@@ -491,17 +501,18 @@ contract("ConditionalTokens", function(accounts) {
                       this,
                       getCollectionId(conditionId, partition[0])
                     );
-                    (await this.conditionalTokens.balanceOf(
-                      counterparty,
-                      positionId
-                    )).should.be.bignumber.equal(transferAmount);
+                    (
+                      await this.conditionalTokens.balanceOf(
+                        counterparty,
+                        positionId
+                      )
+                    ).should.be.bignumber.equal(transferAmount);
                   });
 
                   it("should credit payout as collateral", async function() {
-                    (await collateralBalanceOf.call(
-                      this,
-                      trader.address
-                    )).should.be.bignumber.equal(
+                    (
+                      await collateralBalanceOf.call(this, trader.address)
+                    ).should.be.bignumber.equal(
                       collateralTokenCount.sub(splitAmount).add(payout)
                     );
                   });
@@ -594,11 +605,13 @@ contract("ConditionalTokens", function(accounts) {
 
                   it("combines collection IDs", async function() {
                     for (const indexSet of partition2) {
-                      (await this.conditionalTokens.getCollectionId(
-                        parentCollectionId,
-                        conditionId2,
-                        indexSet
-                      )).should.be.equal(
+                      (
+                        await this.conditionalTokens.getCollectionId(
+                          parentCollectionId,
+                          conditionId2,
+                          indexSet
+                        )
+                      ).should.be.equal(
                         combineCollectionIds([
                           parentCollectionId,
                           getCollectionId(conditionId2, indexSet)
@@ -626,10 +639,12 @@ contract("ConditionalTokens", function(accounts) {
                   });
 
                   it("burns value in the parent position", async function() {
-                    (await this.conditionalTokens.balanceOf(
-                      trader.address,
-                      getPositionForCollection.call(this, parentCollectionId)
-                    )).should.be.bignumber.equal(
+                    (
+                      await this.conditionalTokens.balanceOf(
+                        trader.address,
+                        getPositionForCollection.call(this, parentCollectionId)
+                      )
+                    ).should.be.bignumber.equal(
                       collateralTokenCount.sub(deepSplitAmount)
                     );
                   });
@@ -644,10 +659,12 @@ contract("ConditionalTokens", function(accounts) {
                         ])
                       );
 
-                      (await this.conditionalTokens.balanceOf(
-                        trader.address,
-                        positionId
-                      )).should.be.bignumber.equal(deepSplitAmount);
+                      (
+                        await this.conditionalTokens.balanceOf(
+                          trader.address,
+                          positionId
+                        )
+                      ).should.be.bignumber.equal(deepSplitAmount);
                     }
                   });
                 }
@@ -675,10 +692,12 @@ contract("ConditionalTokens", function(accounts) {
 
                 it("should reflect report via payoutNumerators", async function() {
                   for (let i = 0; i < finalReport.length; i++) {
-                    (await this.conditionalTokens.payoutNumerators(
-                      conditionId,
-                      i
-                    )).should.be.bignumber.equal(finalReport[i]);
+                    (
+                      await this.conditionalTokens.payoutNumerators(
+                        conditionId,
+                        i
+                      )
+                    ).should.be.bignumber.equal(finalReport[i]);
                   }
                 });
 
