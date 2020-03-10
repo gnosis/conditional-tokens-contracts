@@ -13,7 +13,7 @@ Smart contracts for conditional tokens.
 
 `→ Online Documentation`_
 
-.. _→ Online Documentation: https://conditional-tokens.readthedocs.io/en/latest/
+.. _→ Online Documentation: https://docs.gnosis.io/conditionaltokens/
 
 
 License
