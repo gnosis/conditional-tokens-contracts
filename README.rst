@@ -15,6 +15,11 @@ Smart contracts for conditional tokens.
 
 .. _→ Online Documentation: https://docs.gnosis.io/conditionaltokens/
 
+The conditional tokens contracts are deployed at the following addresses:
+
+* Mainnet: ```0xC59b0e4De5F1248C1140964E0fF287B192407E0C```
+* Rinkeby: ```0x36bede640D19981A82090519bC1626249984c908```
+
 
 License
 -------
