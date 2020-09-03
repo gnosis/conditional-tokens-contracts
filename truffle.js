@@ -1,5 +1,6 @@
 require("chai/register-should");
 require("chai").use(require("chai-as-promised"));
+const HDWalletProvider = require("truffle-hdwallet-provider");
 
 const config = {
   networks: {
@@ -22,6 +23,14 @@ const config = {
       host: "localhost",
       port: 8545,
       network_id: "4"
+    },
+    xdai: {
+      provider: function() {
+        return new HDWalletProvider("mnemonic here", "https://dai.poa.network");
+      },
+      network_id: 100,
+      gas: 8000000,
+      gasPrice: 1000000000
     },
     local: {
       host: "localhost",
