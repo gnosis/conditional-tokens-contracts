@@ -1,13 +1,7 @@
 language: node_js
 node_js:
-- '11'
-- '10'
-- '8'
-before_install:
-- npm install -g npm greenkeeper-lockfile@1
-before_script: greenkeeper-lockfile-update
+- lts/*
 script:
 - npm run lint
 - npm test
 - npx codechecks
-after_script: greenkeeper-lockfile-upload
