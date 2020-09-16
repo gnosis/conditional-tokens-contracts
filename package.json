@@ -8,7 +8,7 @@
     "compile": "truffle compile",
     "migrate": "truffle migrate",
     "networks": "truffle networks",
-    "test": "run-with-testrpc 'truffle test --network local'",
+    "test": "truffle test",
     "lint-contracts": "solium -d contracts/",
     "injectnetinfo": "tnt iN",
     "extractnetinfo": "tnt eN",
@@ -24,11 +24,6 @@
   ],
   "author": "Gnosis (https://gnosis.io)",
   "license": "LGPL-3.0",
-  "dependencies": {
-    "openzeppelin-solidity": "^2.3.0",
-    "truffle-flattener": "^1.4.4",
-    "truffle-hdwallet-provider": "^1.0.17"
-  },
   "devDependencies": {
     "@codechecks/client": "^0.1.9",
     "@gnosis.pm/safe-contracts": "github:gnosis/safe-contracts",
@@ -45,10 +40,13 @@
     "lint-staged": "^9.2.5",
     "lodash": "^4.17.15",
     "npm-prepublish": "^1.2.3",
+    "openzeppelin-solidity": "^2.3.0",
     "openzeppelin-test-helpers": "^0.5.0",
     "prettier": "1.19.1",
     "run-with-testrpc": "^0.3.1",
     "truffle": "^5.0.36",
+    "truffle-flattener": "^1.4.4",
+    "truffle-hdwallet-provider": "^1.0.17",
     "web3": "^2.0.0-alpha.1"
   },
   "repository": {
