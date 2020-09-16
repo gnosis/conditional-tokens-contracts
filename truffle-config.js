@@ -1,6 +1,3 @@
-require("chai/register-should");
-require("chai").use(require("chai-as-promised"));
-
 const config = {
   networks: {
     mainnet: {
@@ -55,9 +52,16 @@ const config = {
   }
 };
 
-const _ = require("lodash");
+try {
+  require("chai/register-should");
+  require("chai").use(require("chai-as-promised"));
+} catch (e) {
+  // eslint-disable-next-line no-console
+  console.log("Skip setting up testing utilities");
+}
 
 try {
+  const _ = require("lodash");
   _.merge(config, require("./truffle-local"));
 } catch (e) {
   if (e.code === "MODULE_NOT_FOUND" && e.message.includes("truffle-local")) {
