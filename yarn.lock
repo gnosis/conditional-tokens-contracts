@@ -5843,7 +5843,12 @@ opencollective-postinstall@^2.0.2:
   resolved "https://registry.yarnpkg.com/opencollective-postinstall/-/opencollective-postinstall-2.0.3.tgz#7a0fff978f6dbfa4d006238fbac98ed4198c3259"
   integrity sha512-8AV/sCtuzUeTo8gQK5qDZzARrulB3egtLzFgteqB2tcT4Mw7B8Kt7JcDHmltjz6FOAHsvTevk70gZEbhM4ZS9Q==
 
-openzeppelin-solidity@^2.0.0, openzeppelin-solidity@^2.3.0:
+openzeppelin-solidity@2.3.0:
+  version "2.3.0"
+  resolved "https://registry.yarnpkg.com/openzeppelin-solidity/-/openzeppelin-solidity-2.3.0.tgz#1ab7b4cc3782a5472ed61eb740c56a8bfdd74119"
+  integrity sha512-QYeiPLvB1oSbDt6lDQvvpx7k8ODczvE474hb2kLXZBPKMsxKT1WxTCHBYrCU7kS7hfAku4DcJ0jqOyL+jvjwQw==
+
+openzeppelin-solidity@^2.0.0:
   version "2.5.1"
   resolved "https://registry.yarnpkg.com/openzeppelin-solidity/-/openzeppelin-solidity-2.5.1.tgz#1cdcce30c4c6a7b6625dab62ccd0440a813ab597"
   integrity sha512-oCGtQPLOou4su76IMr4XXJavy9a8OZmAXeUZ8diOdFznlL/mlkIlYr7wajqCzH4S47nlKPS7m0+a2nilCTpVPQ==

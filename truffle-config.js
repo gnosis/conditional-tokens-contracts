@@ -1,7 +1,3 @@
-require("chai/register-should");
-require("chai").use(require("chai-as-promised"));
-const HDWalletProvider = require("truffle-hdwallet-provider");
-
 const config = {
   networks: {
     mainnet: {
@@ -25,12 +21,9 @@ const config = {
       network_id: "4"
     },
     xdai: {
-      provider: function() {
-        return new HDWalletProvider("mnemonic here", "https://dai.poa.network");
-      },
-      network_id: 100,
-      gas: 8000000,
-      gasPrice: 1000000000
+      host: "localhost",
+      port: 8545,
+      network_id: "100"
     },
     local: {
       host: "localhost",
@@ -59,9 +52,16 @@ const config = {
   }
 };
 
-const _ = require("lodash");
+try {
+  require("chai/register-should");
+  require("chai").use(require("chai-as-promised"));
+} catch (e) {
+  // eslint-disable-next-line no-console
+  console.log("Skip setting up testing utilities");
+}
 
 try {
+  const _ = require("lodash");
   _.merge(config, require("./truffle-local"));
 } catch (e) {
   if (e.code === "MODULE_NOT_FOUND" && e.message.includes("truffle-local")) {
