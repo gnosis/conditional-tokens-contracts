@@ -14,6 +14,7 @@ contract ConditionalTokensMany is ERC1155 {
     // TODO: Make impossible to claim funds before 100 years pass.
     // TODO: MACI by Vitalik
     // TODO: Allow change 100 years to something other by voting?
+    // TODO: Microsoft Azure to run a BrightID node till we vote to make it decentralized.
 
     uint constant INITIAL_CUSTOMER_BALANCE = 1000 * 10**18; // an arbitrarily choosen value
 
