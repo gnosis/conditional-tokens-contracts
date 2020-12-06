@@ -6,6 +6,8 @@ import { CTHelpers } from "./CTHelpers.sol";
 /// ERC-1155 token ID is a combination of market ID, collateral address, and customer address.
 contract ConditionalTokensMany is ERC1155 {
 
+    // TODO: Nontranferrable token with its rent given to alive person tradeable and redeemable.
+
     uint constant INITIAL_CUSTOMER_BALANCE = 1000 * 10**18; // an arbitrarily choosen value
 
     event MarketCreated(address oracle, uint64 marketId);
