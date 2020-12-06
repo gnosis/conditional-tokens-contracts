@@ -3,7 +3,7 @@ import { IERC20 } from "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
 import { CTHelpers } from "./CTHelpers.sol";
 
-contract ConditionalTokens is/* FIXME */ ERC1155 {
+contract ConditionalTokens is ERC1155 {
 
     event MarketCreated(address oracle, uint64 marketId);
 
@@ -45,8 +45,6 @@ contract ConditionalTokens is/* FIXME */ ERC1155 {
     /// Denominator is also used for checking if the condition has been resolved. If the denominator is non-zero, then the condition has been resolved.
     mapping(uint64 => uint) public payoutDenominator;
 
-    mapping(uint64 => mapping(address => mapping(address => uint))) public marketBalances;
-
     /// Register ourselves as an oracle for a new market.
     function createMarket() external {
         uint64 marketId = maxMarket++;
@@ -55,9 +53,9 @@ contract ConditionalTokens is/* FIXME */ ERC1155 {
     }
 
     /// First need to approve the contract to spend the token.
-    function deposit(IERC20 collateralToken, uint64 market, address recipient, uint256 amount) external {
+    function deposit(IERC20 collateralToken, uint64 market, address recipient, uint256 amount, bytes calldata data) external {
         require(collateralToken.transferFrom(msg.sender, address(this), amount));
-        marketBalances[market][address(collateralToken)][recipient] += amount;
+        _mint(recipient, _tokenId(market, collateralToken), amount, data);
         // TODO: Emit.
     }
 
@@ -90,10 +88,14 @@ contract ConditionalTokens is/* FIXME */ ERC1155 {
     function redeemPositions(IERC20 collateralToken, uint64 market, address address_) external {
         uint256 numerator = payoutNumerators[market][address_];
         uint256 denominator = payoutDenominator[market];
-        uint256 total = marketBalances[market][address(collateralToken)][address_];
+        uint256 total = balanceOf(address_, _tokenId(market, collateralToken));
         uint256 amount = total * numerator / denominator; // rounded to below for no out-of-funds
         payoutNumerators[market][address_] = 0;
         collateralToken.transfer(address_, amount); // FIXME: Call it last, not in the loop for security!
         // FIXME: Emit.
+    }
+
+    function _tokenId(uint64 market, IERC20 collateralToken) private pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(market, collateralToken)));
     }
 }
