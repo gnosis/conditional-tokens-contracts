@@ -130,8 +130,8 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     function registerCustomer(IERC20 collateralToken, uint64 market, bytes calldata data) external {
-        totalMarketBalances[_collateralTokenId(market, collateralToken)] += INITIAL_CUSTOMER_BALANCE;
-        _mint(msg.sender, _conditionalTokenId(market, collateralToken, msg.sender), INITIAL_CUSTOMER_BALANCE, data);
+        totalMarketBalances[_collateralTokenId(collateralToken, market)] += INITIAL_CUSTOMER_BALANCE;
+        _mint(msg.sender, _conditionalTokenId(collateralToken, market, msg.sender), INITIAL_CUSTOMER_BALANCE, data);
         emit CustomerRegistered(collateralToken, msg.sender, market, data);
         // TODO: emit
     }
@@ -177,19 +177,19 @@ contract ConditionalTokensMany is ERC1155 {
         return _collateralBalanceOf(collateralToken, market, customer);
     }
 
-    function _collateralTokenId(uint64 market, IERC20 collateralToken) private pure returns (uint256) {
+    function _collateralTokenId(IERC20 collateralToken, uint64 market) private pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(market, collateralToken)));
     }
 
-    function _conditionalTokenId(uint64 market, IERC20 collateralToken, address customer) private pure returns (uint256) {
+    function _conditionalTokenId(IERC20 collateralToken, uint64 market, address customer) private pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(market, collateralToken, customer)));
     }
 
     function _collateralBalanceOf(IERC20 collateralToken, uint64 market, address customer) internal view returns (uint256) {
         uint256 numerator = uint256(payoutNumerators[market][customer]);
         uint256 denominator = payoutDenominator[market];
-        uint256 total = totalMarketBalances[_collateralTokenId(market, collateralToken)];
-        uint256 customerBalance = balanceOf(customer, _conditionalTokenId(market, collateralToken, customer));
+        uint256 total = totalMarketBalances[_collateralTokenId(collateralToken, market)];
+        uint256 customerBalance = balanceOf(customer, _conditionalTokenId(collateralToken, market, customer));
         // Rounded to below for no out-of-funds, no overflow because numerator is small:
         return customerBalance * numerator / denominator / total;
     }
