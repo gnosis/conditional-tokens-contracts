@@ -7,6 +7,7 @@ import { CTHelpers } from "./CTHelpers.sol";
 contract ConditionalTokensMany is ERC1155 {
 
     // TODO: Nontranferrable token with its rent given to alive person tradeable and redeemable.
+    // TODO: Also combine both variants.
 
     uint constant INITIAL_CUSTOMER_BALANCE = 1000 * 10**18; // an arbitrarily choosen value
 
