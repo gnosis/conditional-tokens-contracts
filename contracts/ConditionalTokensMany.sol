@@ -74,6 +74,8 @@ contract ConditionalTokensMany is ERC1155 {
         uint payout
     );
 
+    IERC20 weth;
+
     uint64 private maxMarket;
 
     /// Mapping from market to oracle.
@@ -86,6 +88,10 @@ contract ConditionalTokensMany is ERC1155 {
     mapping(uint64 => uint) public payoutDenominator;
     /// Total balance of conditional for a given market and collateral.
     mapping(uint256 => uint) public totalMarketBalances;
+
+    constructor(IERC20 _weth) public {
+        weth = _weth;
+    }
 
     /// Register ourselves as an oracle for a new market.
     function createMarket() external {
@@ -100,6 +106,15 @@ contract ConditionalTokensMany is ERC1155 {
         require(collateralToken.transferFrom(msg.sender, address(this), amount));
         _mint(msg.sender, _collateralDonatedTokenId(collateralToken), amount, data);
         emit DonateERC20Collateral(collateralToken, msg.sender, amount, data);
+    }
+
+    // Another way to donate
+    function receive() external payable {
+        address payable wethAddress = address(uint160(address(weth)));
+        wethAddress.transfer(msg.value);
+        bytes memory data = new bytes(0);
+        _mint(msg.sender, _collateralDonatedTokenId(weth), msg.value, data);
+        emit DonateERC20Collateral(weth, msg.sender, msg.value, data);
     }
 
     /// Donate funds in a ERC20 token.
