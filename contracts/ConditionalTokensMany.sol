@@ -151,6 +151,7 @@ contract ConditionalTokensMany is ERC1155 {
 
     /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
     function reportNumeratorsBatch(uint64 market, address[] calldata addresses, uint128[] calldata numerators) external {
+        require(addresses.length == numerators.length);
         require(oracles[market] == msg.sender);
         for (uint i = 0; i < addresses.length; ++i) {
             address customer = addresses[i];
