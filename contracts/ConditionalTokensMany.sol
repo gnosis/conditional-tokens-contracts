@@ -8,6 +8,7 @@ import { CTHelpers } from "./CTHelpers.sol";
 /// - a collateral address (donated tokens)
 /// - a combination of TOKEN_STAKED and collateral address
 contract ConditionalTokensMany is ERC1155 {
+    // TODO: ERC-1155 collateral.
 
     enum CollateralKind { TOKEN_STAKED }
 
