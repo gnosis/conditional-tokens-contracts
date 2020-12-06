@@ -6,6 +6,8 @@ it as the market's predictions approach the future reality well enough and the t
 strive for their profit - TODO: prove) is implemented by the contract
 `ConditionalTokensMany`.
 
+So, one could pay his tution fees from his future salary!
+
 This contract implements multiple markets with an unlimited number of conditions, but
 without splitting and merging.
 
