@@ -103,13 +103,15 @@ contract ConditionalTokensMany is ERC1155 {
 
     /// Donate funds in a ERC20 token.
     /// First need to approve the contract to spend the token.
+    /// Not recommended to donate after any oracle has finished, because funds may be (partially) lost.
     function donate(IERC20 collateralToken, uint256 amount, bytes calldata data) external {
         require(collateralToken.transferFrom(msg.sender, address(this), amount));
         _mint(msg.sender, _collateralDonatedTokenId(collateralToken), amount, data);
         emit DonateERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
-    // Another way to donate
+    // Another way to donate.
+    /// Not recommended to donate after any oracle has finished, because funds may be (partially) lost.
     function receive() external payable {
         address payable wethAddress = address(uint160(address(weth)));
         require(wethAddress != address(0)); // to prevent money loss
@@ -122,12 +124,14 @@ contract ConditionalTokensMany is ERC1155 {
     /// Donate funds in a ERC20 token.
     /// First need to approve the contract to spend the token.
     /// The stake is lost if either: the prediction period ends or the staker loses his private key (e.g. dies)
+    /// Not recommended to stake after any oracle has finished, because funds may be (partially) lost (and you could not unstake).
     function stakeCollateral(IERC20 collateralToken, uint256 amount, bytes calldata data) external {
         require(collateralToken.transferFrom(msg.sender, address(this), amount));
         _mint(msg.sender, _collateralStakedTokenId(collateralToken), amount, data);
         emit StakeERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
+    // FIXME: Can't take back after oracles!
     function takeStakeBack(IERC20 collateralToken, uint256 amount, bytes calldata data) external {
         uint tokenId = _collateralStakedTokenId(collateralToken);
         require(balanceOf(msg.sender, tokenId) >= amount);
