@@ -111,6 +111,7 @@ contract ConditionalTokensMany is ERC1155 {
     // Another way to donate
     function receive() external payable {
         address payable wethAddress = address(uint160(address(weth)));
+        require(wethAddress != address(0)); // to prevent money loss
         wethAddress.transfer(msg.value);
         bytes memory data = new bytes(0);
         _mint(msg.sender, _collateralDonatedTokenId(weth), msg.value, data);
