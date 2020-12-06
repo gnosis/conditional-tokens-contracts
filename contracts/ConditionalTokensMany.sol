@@ -100,8 +100,7 @@ contract ConditionalTokens is ERC1155 {
         emit OracleFinished(msg.sender);
     }
 
-    // TODO: Partial redeem.
-    function redeemPositions(IERC20 collateralToken, uint64 market, address address_) external {
+    function redeemPosition(IERC20 collateralToken, uint64 market, address address_) external {
         // uint256 tokenId = _tokenId(market, collateralToken);
         address oracle = markets[market];
         require(oracleFinished[oracle]); // to prevent the denominator or the numerators change meantime
@@ -121,7 +120,6 @@ contract ConditionalTokens is ERC1155 {
 
     function _collateralBalanceOf(IERC20 collateralToken, uint64 market, address address_) internal view returns (uint256) {
         // uint256 tokenId = _tokenId(market, collateralToken);
-        address oracle = markets[market];
         uint256 numerator = payoutNumerators[market][address_];
         uint256 denominator = payoutDenominator[market];
         uint256 total = balanceOf(address_, _tokenId(market, collateralToken));
