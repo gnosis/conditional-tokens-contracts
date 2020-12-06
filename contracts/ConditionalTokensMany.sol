@@ -11,6 +11,7 @@ contract ConditionalTokensMany is ERC1155 {
     // TODO: Account recovery.
     // TODO: Donors receive another token in return.
     // TODO: Allow to take donations back?!
+    // TODO: Make impossible to claim funds before 100 years pass.
 
     uint constant INITIAL_CUSTOMER_BALANCE = 1000 * 10**18; // an arbitrarily choosen value
 
