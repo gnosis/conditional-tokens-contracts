@@ -5,8 +5,6 @@ import { CTHelpers } from "./CTHelpers.sol";
 
 contract ConditionalTokens is ERC1155 {
 
-    // FIXME: indexed events
-
     event MarketCreated(address oracle, uint64 marketId);
 
     event DepositERC20Collateral(
