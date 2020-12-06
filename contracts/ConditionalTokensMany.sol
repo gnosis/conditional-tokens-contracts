@@ -5,6 +5,8 @@ import { CTHelpers } from "./CTHelpers.sol";
 
 contract ConditionalTokens is/* FIXME */ ERC1155 {
 
+    event MarketCreated(address oracle, uint64 marketId);
+
     event ReportedDenominator(
         uint64 market,
         address oracle,
@@ -47,8 +49,9 @@ contract ConditionalTokens is/* FIXME */ ERC1155 {
 
     /// Register ourselves as an oracle for a new market.
     function createMarket() external {
-        markets[maxMarket++] = msg.sender;
-        // TODO: Emit.
+        uint64 marketId = maxMarket++;
+        markets[marketId] = msg.sender;
+        emit MarketCreated(msg.sender, marketId);
     }
 
     /// First need to approve the contract to spend the token.
