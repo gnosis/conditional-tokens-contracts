@@ -1,5 +1,5 @@
 pragma solidity ^0.5.1;
-import { CTHelpers } from "./ConditionalTokensMany.sol";
+import "./ConditionalTokensMany.sol";
 
 /// ConditionalTokensMany with BrightID identity
 contract ConditionalTokensManyIdent is ConditionalTokensMany {
