@@ -53,8 +53,6 @@ contract ConditionalTokens is ERC1155 {
 
     mapping(address => bool) public oracleFinished;
 
-    // TODO: The following two are mappings from markets
-
     /// Mapping key is an condition ID. Value represents numerators of the payout vector associated with the condition. This array is initialized with a length equal to the outcome slot count. E.g. Condition with 3 outcomes [A, B, C] and two of those correct [0.5, 0.5, 0]. In Ethereum there are no decimal values, so here, 0.5 is represented by fractions like 1/2 == 0.5. That's why we need numerator and denominator values. Payout numerators are also used as a check of initialization. If the numerators array is empty (has length zero), the condition was not created/prepared. See getOutcomeSlotCount.
     mapping(uint64 => mapping(address => uint)) public payoutNumerators; // TODO: hash instead?
     /// Denominator is also used for checking if the condition has been resolved. If the denominator is non-zero, then the condition has been resolved.
@@ -104,21 +102,31 @@ contract ConditionalTokens is ERC1155 {
 
     // TODO: Partial redeem.
     // TODO: Function to calculate balance.
-    // FIXME: What to do if the denominator or the numerators change meantime?
     function redeemPositions(IERC20 collateralToken, uint64 market, address address_) external {
         // uint256 tokenId = _tokenId(market, collateralToken);
         address oracle = markets[market];
-        require(oracleFinished[oracle]);
-        uint256 numerator = payoutNumerators[market][address_];
-        uint256 denominator = payoutDenominator[market];
-        uint256 total = balanceOf(address_, _tokenId(market, collateralToken));
-        uint256 amount = total * numerator / denominator; // rounded to below for no out-of-funds
+        require(oracleFinished[oracle]); // to prevent the denominator or the numerators change meantime
+        uint256 amount = _collateralBalanceOf(collateralToken, market, address_);
         payoutNumerators[market][address_] = 0;
         emit PayoutRedemption(msg.sender, collateralToken, market, address_, amount);
         collateralToken.transfer(address_, amount); // last to prevent reentrancy attack
     }
 
+    function collateralBalanceOf(IERC20 collateralToken, uint64 market, address address_) external view returns (uint256) {
+        return _collateralBalanceOf(collateralToken, market, address_);
+    }
+
     function _tokenId(uint64 market, IERC20 collateralToken) private pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(market, collateralToken)));
     }
+
+    function _collateralBalanceOf(IERC20 collateralToken, uint64 market, address address_) internal view returns (uint256) {
+        // uint256 tokenId = _tokenId(market, collateralToken);
+        address oracle = markets[market];
+        uint256 numerator = payoutNumerators[market][address_];
+        uint256 denominator = payoutDenominator[market];
+        uint256 total = balanceOf(address_, _tokenId(market, collateralToken));
+        return total * numerator / denominator; // rounded to below for no out-of-funds
+    }
+
 }
