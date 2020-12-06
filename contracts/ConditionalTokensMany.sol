@@ -3,18 +3,37 @@ import { IERC20 } from "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
 import { CTHelpers } from "./CTHelpers.sol";
 
-/// ERC-1155 token ID is a combination of market ID, collateral address, and customer address.
+/// We have two kinds of ERC-1155 token ID
+/// - a combination of market ID, collateral address, and customer address;
+/// - a combination of something and collateral address (donated tokens)
+/// - a combination of TOKEN_STAKED and collateral address
 contract ConditionalTokensMany is ERC1155 {
 
-    // TODO: Donors receive another token in return.
-    // TODO: Allow to take donations back?!
+    enum CollateralKind { TOKEN_STAKED }
+
     // TODO: Make impossible to claim funds before 100 years pass.
 
     uint constant INITIAL_CUSTOMER_BALANCE = 1000 * 10**18; // an arbitrarily choosen value
 
     event MarketCreated(address oracle, uint64 marketId);
 
-    event DepositERC20Collateral(
+    event DonateERC20Collateral(
+        IERC20 indexed collateralToken,
+        address sender,
+        uint64 indexed market,
+        uint256 amount,
+        bytes data
+    );
+
+    event StakeERC20Collateral(
+        IERC20 indexed collateralToken,
+        address sender,
+        uint64 indexed market,
+        uint256 amount,
+        bytes data
+    );
+
+    event TakeBackERC20Collateral(
         IERC20 indexed collateralToken,
         address sender,
         uint64 indexed market,
@@ -72,13 +91,35 @@ contract ConditionalTokensMany is ERC1155 {
         emit MarketCreated(msg.sender, marketId);
     }
 
-    /// Deposit funds in a ERC20 token.
+    /// Donate funds in a ERC20 token.
     /// First need to approve the contract to spend the token.
-    function deposit(IERC20 collateralToken, uint64 market, bytes calldata data) external payable {
+    function donate(IERC20 collateralToken, uint64 market, uint256 amount, bytes calldata data) external {
         address oracle = oracles[market];
         require(!oracleFinished[oracle]);
-        require(collateralToken.transferFrom(msg.sender, address(this), msg.value));
-        emit DepositERC20Collateral(collateralToken, msg.sender, market, msg.value, data);
+        require(collateralToken.transferFrom(msg.sender, address(this), amount));
+        _mint(msg.sender, _collateralDonatedTokenId(collateralToken), amount, data);
+        emit DonateERC20Collateral(collateralToken, msg.sender, market, amount, data);
+    }
+
+    /// Donate funds in a ERC20 token.
+    /// First need to approve the contract to spend the token.
+    /// The stake is lost if either: the prediction period ends or the staker loses his private key (e.g. dies)
+    function stakeCollateral(IERC20 collateralToken, uint64 market, uint256 amount, bytes calldata data) external {
+        address oracle = oracles[market];
+        require(!oracleFinished[oracle]);
+        require(collateralToken.transferFrom(msg.sender, address(this), amount));
+        _mint(msg.sender, _collateralStakedTokenId(collateralToken), amount, data);
+        emit StakeERC20Collateral(collateralToken, msg.sender, market, amount, data);
+    }
+
+    function takeStakeBack(IERC20 collateralToken, uint64 market, uint256 amount, bytes calldata data) external {
+        address oracle = oracles[market];
+        require(!oracleFinished[oracle]);
+        uint tokenId = _collateralStakedTokenId(collateralToken);
+        require(balanceOf(msg.sender, tokenId) >= amount);
+        require(collateralToken.transfer(msg.sender, amount));
+        _burn(msg.sender, tokenId, amount);
+        emit TakeBackERC20Collateral(collateralToken, msg.sender, market, amount, data);
     }
 
     function registerCustomer(IERC20 collateralToken, uint64 market, bytes calldata data) external {
@@ -142,5 +183,13 @@ contract ConditionalTokensMany is ERC1155 {
         uint256 customerBalance = balanceOf(customer, _conditionalTokenId(market, collateralToken, customer));
         // Rounded to below for no out-of-funds, no overflow because numerator is small:
         return customerBalance * numerator / denominator / total;
+    }
+
+    function _collateralStakedTokenId(IERC20 collateralToken) internal pure returns (uint256) {
+        return uint256(address(collateralToken));
+    }
+
+    function _collateralDonatedTokenId(IERC20 collateralToken) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_STAKED), collateralToken)));
     }
 }
