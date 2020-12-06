@@ -101,7 +101,6 @@ contract ConditionalTokens is ERC1155 {
     }
 
     // TODO: Partial redeem.
-    // TODO: Function to calculate balance.
     function redeemPositions(IERC20 collateralToken, uint64 market, address address_) external {
         // uint256 tokenId = _tokenId(market, collateralToken);
         address oracle = markets[market];
