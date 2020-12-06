@@ -27,44 +27,50 @@ contract("ConditionalTokens", function(accounts) {
   ] = accounts;
 
   beforeEach("deploy ConditionalTokens", async function() {
-    this.conditionalTokens = await ConditionalTokens.new();
+    this.conditionalTokens = await ConditionalTokensMany.new();
   });
 
-  describe("prepareCondition", function() {
+  describe("createMarket", function() {
     context("with valid parameters", function() {
       beforeEach(async function() {
-        ({ logs: this.logs } = await this.conditionalTokens.prepareCondition(
-          oracle,
-          questionId,
-          outcomeSlotCount
-        ));
-      });
+        ({ logs: this.logs1 } = await this.conditionalTokens.createMarket());
+        const marketId1 = this.logs1.marketId;
+        ({ logs: this.logs2 } = await this.conditionalTokens.createMarket());
+        const marketId2 = this.logs2.marketId;
+    });
 
-      it("should emit an ConditionPreparation event", async function() {
-        expectEvent.inLogs(this.logs, "ConditionPreparation", {
-          conditionId,
-          oracle,
-          questionId,
-          outcomeSlotCount
+      it("should emit an MarketCreated event", async function() {
+        expect(marketId1).should.be.bignumber.equal("0");
+        expect(marketId2).should.be.bignumber.equal("1");
+        expectEvent.inLogs(this.logs, "MarketCreated", {
+          oracle: accounts[0],
+          marketId1
+        });
+        expectEvent.inLogs(this.logs, "MarketCreated", {
+            oracle: accounts[0],
+            marketId2
         });
       });
 
       it("should leave payout denominator unset", async function() {
         (
-          await this.conditionalTokens.payoutDenominator(conditionId)
+          await this.conditionalTokens.payoutDenominator(marketId1)
+        ).should.be.bignumber.equal("0");
+        (
+          await this.conditionalTokens.payoutDenominator(marketId2)
         ).should.be.bignumber.equal("0");
       });
 
-      it("should not be able to prepare the same condition more than once", async function() {
-        await expectRevert(
-          this.conditionalTokens.prepareCondition(
-            oracle,
-            questionId,
-            outcomeSlotCount
-          ),
-          "condition already prepared"
-        );
-      });
+    //   it("should not be able to prepare the same condition more than once", async function() {
+    //     await expectRevert(
+    //       this.conditionalTokens.prepareCondition(
+    //         oracle,
+    //         questionId,
+    //         outcomeSlotCount
+    //       ),
+    //       "condition already prepared"
+    //     );
+    //   });
     });
   });
 });
