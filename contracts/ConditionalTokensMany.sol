@@ -3,7 +3,10 @@ import { IERC20 } from "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
 import { CTHelpers } from "./CTHelpers.sol";
 
-contract ConditionalTokens is ERC1155 {
+/// ERC-1155 token ID is a combination of market ID, collateral address, and customer address.
+contract ConditionalTokensMany is ERC1155 {
+
+    uint constant INITIAL_CUSTOMER_BALANCE = 1000 * 10**18; // an arbitrarily choosen value
 
     event MarketCreated(address oracle, uint64 marketId);
 
@@ -55,6 +58,8 @@ contract ConditionalTokens is ERC1155 {
     mapping(uint64 => mapping(address => uint)) public payoutNumerators; // TODO: hash instead?
     /// Mapping (market => denominator) for payout denominators.
     mapping(uint64 => uint) public payoutDenominator;
+    /// Total balance of conditional for a given market and collateral.
+    mapping(uint256 => uint) public totalMarketBalances;
 
     /// Register ourselves as an oracle for a new market.
     function createMarket() external {
@@ -69,6 +74,11 @@ contract ConditionalTokens is ERC1155 {
     function deposit(IERC20 collateralToken, uint64 market, bytes calldata data) external payable {
         require(collateralToken.transferFrom(msg.sender, address(this), msg.value));
         emit DepositERC20Collateral(collateralToken, msg.sender, market, msg.value, data);
+    }
+
+    function registerCustomer(IERC20 collateralToken, uint64 market, bytes calldata data) external {
+        totalMarketBalances[_collateralTokenId(market, collateralToken)] += INITIAL_CUSTOMER_BALANCE;
+        _mint(msg.sender, _conditionalTokenId(market, collateralToken, msg.sender), INITIAL_CUSTOMER_BALANCE, data);
     }
 
     function reportDenominator(uint64 market, uint256 denominator) external {
@@ -100,7 +110,7 @@ contract ConditionalTokens is ERC1155 {
     }
 
     function redeemPosition(IERC20 collateralToken, uint64 market, address customer) external {
-        // uint256 tokenId = _tokenId(market, collateralToken);
+        // uint256 tokenId = _collateralTokenId(market, collateralToken);
         address oracle = markets[market];
         require(oracleFinished[oracle]); // to prevent the denominator or the numerators change meantime
         uint256 amount = _collateralBalanceOf(collateralToken, market, customer);
@@ -113,15 +123,21 @@ contract ConditionalTokens is ERC1155 {
         return _collateralBalanceOf(collateralToken, market, customer);
     }
 
-    function _tokenId(uint64 market, IERC20 collateralToken) private pure returns (uint256) {
+    function _collateralTokenId(uint64 market, IERC20 collateralToken) private pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(market, collateralToken)));
     }
 
+    function _conditionalTokenId(uint64 market, IERC20 collateralToken, address customer) private pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(market, collateralToken, customer)));
+    }
+
     function _collateralBalanceOf(IERC20 collateralToken, uint64 market, address customer) internal view returns (uint256) {
-        // uint256 tokenId = _tokenId(market, collateralToken);
+        // uint256 tokenId = _collateralTokenId(market, collateralToken);
         uint256 numerator = payoutNumerators[market][customer];
         uint256 denominator = payoutDenominator[market];
-        uint256 total = balanceOf(customer, _tokenId(market, collateralToken));
-        return total * numerator / denominator; // rounded to below for no out-of-funds
+        uint256 total = totalMarketBalances[_collateralTokenId(market, collateralToken)];
+        uint256 customerBalance = balanceOf(customer, _conditionalTokenId(market, collateralToken, customer));
+        // FIXME: overflows
+        return customerBalance * numerator / denominator / total; // rounded to below for no out-of-funds
     }
 }
