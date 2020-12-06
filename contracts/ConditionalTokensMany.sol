@@ -5,29 +5,39 @@ import { CTHelpers } from "./CTHelpers.sol";
 
 contract ConditionalTokens is ERC1155 {
 
+    // FIXME: indexed events
+
     event MarketCreated(address oracle, uint64 marketId);
 
+    event DepositERC20Collateral(
+        IERC20 indexed collateralToken,
+        address sender,
+        uint64 indexed market,
+        address recipient,
+        uint256 amount,
+        bytes data
+    );
+
     event ReportedDenominator(
-        uint64 market,
-        address oracle,
+        uint64 indexed market,
+        address indexed oracle,
         uint256 denominator
     );
 
     event ReportedNumerators(
-        uint64 market,
-        address oracle,
+        uint64 indexed market,
+        address indexed oracle,
         address[] addresses,
         uint256[] numerators
     );
 
-    event OracleFinished(address oracle);
+    event OracleFinished(address indexed oracle);
 
     event PayoutRedemption(
-        address indexed redeemer,
+        address redeemer,
         IERC20 indexed collateralToken,
-        bytes32 indexed parentCollectionId,
-        bytes32 conditionId,
-        uint[] indexSets,
+        uint64 indexed market,
+        address address_,
         uint payout
     );
 
@@ -41,7 +51,7 @@ contract ConditionalTokens is ERC1155 {
     // TODO: The following two are mappings from markets
 
     /// Mapping key is an condition ID. Value represents numerators of the payout vector associated with the condition. This array is initialized with a length equal to the outcome slot count. E.g. Condition with 3 outcomes [A, B, C] and two of those correct [0.5, 0.5, 0]. In Ethereum there are no decimal values, so here, 0.5 is represented by fractions like 1/2 == 0.5. That's why we need numerator and denominator values. Payout numerators are also used as a check of initialization. If the numerators array is empty (has length zero), the condition was not created/prepared. See getOutcomeSlotCount.
-    mapping(uint64 => mapping(address => uint)) public payoutNumerators;
+    mapping(uint64 => mapping(address => uint)) public payoutNumerators; // TODO: hash instead?
     /// Denominator is also used for checking if the condition has been resolved. If the denominator is non-zero, then the condition has been resolved.
     mapping(uint64 => uint) public payoutDenominator;
 
@@ -56,7 +66,7 @@ contract ConditionalTokens is ERC1155 {
     function deposit(IERC20 collateralToken, uint64 market, address recipient, uint256 amount, bytes calldata data) external {
         require(collateralToken.transferFrom(msg.sender, address(this), amount));
         _mint(recipient, _tokenId(market, collateralToken), amount, data);
-        // TODO: Emit.
+        emit DepositERC20Collateral(collateralToken, msg.sender, market, recipient, amount, data);
     }
 
     function reportDenominator(uint64 market, uint256 denominator) external {
@@ -83,16 +93,18 @@ contract ConditionalTokens is ERC1155 {
 
     // TODO: Partial redeem.
     // TODO: Function to calculate balance.
-    // TODO: ERC-1155 // FIXME: Only msg.sender
     // FIXME: What to do if the denominator or the numerators change meantime?
     function redeemPositions(IERC20 collateralToken, uint64 market, address address_) external {
+        // uint256 tokenId = _tokenId(market, collateralToken);
+        address oracle = markets[market];
+        require(oracleFinished[oracle]);
         uint256 numerator = payoutNumerators[market][address_];
         uint256 denominator = payoutDenominator[market];
         uint256 total = balanceOf(address_, _tokenId(market, collateralToken));
         uint256 amount = total * numerator / denominator; // rounded to below for no out-of-funds
         payoutNumerators[market][address_] = 0;
-        collateralToken.transfer(address_, amount); // FIXME: Call it last, not in the loop for security!
-        // FIXME: Emit.
+        emit PayoutRedemption(msg.sender, collateralToken, market, address_, amount);
+        collateralToken.transfer(address_, amount); // last to prevent reentrancy attack
     }
 
     function _tokenId(uint64 market, IERC20 collateralToken) private pure returns (uint256) {
