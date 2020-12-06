@@ -8,6 +8,8 @@ contract ConditionalTokensMany is ERC1155 {
 
     // TODO: Nontranferrable token with its rent given to alive person tradeable and redeemable.
     // TODO: Also combine both variants.
+    // TODO: Account recovery.
+    // TODO: Donors receive another token in return.
 
     uint constant INITIAL_CUSTOMER_BALANCE = 1000 * 10**18; // an arbitrarily choosen value
 
