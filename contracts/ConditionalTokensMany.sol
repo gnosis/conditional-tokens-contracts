@@ -28,14 +28,14 @@ contract ConditionalTokensMany is ERC1155 {
         uint64 indexed market,
         address indexed oracle,
         address customer,
-        uint256 numerator
+        uint128 numerator
     );
 
     event ReportedNumeratorsBatch(
         uint64 indexed market,
         address indexed oracle,
         address[] addresses,
-        uint256[] numerators
+        uint128[] numerators
     );
 
     event OracleFinished(address indexed oracle);
@@ -54,8 +54,8 @@ contract ConditionalTokensMany is ERC1155 {
     mapping(uint64 => address) public oracles;
     /// Whether an oracle finished its work.
     mapping(address => bool) public oracleFinished;
-    /// Mapping (market => (customer => numerator)) for payout numerators.
-    mapping(uint64 => mapping(address => uint)) public payoutNumerators; // TODO: hash instead?
+    /// Mapping (market => (customer => numerator)) for payout numerators. Using uint128 prevents multiplication overflows.
+    mapping(uint64 => mapping(address => uint128)) public payoutNumerators; // TODO: hash instead?
     /// Mapping (market => denominator) for payout denominators.
     mapping(uint64 => uint) public payoutDenominator;
     /// Total balance of conditional for a given market and collateral.
@@ -89,14 +89,14 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
-    function reportNumerator(uint64 market, address customer, uint256 numerator) external {
+    function reportNumerator(uint64 market, address customer, uint128 numerator) external {
         require(oracles[market] == msg.sender);
         payoutNumerators[market][customer] = numerator;
         emit ReportedNumerator(market, msg.sender, customer, numerator);
     }
 
     /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
-    function reportNumeratorsBatch(uint64 market, address[] calldata addresses, uint256[] calldata numerators) external {
+    function reportNumeratorsBatch(uint64 market, address[] calldata addresses, uint128[] calldata numerators) external {
         require(oracles[market] == msg.sender);
         for (uint i = 0; i < addresses.length; ++i) {
             address customer = addresses[i];
@@ -111,7 +111,6 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     function redeemPosition(IERC20 collateralToken, uint64 market, address customer) external {
-        // uint256 tokenId = _collateralTokenId(market, collateralToken);
         address oracle = oracles[market];
         require(oracleFinished[oracle]); // to prevent the denominator or the numerators change meantime
         uint256 amount = _collateralBalanceOf(collateralToken, market, customer);
@@ -133,12 +132,11 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     function _collateralBalanceOf(IERC20 collateralToken, uint64 market, address customer) internal view returns (uint256) {
-        // uint256 tokenId = _collateralTokenId(market, collateralToken);
-        uint256 numerator = payoutNumerators[market][customer];
+        uint256 numerator = uint256(payoutNumerators[market][customer]);
         uint256 denominator = payoutDenominator[market];
         uint256 total = totalMarketBalances[_collateralTokenId(market, collateralToken)];
         uint256 customerBalance = balanceOf(customer, _conditionalTokenId(market, collateralToken, customer));
-        // FIXME: overflows
-        return customerBalance * numerator / denominator / total; // rounded to below for no out-of-funds
+        // Rounded to below for no out-of-funds, no overflow because numerator is small:
+        return customerBalance * numerator / denominator / total;
     }
 }
