@@ -16,6 +16,13 @@ contract ConditionalTokensMany is ERC1155 {
 
     event MarketCreated(address oracle, uint64 marketId);
 
+    event CustomerRegistered(
+        IERC20 collateralToken,
+        address customer,
+        uint64 market,
+        bytes data
+    );
+
     event DonateERC20Collateral(
         IERC20 indexed collateralToken,
         address sender,
@@ -124,6 +131,8 @@ contract ConditionalTokensMany is ERC1155 {
     function registerCustomer(IERC20 collateralToken, uint64 market, bytes calldata data) external {
         totalMarketBalances[_collateralTokenId(market, collateralToken)] += INITIAL_CUSTOMER_BALANCE;
         _mint(msg.sender, _conditionalTokenId(market, collateralToken, msg.sender), INITIAL_CUSTOMER_BALANCE, data);
+        emit CustomerRegistered(collateralToken, msg.sender, market, data);
+        // TODO: emit
     }
 
     function reportDenominator(uint64 market, uint256 denominator) external {
