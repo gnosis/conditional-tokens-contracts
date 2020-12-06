@@ -120,8 +120,9 @@ contract ConditionalTokensMany is ERC1155 {
         emit StakeERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
-    // FIXME: Can't take back after oracles!
     function takeStakeBack(IERC20 collateralToken, uint64 market, uint256 amount, bytes calldata data) external {
+        address oracle = oracles[market];
+        require(oracleFinished[oracle]);
         uint tokenId = _collateralStakedTokenId(collateralToken, market);
         require(balanceOf(msg.sender, tokenId) >= amount);
         require(collateralToken.transfer(msg.sender, amount));
@@ -133,7 +134,6 @@ contract ConditionalTokensMany is ERC1155 {
         totalMarketBalances[_collateralTokenId(collateralToken, market)] += INITIAL_CUSTOMER_BALANCE;
         _mint(msg.sender, _conditionalTokenId(collateralToken, market, msg.sender), INITIAL_CUSTOMER_BALANCE, data);
         emit CustomerRegistered(collateralToken, msg.sender, market, data);
-        // TODO: emit
     }
 
     function reportDenominator(uint64 market, uint256 denominator) external {
