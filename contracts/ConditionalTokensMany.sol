@@ -24,7 +24,14 @@ contract ConditionalTokens is ERC1155 {
         uint256 denominator
     );
 
-    event ReportedNumerators(
+    event ReportedNumerator(
+        uint64 indexed market,
+        address indexed oracle,
+        address address_,
+        uint256 numerator
+    );
+
+    event ReportedNumeratorsBatch(
         uint64 indexed market,
         address indexed oracle,
         address[] addresses,
@@ -76,14 +83,20 @@ contract ConditionalTokens is ERC1155 {
     }
 
     /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
-    // TODO: reporting one-by-one
-    function reportNumerators(uint64 market, address[] calldata addresses, uint256[] calldata numerators) external {
+    function reportNumerator(uint64 market, address address_, uint256 numerator) external {
+        require(markets[market] == msg.sender);
+        payoutNumerators[market][address_] = numerator;
+        emit ReportedNumerator(market, msg.sender, address_, numerator);
+    }
+
+    /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
+    function reportNumeratorsBatch(uint64 market, address[] calldata addresses, uint256[] calldata numerators) external {
         require(markets[market] == msg.sender);
         for (uint i = 0; i < addresses.length; ++i) {
             address address_ = addresses[i];
             payoutNumerators[market][address_] = numerators[i];
         }
-        emit ReportedNumerators(market, msg.sender, addresses, numerators);
+        emit ReportedNumeratorsBatch(market, msg.sender, addresses, numerators);
     }
 
     function finishOracle() external {
