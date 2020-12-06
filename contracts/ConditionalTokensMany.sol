@@ -77,7 +77,7 @@ contract ConditionalTokensMany is ERC1155 {
 
     IERC20 weth;
 
-    uint64 private maxMarket;
+    uint64 private maxMarket; // FIXME: will 64 bit be enough after 100 years?!
 
     /// Mapping from market to oracle.
     mapping(uint64 => address) public oracles;

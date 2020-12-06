@@ -12,6 +12,9 @@ const {
 const ConditionalTokensMany = artifacts.require("ConditionalTokensMany");
 const ERC20Mintable = artifacts.require("MockCoin");
 
+const wallet1 = new Wallet();
+const wallet2 = new Wallet();
+
 contract("ConditionalTokens", function(accounts) {
   const [
     minter,
@@ -29,11 +32,6 @@ contract("ConditionalTokens", function(accounts) {
 
   describe("prepareCondition", function() {
     context("with valid parameters", function() {
-      const questionId = randomHex(32);
-      const outcomeSlotCount = toBN(256);
-
-      const conditionId = getConditionId(oracle, questionId, outcomeSlotCount);
-
       beforeEach(async function() {
         ({ logs: this.logs } = await this.conditionalTokens.prepareCondition(
           oracle,
