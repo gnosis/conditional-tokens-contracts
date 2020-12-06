@@ -104,36 +104,25 @@ contract ConditionalTokensMany is ERC1155 {
     /// Donate funds in a ERC20 token.
     /// First need to approve the contract to spend the token.
     /// Not recommended to donate after any oracle has finished, because funds may be (partially) lost.
-    function donate(IERC20 collateralToken, uint256 amount, bytes calldata data) external {
+    function donate(IERC20 collateralToken, uint64 market, uint256 amount, bytes calldata data) external {
         require(collateralToken.transferFrom(msg.sender, address(this), amount));
-        _mint(msg.sender, _collateralDonatedTokenId(collateralToken), amount, data);
+        _mint(msg.sender, _collateralDonatedTokenId(collateralToken, market), amount, data);
         emit DonateERC20Collateral(collateralToken, msg.sender, amount, data);
-    }
-
-    // Another way to donate.
-    /// Not recommended to donate after any oracle has finished, because funds may be (partially) lost.
-    function receive() external payable {
-        address payable wethAddress = address(uint160(address(weth)));
-        require(wethAddress != address(0)); // to prevent money loss
-        wethAddress.transfer(msg.value);
-        bytes memory data = new bytes(0);
-        _mint(msg.sender, _collateralDonatedTokenId(weth), msg.value, data);
-        emit DonateERC20Collateral(weth, msg.sender, msg.value, data);
     }
 
     /// Donate funds in a ERC20 token.
     /// First need to approve the contract to spend the token.
     /// The stake is lost if either: the prediction period ends or the staker loses his private key (e.g. dies)
     /// Not recommended to stake after any oracle has finished, because funds may be (partially) lost (and you could not unstake).
-    function stakeCollateral(IERC20 collateralToken, uint256 amount, bytes calldata data) external {
+    function stakeCollateral(IERC20 collateralToken, uint64 market, uint256 amount, bytes calldata data) external {
         require(collateralToken.transferFrom(msg.sender, address(this), amount));
-        _mint(msg.sender, _collateralStakedTokenId(collateralToken), amount, data);
+        _mint(msg.sender, _collateralStakedTokenId(collateralToken, market), amount, data);
         emit StakeERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
     // FIXME: Can't take back after oracles!
-    function takeStakeBack(IERC20 collateralToken, uint256 amount, bytes calldata data) external {
-        uint tokenId = _collateralStakedTokenId(collateralToken);
+    function takeStakeBack(IERC20 collateralToken, uint64 market, uint256 amount, bytes calldata data) external {
+        uint tokenId = _collateralStakedTokenId(collateralToken, market);
         require(balanceOf(msg.sender, tokenId) >= amount);
         require(collateralToken.transfer(msg.sender, amount));
         _burn(msg.sender, tokenId, amount);
@@ -205,11 +194,11 @@ contract ConditionalTokensMany is ERC1155 {
         return customerBalance * numerator / denominator / total;
     }
 
-    function _collateralStakedTokenId(IERC20 collateralToken) internal pure returns (uint256) {
-        return uint256(address(collateralToken));
+    function _collateralStakedTokenId(IERC20 collateralToken, uint64 market) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(collateralToken, market)));
     }
 
-    function _collateralDonatedTokenId(IERC20 collateralToken) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_STAKED), collateralToken)));
+    function _collateralDonatedTokenId(IERC20 collateralToken, uint64 market) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_STAKED), collateralToken, market)));
     }
 }
