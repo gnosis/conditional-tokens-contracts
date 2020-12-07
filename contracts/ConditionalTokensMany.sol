@@ -163,7 +163,7 @@ contract ConditionalTokensMany is ERC1155 {
         emit ReportedNumeratorsBatch(market, msg.sender, addresses, numerators);
     }
 
-    function finishOracle(uint64 market) external
+    function finishMarket(uint64 market) external
         _isOracle(market)
     {
         marketFinished[market] = true;
