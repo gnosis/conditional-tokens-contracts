@@ -84,7 +84,7 @@ contract("ConditionalTokensMany", function(accounts) {
           "1000000000000" /* a big number */,
           { from: donor1 }
         );
-        // TODO: Test more than one outcome.
+        // TODO: Test more than one market per outcome.
         await this.conditionalTokens.donate(
           this.collateral.address,
           this.market1,
@@ -104,7 +104,7 @@ contract("ConditionalTokensMany", function(accounts) {
         await this.conditionalTokens.donate(
           this.collateral.address,
           this.market2,
-          this.outcome1,
+          this.outcome2,
           "4000",
           [],
           { from: donor1 }
@@ -112,7 +112,7 @@ contract("ConditionalTokensMany", function(accounts) {
         await this.conditionalTokens.stakeCollateral(
           this.collateral.address,
           this.market2,
-          this.outcome1,
+          this.outcome2,
           "6000",
           [],
           { from: donor1 }
@@ -133,29 +133,16 @@ contract("ConditionalTokensMany", function(accounts) {
         await this.conditionalTokens.finishOutcome(this.outcome1);
 
         await this.conditionalTokens.reportNumerator(
-          this.outcome1,
+          this.outcome2,
           customer1,
           toBN("90")
         );
         await this.conditionalTokens.reportNumerator(
-          this.outcome1,
+          this.outcome2,
           customer2,
           toBN("10")
         );
         await this.conditionalTokens.finishOutcome(this.outcome1);
-
-        console.log(
-          // FIXME: remove
-          await this.conditionalTokens.collateralBalanceOf(
-            this.collateral.address,
-            this.market1,
-            this.outcome1,
-            customer1
-          ),
-          TOTAL_COLLATERAL1.mul(toBN("20"))
-            .div(toBN("30"))
-            .div(NUMBER_CUSTOMERS1)
-        );
 
         (
           await this.conditionalTokens.collateralBalanceOf(
@@ -191,7 +178,7 @@ contract("ConditionalTokensMany", function(accounts) {
           await this.conditionalTokens.collateralBalanceOf(
             this.collateral.address,
             this.market2,
-            this.outcome1,
+            this.outcome2,
             customer1
           )
         )
@@ -206,7 +193,7 @@ contract("ConditionalTokensMany", function(accounts) {
           await this.conditionalTokens.collateralBalanceOf(
             this.collateral.address,
             this.market2,
-            this.outcome1,
+            this.outcome2,
             customer2
           )
         )
