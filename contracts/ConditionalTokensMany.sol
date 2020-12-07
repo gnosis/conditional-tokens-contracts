@@ -80,7 +80,6 @@ contract ConditionalTokensMany is ERC1155 {
 
     uint64 private maxMarket; // FIXME: will 64 bit be enough after 100 years?!
 
-    // TODO: Count numbers of customers per market and/or total balances.
     /// Mapping from market to oracle.
     mapping(uint64 => address) public oracles;
     /// Whether an oracle finished its work.
