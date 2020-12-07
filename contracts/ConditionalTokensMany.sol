@@ -79,7 +79,7 @@ contract ConditionalTokensMany is ERC1155 {
     /// Mapping from market to oracle.
     mapping(uint64 => address) public oracles;
     /// Whether an oracle finished its work.
-    mapping(address => bool) public oracleFinished;
+    mapping(uint64 => bool) public marketFinished;
     /// Mapping (market => (customer => numerator)) for payout numerators. Using uint128 prevents multiplication overflows.
     mapping(uint64 => mapping(address => uint128)) public payoutNumerators; // TODO: hash instead?
     /// Mapping (market => denominator) for payout denominators.
@@ -116,8 +116,7 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     function takeStakeBack(IERC20 collateralToken, uint64 market, uint256 amount, bytes calldata data) external {
-        address oracle = oracles[market];
-        require(oracleFinished[oracle], "too late");
+        require(marketFinished[market], "too late");
         uint tokenId = _collateralStakedTokenId(collateralToken, market);
         require(balanceOf(msg.sender, tokenId) >= amount, "not enough balance");
         require(collateralToken.transfer(msg.sender, amount), "cannot transfer");
@@ -164,14 +163,15 @@ contract ConditionalTokensMany is ERC1155 {
         emit ReportedNumeratorsBatch(market, msg.sender, addresses, numerators);
     }
 
-    function finishOracle() external {
-        oracleFinished[msg.sender] = true;
+    function finishOracle(uint64 market) external
+        _isOracle(market)
+    {
+        marketFinished[market] = true;
         emit OracleFinished(msg.sender);
     }
 
     function redeemPosition(IERC20 collateralToken, uint64 market, address customer) external {
-        address oracle = oracles[market];
-        require(oracleFinished[oracle], "too early"); // to prevent the denominator or the numerators change meantime
+        require(marketFinished[market], "too early"); // to prevent the denominator or the numerators change meantime
         uint256 amount = _collateralBalanceOf(collateralToken, market, customer);
         payoutNumerators[market][customer] = 0;
         emit PayoutRedemption(msg.sender, collateralToken, market, customer, amount);
