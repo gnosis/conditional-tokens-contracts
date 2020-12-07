@@ -125,6 +125,7 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     function registerCustomer(IERC20 collateralToken, uint64 market, bytes calldata data) external {
+        // FIXME: Should not allow to register more than once.
         totalMarketBalances[_collateralTokenId(collateralToken, market)] += INITIAL_CUSTOMER_BALANCE;
         _mint(msg.sender, _conditionalTokenId(collateralToken, market, msg.sender), INITIAL_CUSTOMER_BALANCE, data);
         emit CustomerRegistered(collateralToken, msg.sender, market, data);
