@@ -21,6 +21,10 @@ contract("ConditionalTokensMany", function(accounts) {
         this.market1 = this.logs1[0].args.marketId;
         ({ logs: this.logs2 } = await this.conditionalTokens.createMarket());
         this.market2 = this.logs2[0].args.marketId;
+        ({ logs: this.logs3 } = await this.conditionalTokens.createOutcome());
+        this.outcome1 = this.logs3[0].args.outcomeId;
+        ({ logs: this.logs4 } = await this.conditionalTokens.createOutcome());
+        this.outcome2 = this.logs4[0].args.outcomeId;
       });
 
       it("should emit a MarketCreated event", function() {
@@ -34,6 +38,7 @@ contract("ConditionalTokensMany", function(accounts) {
           oracle: oracle1,
           marketId: this.market2
         });
+        // TODO: Check "OutcomeCreated"
       });
 
       it("should leave payout denominator unset", async function() {
@@ -79,9 +84,11 @@ contract("ConditionalTokensMany", function(accounts) {
           "1000000000000" /* a big number */,
           { from: donor1 }
         );
+        // TODO: Test more than one outcome.
         await this.conditionalTokens.donate(
           this.collateral.address,
           this.market1,
+          this.outcome1,
           "400",
           [],
           { from: donor1 }
@@ -89,6 +96,7 @@ contract("ConditionalTokensMany", function(accounts) {
         await this.conditionalTokens.stakeCollateral(
           this.collateral.address,
           this.market1,
+          this.outcome1,
           "600",
           [],
           { from: donor1 }
@@ -96,6 +104,7 @@ contract("ConditionalTokensMany", function(accounts) {
         await this.conditionalTokens.donate(
           this.collateral.address,
           this.market2,
+          this.outcome1,
           "4000",
           [],
           { from: donor1 }
@@ -103,6 +112,7 @@ contract("ConditionalTokensMany", function(accounts) {
         await this.conditionalTokens.stakeCollateral(
           this.collateral.address,
           this.market2,
+          this.outcome1,
           "6000",
           [],
           { from: donor1 }
@@ -111,33 +121,34 @@ contract("ConditionalTokensMany", function(accounts) {
         const TOTAL_COLLATERAL2 = toBN("10000");
 
         await this.conditionalTokens.reportNumerator(
-          this.market1,
+          this.outcome1,
           customer1,
           toBN("20")
         );
         await this.conditionalTokens.reportNumerator(
-          this.market1,
+          this.outcome1,
           customer2,
           toBN("10")
         );
-        await this.conditionalTokens.finishMarket(this.market1);
+        await this.conditionalTokens.finishOutcome(this.market1);
 
         await this.conditionalTokens.reportNumerator(
-          this.market2,
+          this.outcome1,
           customer1,
           toBN("90")
         );
         await this.conditionalTokens.reportNumerator(
-          this.market2,
+          this.outcome1,
           customer2,
           toBN("10")
         );
-        await this.conditionalTokens.finishMarket(this.market2);
+        await this.conditionalTokens.finishOutcome(this.market2);
 
         (
           await this.conditionalTokens.collateralBalanceOf(
             this.collateral.address,
             this.market1,
+            this.outcome1,
             customer1
           )
         )
@@ -152,6 +163,7 @@ contract("ConditionalTokensMany", function(accounts) {
           await this.conditionalTokens.collateralBalanceOf(
             this.collateral.address,
             this.market1,
+            this.outcome1,
             customer2
           )
         )
@@ -166,6 +178,7 @@ contract("ConditionalTokensMany", function(accounts) {
           await this.conditionalTokens.collateralBalanceOf(
             this.collateral.address,
             this.market2,
+            this.outcome1,
             customer1
           )
         )
@@ -180,6 +193,7 @@ contract("ConditionalTokensMany", function(accounts) {
           await this.conditionalTokens.collateralBalanceOf(
             this.collateral.address,
             this.market2,
+            this.outcome1,
             customer2
           )
         )

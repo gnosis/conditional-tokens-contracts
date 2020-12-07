@@ -21,6 +21,8 @@ contract ConditionalTokensMany is ERC1155 {
 
     event MarketCreated(address oracle, uint64 marketId);
 
+    event OutcomeCreated(address oracle, uint64 outcomeId);
+
     event CustomerRegistered(
         address customer,
         uint64 market,
@@ -105,7 +107,7 @@ contract ConditionalTokensMany is ERC1155 {
     function createOutcome() external {
         uint64 outcomeId = maxMarket++;
         oracles[outcomeId] = msg.sender;
-        emit MarketCreated(msg.sender, outcomeId);
+        emit OutcomeCreated(msg.sender, outcomeId);
     }
 
     /// Donate funds in a ERC20 token.
@@ -128,7 +130,7 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     function takeStakeBack(IERC20 collateralToken, uint64 market, uint64 outcome, uint256 amount, bytes calldata data) external {
-        require(outcomeFinished[market], "too late");
+        require(outcomeFinished[outcome], "too late");
         uint tokenId = _collateralStakedTokenId(collateralToken, market);
         collateralTotals[address(collateralToken)][market][outcome] = collateralTotals[address(collateralToken)][market][outcome].sub(amount);
         require(collateralToken.transfer(msg.sender, amount), "cannot transfer");
@@ -195,10 +197,6 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     // FIXME: Ensure differenet *TokenId() don't glitch
-
-    function _collateralTokenId(IERC20 collateralToken, uint64 market) private pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(market, collateralToken)));
-    }
 
     function _conditionalTokenId(uint64 market, address customer) private pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(market, customer)));
