@@ -33,6 +33,7 @@ contract("ConditionalTokensMany", function(accounts) {
       beforeEach(async function() {
         this.oracle1 = accounts[0];
         this.customer1 = accounts[1];
+        this.customer2 = accounts[2];
         ({ logs: this.logs1 } = await this.conditionalTokens.createMarket());
         this.marketId1 = this.logs1[0].args.marketId;
         ({ logs: this.logs2 } = await this.conditionalTokens.createMarket());
@@ -78,6 +79,16 @@ contract("ConditionalTokensMany", function(accounts) {
         await this.conditionalTokens.registerCustomer(this.marketId1, [], {
           from: this.customer1
         });
+        await this.conditionalTokens.registerCustomer(this.marketId1, [], {
+          from: this.customer2
+        });
+        await this.conditionalTokens.registerCustomer(this.marketId2, [], {
+          from: this.customer1
+        });
+        await this.conditionalTokens.registerCustomer(this.marketId2, [], {
+          from: this.customer2
+        });
+        // TODO
       });
     });
   });
