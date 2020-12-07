@@ -115,7 +115,7 @@ contract ConditionalTokensMany is ERC1155 {
     /// Not recommended to donate after any oracle has finished, because funds may be (partially) lost.
     function donate(IERC20 collateralToken, uint64 market, uint64 outcome, uint256 amount, bytes calldata data) external {
         _collateralIn(collateralToken, market, outcome, amount);
-        _mint(msg.sender, _collateralDonatedTokenId(collateralToken, market), amount, data);
+        _mint(msg.sender, _collateralDonatedTokenId(collateralToken, market, outcome), amount, data);
         emit DonateERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
@@ -125,13 +125,13 @@ contract ConditionalTokensMany is ERC1155 {
     /// Not recommended to stake after any oracle has finished, because funds may be (partially) lost (and you could not unstake).
     function stakeCollateral(IERC20 collateralToken, uint64 market, uint64 outcome, uint256 amount, bytes calldata data) external {
         _collateralIn(collateralToken, market, outcome, amount);
-        _mint(msg.sender, _collateralStakedTokenId(collateralToken, market), amount, data);
+        _mint(msg.sender, _collateralStakedTokenId(collateralToken, market, outcome), amount, data);
         emit StakeERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
     function takeStakeBack(IERC20 collateralToken, uint64 market, uint64 outcome, uint256 amount, bytes calldata data) external {
         require(outcomeFinished[outcome], "too late");
-        uint tokenId = _collateralStakedTokenId(collateralToken, market);
+        uint tokenId = _collateralStakedTokenId(collateralToken, market, outcome);
         collateralTotals[address(collateralToken)][market][outcome] = collateralTotals[address(collateralToken)][market][outcome].sub(amount);
         require(collateralToken.transfer(msg.sender, amount), "cannot transfer");
         _burn(msg.sender, tokenId, amount);
@@ -212,12 +212,12 @@ contract ConditionalTokensMany is ERC1155 {
         return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_CONDITIONAL), market, customer)));
     }
 
-    function _collateralStakedTokenId(IERC20 collateralToken, uint64 market) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_DONATED), collateralToken, market)));
+    function _collateralStakedTokenId(IERC20 collateralToken, uint64 market, uint64 outcome) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_DONATED), collateralToken, market, outcome)));
     }
 
-    function _collateralDonatedTokenId(IERC20 collateralToken, uint64 market) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_STAKED), collateralToken, market)));
+    function _collateralDonatedTokenId(IERC20 collateralToken, uint64 market, uint64 outcome) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_STAKED), collateralToken, market, outcome)));
     }
 
     function _collateralIn(IERC20 collateralToken, uint64 market, uint64 outcome, uint256 amount) private {
