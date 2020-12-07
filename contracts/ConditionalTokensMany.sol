@@ -125,6 +125,7 @@ contract ConditionalTokensMany is ERC1155 {
         emit TakeBackERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
+    // FIXME: It's possible to register a customer once for all markets at once.
     function registerCustomer(uint64 market, bytes calldata data) external {
         require(!customers[msg.sender], "customer already registered");
         customers[msg.sender] = true;
