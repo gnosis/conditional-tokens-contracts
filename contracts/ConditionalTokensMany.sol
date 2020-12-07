@@ -10,6 +10,7 @@ import { CTHelpers } from "./CTHelpers.sol";
 /// - a combination of TOKEN_STAKED and collateral address (staked collateral tokens)
 contract ConditionalTokensMany is ERC1155 {
     // TODO: ERC-1155 collateral.
+    // TODO: Getters.
     // TODO: Oracle based (with quadratic upgradeable voting) recovery of lost accounts.
 
     using ABDKMath64x64 for int128;
