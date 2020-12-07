@@ -130,7 +130,7 @@ contract("ConditionalTokensMany", function(accounts) {
           customer2,
           toBN("10")
         );
-        await this.conditionalTokens.finishOutcome(this.market1);
+        await this.conditionalTokens.finishOutcome(this.outcome1);
 
         await this.conditionalTokens.reportNumerator(
           this.outcome1,
@@ -142,7 +142,7 @@ contract("ConditionalTokensMany", function(accounts) {
           customer2,
           toBN("10")
         );
-        await this.conditionalTokens.finishOutcome(this.market2);
+        await this.conditionalTokens.finishOutcome(this.outcome1);
 
         (
           await this.conditionalTokens.collateralBalanceOf(
