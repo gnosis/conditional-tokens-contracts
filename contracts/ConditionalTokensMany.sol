@@ -132,8 +132,9 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     // TODO: Ability to register somebody other as a customer. Useful for oracles.
-    // FIXME: Need to register for each weighted sub-market. That's bad. (Need to abolish registration and?) instead have 1000 tokens by default?
+    // Can be called both before or after the oracle finish. However registering after the finish is useless.
     function registerCustomer(uint64 market, bytes calldata data) external {
+        // FIXME: Wrong behavior if sent money to an unregistered customer!
         uint256 conditionalTokenId = _conditionalTokenId(market, msg.sender);
         require(!conditionalTokens[conditionalTokenId], "customer already registered");
         conditionalTokens[conditionalTokenId] = true;
@@ -200,7 +201,7 @@ contract ConditionalTokensMany is ERC1155 {
     function _collateralBalanceOf(IERC20 collateralToken, uint64 market, address customer) internal view returns (uint256) {
         uint256 numerator = uint256(payoutNumerators[market][customer]);
         uint256 denominator = payoutDenominator[market];
-        uint256 customerBalance = balanceOf(customer, _conditionalTokenId(market, customer));
+        uint256 customerBalance = balanceOf(customer, _conditionalTokenId(market, customer)); // zero for FIXME
         uint256 collateralBalance = collateralTotals[address(collateralToken)][market];
         // Rounded to below for no out-of-funds:
         int128 marketShare = ABDKMath64x64.divu(customerBalance, marketTotalBalances[market]);
