@@ -1,4 +1,5 @@
 pragma solidity ^0.5.1;
+import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import { IERC20 } from "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
 import { CTHelpers } from "./CTHelpers.sol";
@@ -10,6 +11,8 @@ import { CTHelpers } from "./CTHelpers.sol";
 contract ConditionalTokensMany is ERC1155 {
     // TODO: ERC-1155 collateral.
     // TODO: Oracle based (with quadratic upgradeable voting) recovery of lost accounts.
+
+    using ABDKMath64x64 for int128;
 
     enum CollateralKind { TOKEN_STAKED }
 
@@ -54,14 +57,14 @@ contract ConditionalTokensMany is ERC1155 {
         uint64 indexed market,
         address indexed oracle,
         address customer,
-        uint128 numerator
+        uint256 numerator
     );
 
     event ReportedNumeratorsBatch(
         uint64 indexed market,
         address indexed oracle,
         address[] addresses,
-        uint128[] numerators
+        uint256[] numerators
     );
 
     event OracleFinished(address indexed oracle);
@@ -81,14 +84,16 @@ contract ConditionalTokensMany is ERC1155 {
     mapping(uint64 => address) public oracles;
     /// Whether an oracle finished its work.
     mapping(uint64 => bool) public marketFinished;
-    /// Mapping (market => (customer => numerator)) for payout numerators. Using uint128 prevents multiplication overflows.
-    mapping(uint64 => mapping(address => uint128)) public payoutNumerators; // TODO: hash instead?
+    /// Mapping (market => (customer => numerator)) for payout numerators.
+    mapping(uint64 => mapping(address => uint256)) public payoutNumerators; // TODO: hash instead?
     /// Mapping (market => denominator) for payout denominators.
     mapping(uint64 => uint) public payoutDenominator;
     /// All conditonal tokens,
     mapping(uint256 => bool) public conditionalTokens;
     /// Total collaterals per market.
     mapping(address => mapping(uint64 => uint256)) collateralTotals; // TODO: hash instead?
+    /// Total conditional market balances
+    mapping(uint64 => uint256) marketTotalBalances; // TODO: hash instead?
 
     /// Register ourselves as an oracle for a new market.
     function createMarket() external {
@@ -131,6 +136,7 @@ contract ConditionalTokensMany is ERC1155 {
         require(!conditionalTokens[conditionalTokenId], "customer already registered");
         conditionalTokens[conditionalTokenId] = true;
         _mint(msg.sender, conditionalTokenId, INITIAL_CUSTOMER_BALANCE, data);
+        marketTotalBalances[market] += INITIAL_CUSTOMER_BALANCE; // No chance of overflow.
         emit CustomerRegistered(msg.sender, market, data);
     }
 
@@ -145,7 +151,7 @@ contract ConditionalTokensMany is ERC1155 {
     // TODO: Make it a nontransferrable ERC-1155 token?
     // FIXME: If the customer is not registered?
     // FIXME: Sum of numerators not greater than the denominator.
-    function reportNumerator(uint64 market, address customer, uint128 numerator) external
+    function reportNumerator(uint64 market, address customer, uint256 numerator) external
         _isOracle(market)
     {
         payoutNumerators[market][customer] = numerator;
@@ -154,7 +160,7 @@ contract ConditionalTokensMany is ERC1155 {
 
     /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
     // FIXME: Sum of numerators not greater than the denominator.
-    function reportNumeratorsBatch(uint64 market, address[] calldata addresses, uint128[] calldata numerators) external
+    function reportNumeratorsBatch(uint64 market, address[] calldata addresses, uint256[] calldata numerators) external
         _isOracle(market)
     {
         require(addresses.length == numerators.length, "length mismatch");
@@ -193,15 +199,17 @@ contract ConditionalTokensMany is ERC1155 {
         return uint256(keccak256(abi.encodePacked(market, customer)));
     }
 
+    // TODO: Slow to recalculate.
     function _collateralBalanceOf(IERC20 collateralToken, uint64 market, address customer) internal view returns (uint256) {
         uint256 numerator = uint256(payoutNumerators[market][customer]);
         uint256 denominator = payoutDenominator[market];
         uint256 customerBalance = balanceOf(customer, _conditionalTokenId(market, customer));
         uint256 collateralBalance = collateralTotals[address(collateralToken)][market];
         collateralToken.balanceOf(address(this));
-        // Rounded to below for no out-of-funds, FIXME: no overflow:
-        return customerBalance * numerator * collateralBalance / denominator / INITIAL_CUSTOMER_BALANCE;
-        // FIXME: Divide by numberOfCustomers
+        // Rounded to below for no out-of-funds:
+        int128 marketShare = ABDKMath64x64.divu(customerBalance, marketTotalBalances[market]);
+        int128 userShare = ABDKMath64x64.divu(numerator, denominator);
+        return marketShare.mul(userShare).mulu(collateralBalance);
     }
 
     function _collateralStakedTokenId(IERC20 collateralToken, uint64 market) internal pure returns (uint256) {

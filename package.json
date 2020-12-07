@@ -25,6 +25,7 @@
   "author": "Gnosis (https://gnosis.io)",
   "license": "LGPL-3.0",
   "dependencies": {
+    "abdk-libraries-solidity": "^2.4.0",
     "openzeppelin-solidity": "2.3.0"
   },
   "devDependencies": {
