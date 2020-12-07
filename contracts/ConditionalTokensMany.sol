@@ -141,33 +141,28 @@ contract ConditionalTokensMany is ERC1155 {
         emit CustomerRegistered(msg.sender, market, data);
     }
 
-    function reportDenominator(uint64 market, uint256 denominator) external
-        _isOracle(market)
-    {
-        payoutDenominator[market] = denominator;
-        emit ReportedDenominator(market, msg.sender, denominator);
-    }
-
     /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
     // TODO: Make it a nontransferrable ERC-1155 token?
     // FIXME: If the customer is not registered?
-    // FIXME: Sum of numerators not greater than the denominator. (Or alternatively "scale".)
+    // FIXME: What if called second time for the same customer?
     function reportNumerator(uint64 market, address customer, uint256 numerator) external
         _isOracle(market)
     {
         payoutNumerators[market][customer] = numerator;
+        payoutDenominator[market] += numerator;
         emit ReportedNumerator(market, msg.sender, customer, numerator);
     }
 
     /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
-    // FIXME: Sum of numerators not greater than the denominator.
     function reportNumeratorsBatch(uint64 market, address[] calldata addresses, uint256[] calldata numerators) external
         _isOracle(market)
     {
         require(addresses.length == numerators.length, "length mismatch");
         for (uint i = 0; i < addresses.length; ++i) {
             address customer = addresses[i];
-            payoutNumerators[market][customer] = numerators[i];
+            uint256 numerator = numerators[i];
+            payoutNumerators[market][customer] = numerator;
+            payoutDenominator[market] += numerator;
         }
         emit ReportedNumeratorsBatch(market, msg.sender, addresses, numerators);
     }
