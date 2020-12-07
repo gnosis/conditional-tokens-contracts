@@ -13,10 +13,7 @@ const {
 const ConditionalTokensMany = artifacts.require("ConditionalTokensMany");
 const ERC20Mintable = artifacts.require("MockCoin");
 
-const wallet1 = accounts.wallet.create();
-const wallet2 = accounts.wallet.create();
-
-contract("ConditionalTokens", function(accounts) {
+contract("ConditionalTokensMany", function(accounts) {
   const [
     minter,
     oracle,
@@ -34,21 +31,23 @@ contract("ConditionalTokens", function(accounts) {
   describe("createMarket", function() {
     context("with valid parameters", function() {
       beforeEach(async function() {
+        this.oracle1 = accounts[0];
+        this.customer1 = accounts[1];
         ({ logs: this.logs1 } = await this.conditionalTokens.createMarket());
         this.marketId1 = this.logs1[0].args.marketId;
         ({ logs: this.logs2 } = await this.conditionalTokens.createMarket());
         this.marketId2 = this.logs2[0].args.marketId;
       });
 
-      it("should emit an MarketCreated event", function() {
+      it("should emit a MarketCreated event", function() {
         this.marketId1.should.be.bignumber.equal("0");
         this.marketId2.should.be.bignumber.equal("1");
         expectEvent.inLogs(this.logs1, "MarketCreated", {
-          oracle: accounts[0],
+          oracle: this.oracle1,
           marketId: this.marketId1
         });
         expectEvent.inLogs(this.logs2, "MarketCreated", {
-          oracle: accounts[0],
+          oracle: this.oracle1,
           marketId: this.marketId2
         });
       });
@@ -62,16 +61,18 @@ contract("ConditionalTokens", function(accounts) {
         ).should.be.bignumber.equal("0");
       });
 
-      //   it("should not be able to prepare the same condition more than once", async function() {
-      //     await expectRevert(
-      //       this.conditionalTokens.prepareCondition(
-      //         oracle,
-      //         questionId,
-      //         outcomeSlotCount
-      //       ),
-      //       "condition already prepared"
-      //     );
-      //   });
+      it("should not be able to prepare the same condition more than once", async function() {
+        console.log(this.customer1);
+        await this.conditionalTokens.registerCustomer(this.marketId1, [], {
+          from: this.customer1
+        });
+        await expectRevert(
+          this.conditionalTokens.registerCustomer(this.marketId1, [], {
+            from: this.customer1
+          }),
+          "customer already registered"
+        );
+      });
     });
   });
 });
