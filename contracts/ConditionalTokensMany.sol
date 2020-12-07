@@ -144,6 +144,7 @@ contract ConditionalTokensMany is ERC1155 {
     /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
     // TODO: Make it a nontransferrable ERC-1155 token?
     // FIXME: If the customer is not registered?
+    // FIXME: Sum of numerators not greater than the denominator.
     function reportNumerator(uint64 market, address customer, uint128 numerator) external
         _isOracle(market)
     {
@@ -152,6 +153,7 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
+    // FIXME: Sum of numerators not greater than the denominator.
     function reportNumeratorsBatch(uint64 market, address[] calldata addresses, uint128[] calldata numerators) external
         _isOracle(market)
     {
