@@ -131,7 +131,7 @@ contract ConditionalTokensMany is ERC1155 {
         emit TakeBackERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
-    // TODO: Ability to register somebody other as a customer? Useful for oracles?
+    // TODO: Ability to register somebody other as a customer. Useful for oracles.
     // Can be called both before or after the oracle finish. However registering after the finish is useless.
     function registerCustomer(uint64 market, bytes calldata data) external {
         // FIXME: Wrong behavior if sent money to an unregistered customer!
