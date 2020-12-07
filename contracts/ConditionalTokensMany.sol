@@ -134,6 +134,7 @@ contract ConditionalTokensMany is ERC1155 {
     // Can be called both before or after the oracle finish. However registering after the finish is useless.
     function registerCustomer(uint64 market, bytes calldata data) external {
         // FIXME: Wrong behavior if sent money to an unregistered customer!
+        // FIXME: Be able to share the same conditional token for several markets (useful for competing oracles).
         uint256 conditionalTokenId = _conditionalTokenId(market, msg.sender);
         require(!conditionalTokens[conditionalTokenId], "customer already registered");
         conditionalTokens[conditionalTokenId] = true;
