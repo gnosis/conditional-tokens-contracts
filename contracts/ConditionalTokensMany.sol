@@ -124,6 +124,7 @@ contract ConditionalTokensMany is ERC1155 {
         emit TakeBackERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
+    // FIXME: Should not have separate conditional token for each collateral.
     function registerCustomer(IERC20 collateralToken, uint64 market, bytes calldata data) external {
         // FIXME: Should not allow to register more than once.
         uint256 conditionalTokenId = _conditionalTokenId(collateralToken, market, msg.sender);
