@@ -74,6 +74,7 @@ contract ConditionalTokensMany is ERC1155 {
         address redeemer,
         IERC20 indexed collateralToken,
         uint64 indexed market,
+        uint64 indexed outcome,
         address customer,
         uint payout
     );
@@ -90,8 +91,8 @@ contract ConditionalTokensMany is ERC1155 {
     mapping(uint64 => uint) public payoutDenominator;
     /// All conditonal tokens,
     mapping(uint256 => bool) public conditionalTokens;
-    /// Total collaterals per market.
-    mapping(address => mapping(uint64 => uint256)) collateralTotals; // TODO: hash instead?
+    /// Total collaterals per market: collateral => (market => (outcome => total))
+    mapping(address => mapping(uint64 => mapping(uint64 => uint256))) collateralTotals; // TODO: hash instead?
     /// Total conditional market balances
     mapping(uint64 => uint256) marketTotalBalances; // TODO: hash instead?
 
@@ -110,8 +111,8 @@ contract ConditionalTokensMany is ERC1155 {
     /// Donate funds in a ERC20 token.
     /// First need to approve the contract to spend the token.
     /// Not recommended to donate after any oracle has finished, because funds may be (partially) lost.
-    function donate(IERC20 collateralToken, uint64 market, uint256 amount, bytes calldata data) external {
-        _collateralIn(collateralToken, market, amount);
+    function donate(IERC20 collateralToken, uint64 market, uint64 outcome, uint256 amount, bytes calldata data) external {
+        _collateralIn(collateralToken, market, outcome, amount);
         _mint(msg.sender, _collateralDonatedTokenId(collateralToken, market), amount, data);
         emit DonateERC20Collateral(collateralToken, msg.sender, amount, data);
     }
@@ -120,16 +121,16 @@ contract ConditionalTokensMany is ERC1155 {
     /// First need to approve the contract to spend the token.
     /// The stake is lost if either: the prediction period ends or the staker loses his private key (e.g. dies)
     /// Not recommended to stake after any oracle has finished, because funds may be (partially) lost (and you could not unstake).
-    function stakeCollateral(IERC20 collateralToken, uint64 market, uint256 amount, bytes calldata data) external {
-        _collateralIn(collateralToken, market, amount);
+    function stakeCollateral(IERC20 collateralToken, uint64 market, uint64 outcome, uint256 amount, bytes calldata data) external {
+        _collateralIn(collateralToken, market, outcome, amount);
         _mint(msg.sender, _collateralStakedTokenId(collateralToken, market), amount, data);
         emit StakeERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
-    function takeStakeBack(IERC20 collateralToken, uint64 market, uint256 amount, bytes calldata data) external {
+    function takeStakeBack(IERC20 collateralToken, uint64 market, uint64 outcome, uint256 amount, bytes calldata data) external {
         require(outcomeFinished[market], "too late");
         uint tokenId = _collateralStakedTokenId(collateralToken, market);
-        collateralTotals[address(collateralToken)][market] = collateralTotals[address(collateralToken)][market].sub(amount);
+        collateralTotals[address(collateralToken)][market][outcome] = collateralTotals[address(collateralToken)][market][outcome].sub(amount);
         require(collateralToken.transfer(msg.sender, amount), "cannot transfer");
         _burn(msg.sender, tokenId, amount);
         emit TakeBackERC20Collateral(collateralToken, msg.sender, amount, data);
@@ -180,17 +181,17 @@ contract ConditionalTokensMany is ERC1155 {
         emit OutcomeFinished(msg.sender);
     }
 
-    function redeemPosition(IERC20 collateralToken, uint64 market, address customer) external {
-        require(outcomeFinished[market], "too early"); // to prevent the denominator or the numerators change meantime
-        uint256 amount = _collateralBalanceOf(collateralToken, market, customer);
-        payoutNumerators[market][customer] = 0;
-        emit PayoutRedemption(msg.sender, collateralToken, market, customer, amount);
+    function redeemPosition(IERC20 collateralToken, uint64 market, uint64 outcome, address customer) external {
+        require(outcomeFinished[outcome], "too early"); // to prevent the denominator or the numerators change meantime
+        uint256 amount = _collateralBalanceOf(collateralToken, market, outcome, customer);
+        payoutNumerators[outcome][customer] = 0;
+        emit PayoutRedemption(msg.sender, collateralToken, market, outcome, customer, amount);
         collateralToken.transfer(customer, amount); // last to prevent reentrancy attack
     }
 
     // TODO: Make it a ERC-1155 token balance?
-    function collateralBalanceOf(IERC20 collateralToken, uint64 market, address customer) external view returns (uint256) {
-        return _collateralBalanceOf(collateralToken, market, customer);
+    function collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer) external view returns (uint256) {
+        return _collateralBalanceOf(collateralToken, market, outcome, customer);
     }
 
     // FIXME: Ensure differenet *TokenId() don't glitch
@@ -204,11 +205,11 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     // TODO: Slow to recalculate.
-    function _collateralBalanceOf(IERC20 collateralToken, uint64 market, address customer) internal view returns (uint256) {
-        uint256 numerator = uint256(payoutNumerators[market][customer]);
-        uint256 denominator = payoutDenominator[market];
+    function _collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer) internal view returns (uint256) {
+        uint256 numerator = uint256(payoutNumerators[outcome][customer]);
+        uint256 denominator = payoutDenominator[outcome];
         uint256 customerBalance = balanceOf(customer, _conditionalTokenId(market, customer)); // zero for FIXME
-        uint256 collateralBalance = collateralTotals[address(collateralToken)][market];
+        uint256 collateralBalance = collateralTotals[address(collateralToken)][market][outcome];
         // Rounded to below for no out-of-funds:
         int128 marketShare = ABDKMath64x64.divu(customerBalance, marketTotalBalances[market]);
         int128 userShare = ABDKMath64x64.divu(numerator, denominator);
@@ -223,9 +224,9 @@ contract ConditionalTokensMany is ERC1155 {
         return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_STAKED), collateralToken, market)));
     }
 
-    function _collateralIn(IERC20 collateralToken, uint64 market, uint256 amount) private {
+    function _collateralIn(IERC20 collateralToken, uint64 market, uint64 outcome, uint256 amount) private {
         require(collateralToken.transferFrom(msg.sender, address(this), amount), "cannot transfer");
-        collateralTotals[address(collateralToken)][market] += amount; // FIXME: Overflow possible?
+        collateralTotals[address(collateralToken)][market][outcome] += amount; // FIXME: Overflow possible?
     }
 
     modifier _isOracle(uint64 outcomeId) {
