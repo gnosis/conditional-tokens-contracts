@@ -201,7 +201,6 @@ contract ConditionalTokensMany is ERC1155 {
         uint256 denominator = payoutDenominator[market];
         uint256 customerBalance = balanceOf(customer, _conditionalTokenId(market, customer));
         uint256 collateralBalance = collateralTotals[address(collateralToken)][market];
-        collateralToken.balanceOf(address(this));
         // Rounded to below for no out-of-funds:
         int128 marketShare = ABDKMath64x64.divu(customerBalance, marketTotalBalances[market]);
         int128 userShare = ABDKMath64x64.divu(numerator, denominator);
