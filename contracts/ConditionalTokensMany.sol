@@ -138,7 +138,6 @@ contract ConditionalTokensMany is ERC1155 {
     function reportDenominator(uint64 market, uint256 denominator) external
         _isOracle(market)
     {
-        require(oracles[market] == msg.sender, "not the oracle");
         payoutDenominator[market] = denominator;
         emit ReportedDenominator(market, msg.sender, denominator);
     }
