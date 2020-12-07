@@ -49,26 +49,26 @@ contract ConditionalTokensMany is ERC1155 {
     );
 
     event ReportedDenominator(
-        uint64 indexed market,
-        address indexed oracle,
+        uint64 indexed outcomeId,
+        address indexed oracle, // TODO: not needed
         uint256 denominator
     );
 
     event ReportedNumerator(
-        uint64 indexed market,
-        address indexed oracle,
+        uint64 indexed outcomeId,
+        address indexed oracle, // TODO: not needed
         address customer,
         uint256 numerator
     );
 
     event ReportedNumeratorsBatch(
-        uint64 indexed market,
-        address indexed oracle,
+        uint64 indexed outcomeId,
+        address indexed oracle, // TODO: not needed
         address[] addresses,
         uint256[] numerators
     );
 
-    event OracleFinished(address indexed oracle);
+    event OutcomeFinished(address indexed oracle);
 
     event PayoutRedemption(
         address redeemer,
@@ -78,12 +78,12 @@ contract ConditionalTokensMany is ERC1155 {
         uint payout
     );
 
-    uint64 private maxMarket; // FIXME: will 64 bit be enough after 100 years?!
+    uint64 private maxMarket; // FIXME: will 64 bit be enough after 100 years?! // FIXME: rename
 
-    /// Mapping from market to oracle.
+    /// Mapping from outcome to oracle.
     mapping(uint64 => address) public oracles;
     /// Whether an oracle finished its work.
-    mapping(uint64 => bool) public marketFinished;
+    mapping(uint64 => bool) public outcomeFinished;
     /// Mapping (market => (customer => numerator)) for payout numerators.
     mapping(uint64 => mapping(address => uint256)) public payoutNumerators; // TODO: hash instead?
     /// Mapping (market => denominator) for payout denominators.
@@ -98,8 +98,13 @@ contract ConditionalTokensMany is ERC1155 {
     /// Register ourselves as an oracle for a new market.
     function createMarket() external {
         uint64 marketId = maxMarket++;
-        oracles[marketId] = msg.sender;
         emit MarketCreated(msg.sender, marketId);
+    }
+
+    function createOutcome() external {
+        uint64 outcomeId = maxMarket++;
+        oracles[outcomeId] = msg.sender;
+        emit MarketCreated(msg.sender, outcomeId);
     }
 
     /// Donate funds in a ERC20 token.
@@ -122,7 +127,7 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     function takeStakeBack(IERC20 collateralToken, uint64 market, uint256 amount, bytes calldata data) external {
-        require(marketFinished[market], "too late");
+        require(outcomeFinished[market], "too late");
         uint tokenId = _collateralStakedTokenId(collateralToken, market);
         collateralTotals[address(collateralToken)][market] = collateralTotals[address(collateralToken)][market].sub(amount);
         require(collateralToken.transfer(msg.sender, amount), "cannot transfer");
@@ -134,7 +139,6 @@ contract ConditionalTokensMany is ERC1155 {
     // Can be called both before or after the oracle finish. However registering after the finish is useless.
     function registerCustomer(uint64 market, bytes calldata data) external {
         // FIXME: Wrong behavior if sent money to an unregistered customer!
-        // FIXME: Be able to share the same conditional token for several markets (useful for competing oracles).
         uint256 conditionalTokenId = _conditionalTokenId(market, msg.sender);
         require(!conditionalTokens[conditionalTokenId], "customer already registered");
         conditionalTokens[conditionalTokenId] = true;
@@ -147,37 +151,37 @@ contract ConditionalTokensMany is ERC1155 {
     // TODO: Make it a nontransferrable ERC-1155 token?
     // FIXME: If the customer is not registered?
     // FIXME: What if called second time for the same customer?
-    function reportNumerator(uint64 market, address customer, uint256 numerator) external
-        _isOracle(market)
+    function reportNumerator(uint64 outcomeId, address customer, uint256 numerator) external
+        _isOracle(outcomeId)
     {
-        payoutNumerators[market][customer] = numerator;
-        payoutDenominator[market] += numerator;
-        emit ReportedNumerator(market, msg.sender, customer, numerator);
+        payoutNumerators[outcomeId][customer] = numerator;
+        payoutDenominator[outcomeId] += numerator;
+        emit ReportedNumerator(outcomeId, msg.sender, customer, numerator);
     }
 
     /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
-    function reportNumeratorsBatch(uint64 market, address[] calldata addresses, uint256[] calldata numerators) external
-        _isOracle(market)
+    function reportNumeratorsBatch(uint64 outcomeId, address[] calldata addresses, uint256[] calldata numerators) external
+        _isOracle(outcomeId)
     {
         require(addresses.length == numerators.length, "length mismatch");
         for (uint i = 0; i < addresses.length; ++i) {
             address customer = addresses[i];
             uint256 numerator = numerators[i];
-            payoutNumerators[market][customer] = numerator;
-            payoutDenominator[market] += numerator;
+            payoutNumerators[outcomeId][customer] = numerator;
+            payoutDenominator[outcomeId] += numerator;
         }
-        emit ReportedNumeratorsBatch(market, msg.sender, addresses, numerators);
+        emit ReportedNumeratorsBatch(outcomeId, msg.sender, addresses, numerators);
     }
 
-    function finishMarket(uint64 market) external
-        _isOracle(market)
+    function finishOutcome(uint64 outcomeId) external
+        _isOracle(outcomeId)
     {
-        marketFinished[market] = true;
-        emit OracleFinished(msg.sender);
+        outcomeFinished[outcomeId] = true;
+        emit OutcomeFinished(msg.sender);
     }
 
     function redeemPosition(IERC20 collateralToken, uint64 market, address customer) external {
-        require(marketFinished[market], "too early"); // to prevent the denominator or the numerators change meantime
+        require(outcomeFinished[market], "too early"); // to prevent the denominator or the numerators change meantime
         uint256 amount = _collateralBalanceOf(collateralToken, market, customer);
         payoutNumerators[market][customer] = 0;
         emit PayoutRedemption(msg.sender, collateralToken, market, customer, amount);
@@ -188,6 +192,8 @@ contract ConditionalTokensMany is ERC1155 {
     function collateralBalanceOf(IERC20 collateralToken, uint64 market, address customer) external view returns (uint256) {
         return _collateralBalanceOf(collateralToken, market, customer);
     }
+
+    // FIXME: Ensure differenet *TokenId() don't glitch
 
     function _collateralTokenId(IERC20 collateralToken, uint64 market) private pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(market, collateralToken)));
@@ -222,8 +228,8 @@ contract ConditionalTokensMany is ERC1155 {
         collateralTotals[address(collateralToken)][market] += amount; // FIXME: Overflow possible?
     }
 
-    modifier _isOracle(uint64 market) {
-        require(oracles[market] == msg.sender, "not the oracle");
+    modifier _isOracle(uint64 outcomeId) {
+        require(oracles[outcomeId] == msg.sender, "not the oracle");
         _;
     }
 }
