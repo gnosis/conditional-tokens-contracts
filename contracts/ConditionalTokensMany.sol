@@ -200,7 +200,7 @@ contract ConditionalTokensMany is ERC1155 {
     function _collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer) internal view returns (uint256) {
         uint256 numerator = uint256(payoutNumerators[outcome][customer]);
         uint256 denominator = payoutDenominator[outcome];
-        uint256 customerBalance = balanceOf(customer, _conditionalTokenId(market, customer)); // zero for FIXME
+        uint256 customerBalance = balanceOf(customer, _conditionalTokenId(market, customer));
         uint256 collateralBalance = collateralTotals[address(collateralToken)][market][outcome];
         // Rounded to below for no out-of-funds:
         int128 marketShare = ABDKMath64x64.divu(customerBalance, marketTotalBalances[market]);
