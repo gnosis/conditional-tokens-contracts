@@ -25,17 +25,18 @@ contract("ConditionalTokensMany", function(accounts) {
   ] = accounts;
 
   beforeEach("initiate token contracts", async function() {
+    this.oracle1 = accounts[0];
+    this.customer1 = accounts[1];
+    this.customer2 = accounts[2];
+    this.donor1 = accounts[3];
     this.conditionalTokens = await ConditionalTokensMany.new();
-    // this.collateral = await ERC20Mintable.new(); // TODO: Check multiple collaterals
-    // this.collateral.mint(donor, "10000");
+    this.collateral = await ERC20Mintable.new(); // TODO: Check multiple collaterals
+    this.collateral.mint(this.donor1, "10000000");
   });
 
-  describe("createMarket", function() {
+  describe("createMarket", function() { // TODO: rename
     context("with valid parameters", function() {
       beforeEach(async function() {
-        this.oracle1 = accounts[0];
-        this.customer1 = accounts[1];
-        this.customer2 = accounts[2];
         ({ logs: this.logs1 } = await this.conditionalTokens.createMarket());
         this.market1 = this.logs1[0].args.marketId;
         ({ logs: this.logs2 } = await this.conditionalTokens.createMarket());
@@ -78,13 +79,9 @@ contract("ConditionalTokensMany", function(accounts) {
       });
 
       it("checking the math", async function() {
-        const collateral = await this.conditionalTokens.registerCustomer(
-          this.market1,
-          [],
-          {
-            from: this.customer1
-          }
-        );
+        await this.conditionalTokens.registerCustomer(this.market1, [], {
+          from: this.customer1
+        });
         await this.conditionalTokens.registerCustomer(this.market1, [], {
           from: this.customer2
         });
@@ -95,23 +92,31 @@ contract("ConditionalTokensMany", function(accounts) {
           from: this.customer2
         });
 
-        await this.conditionalTokens.reportDenominator(this.market1, toBN("3"));
-        await this.conditionalTokens.reportNumerator(
-          this.market1,
-          this.customer1,
-          toBN("20")
-        );
-        await this.conditionalTokens.reportNumerator(
-          this.market1,
-          this.customer2,
-          toBN("10")
-        );
-        await this.conditionalTokens.finishMarket(this.market1);
-        await this.conditionalTokens.reportDenominator(this.market2, toBN("3"));
+        await this.collateral.approve(this.conditionalTokens.address, "1000000000000" /* a big number */, {from: this.donor1});
+        await this.conditionalTokens.donate(this.collateral.address, this.market1, "400", [], {from: this.donor1});
+        await this.conditionalTokens.stakeCollateral(this.collateral.address, this.market1, "600", [], {from: this.donor1});
+        await this.conditionalTokens.donate(this.collateral.address, this.market2, "4000", [], {from: this.donor1});
+        await this.conditionalTokens.stakeCollateral(this.collateral.address, this.market2, "6000", [], {from: this.donor1});
+        const TOTAL_COLLATERAL1 = toBN("1000");
+        const TOTAL_COLLATERAL2 = toBN("10000");
+
+        // await this.conditionalTokens.reportDenominator(this.market1, toBN("3"));
+        // await this.conditionalTokens.reportNumerator(
+        //   this.market1,
+        //   this.customer1,
+        //   toBN("20")
+        // );
+        // await this.conditionalTokens.reportNumerator(
+        //   this.market1,
+        //   this.customer2,
+        //   toBN("10")
+        // );
+        // await this.conditionalTokens.finishMarket(this.market1);
+        await this.conditionalTokens.reportDenominator(this.market2, toBN("10"));
         await this.conditionalTokens.reportNumerator(
           this.market2,
           this.customer1,
-          toBN("20")
+          toBN("90")
         );
         await this.conditionalTokens.reportNumerator(
           this.market2,
@@ -120,7 +125,19 @@ contract("ConditionalTokensMany", function(accounts) {
         );
         await this.conditionalTokens.finishMarket(this.market2);
 
-        // await collateralBalanceOf(collateralToken, market1, customer1)
+        // TODO: Use named constants.
+        // (
+        //   await this.conditionalTokens.collateralBalanceOf(this.collateral.address, this.market1, this.customer1)
+        // ).should.be.bignumber.equal(TOTAL_COLLATERAL1.mul(toBN("20")).div(toBN("3")));
+        // (
+        //   await this.conditionalTokens.collateralBalanceOf(this.collateral.address, this.market1, this.customer2)
+        // ).should.be.bignumber.equal(TOTAL_COLLATERAL1.mul(toBN("10")).div(toBN("3")));
+        (
+          await this.conditionalTokens.collateralBalanceOf(this.collateral.address, this.market2, this.customer1)
+        ).should.be.bignumber.equal(TOTAL_COLLATERAL2.mul(toBN("90")).div(toBN("10")));
+        (
+          await this.conditionalTokens.collateralBalanceOf(this.collateral.address, this.market2, this.customer2)
+        ).should.be.bignumber.equal(TOTAL_COLLATERAL2.mul(toBN("10")).div(toBN("10")));
         // TODO
       });
     });

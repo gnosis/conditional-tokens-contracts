@@ -76,6 +76,7 @@ contract ConditionalTokensMany is ERC1155 {
 
     uint64 private maxMarket; // FIXME: will 64 bit be enough after 100 years?!
 
+    // TODO: Count numbers of customers per market and/or total balances.
     /// Mapping from market to oracle.
     mapping(uint64 => address) public oracles;
     /// Whether an oracle finished its work.
@@ -84,10 +85,10 @@ contract ConditionalTokensMany is ERC1155 {
     mapping(uint64 => mapping(address => uint128)) public payoutNumerators; // TODO: hash instead?
     /// Mapping (market => denominator) for payout denominators.
     mapping(uint64 => uint) public payoutDenominator;
-    /// Total balance of conditional for a given market and collateral.
-    mapping(uint256 => uint) public totalMarketBalances;
     /// All conditonal tokens,
     mapping(uint256 => bool) public conditionalTokens;
+    /// Total collaterals per market.
+    mapping(address => mapping(uint64 => uint256)) collateralTotals; // TODO: hash instead?
 
     /// Register ourselves as an oracle for a new market.
     function createMarket() external {
@@ -100,7 +101,7 @@ contract ConditionalTokensMany is ERC1155 {
     /// First need to approve the contract to spend the token.
     /// Not recommended to donate after any oracle has finished, because funds may be (partially) lost.
     function donate(IERC20 collateralToken, uint64 market, uint256 amount, bytes calldata data) external {
-        _collateralIn(collateralToken, amount);
+        _collateralIn(collateralToken, market, amount);
         _mint(msg.sender, _collateralDonatedTokenId(collateralToken, market), amount, data);
         emit DonateERC20Collateral(collateralToken, msg.sender, amount, data);
     }
@@ -110,7 +111,7 @@ contract ConditionalTokensMany is ERC1155 {
     /// The stake is lost if either: the prediction period ends or the staker loses his private key (e.g. dies)
     /// Not recommended to stake after any oracle has finished, because funds may be (partially) lost (and you could not unstake).
     function stakeCollateral(IERC20 collateralToken, uint64 market, uint256 amount, bytes calldata data) external {
-        _collateralIn(collateralToken, amount);
+        _collateralIn(collateralToken, market, amount);
         _mint(msg.sender, _collateralStakedTokenId(collateralToken, market), amount, data);
         emit StakeERC20Collateral(collateralToken, msg.sender, amount, data);
     }
@@ -118,7 +119,7 @@ contract ConditionalTokensMany is ERC1155 {
     function takeStakeBack(IERC20 collateralToken, uint64 market, uint256 amount, bytes calldata data) external {
         require(marketFinished[market], "too late");
         uint tokenId = _collateralStakedTokenId(collateralToken, market);
-        require(balanceOf(msg.sender, tokenId) >= amount, "not enough balance");
+        collateralTotals[address(collateralToken)][market] = collateralTotals[address(collateralToken)][market].sub(amount);
         require(collateralToken.transfer(msg.sender, amount), "cannot transfer");
         _burn(msg.sender, tokenId, amount);
         emit TakeBackERC20Collateral(collateralToken, msg.sender, amount, data);
@@ -129,7 +130,6 @@ contract ConditionalTokensMany is ERC1155 {
         uint256 conditionalTokenId = _conditionalTokenId(market, msg.sender);
         require(!conditionalTokens[conditionalTokenId], "customer already registered");
         conditionalTokens[conditionalTokenId] = true;
-        totalMarketBalances[conditionalTokenId] += INITIAL_CUSTOMER_BALANCE;
         _mint(msg.sender, conditionalTokenId, INITIAL_CUSTOMER_BALANCE, data);
         emit CustomerRegistered(msg.sender, market, data);
     }
@@ -194,10 +194,13 @@ contract ConditionalTokensMany is ERC1155 {
     function _collateralBalanceOf(IERC20 collateralToken, uint64 market, address customer) internal view returns (uint256) {
         uint256 numerator = uint256(payoutNumerators[market][customer]);
         uint256 denominator = payoutDenominator[market];
-        uint256 total = totalMarketBalances[_collateralTokenId(collateralToken, market)];
         uint256 customerBalance = balanceOf(customer, _conditionalTokenId(market, customer));
-        // Rounded to below for no out-of-funds, no overflow because numerator is small:
-        return customerBalance * numerator / denominator / total;
+        uint256 collateralBalance = collateralTotals[address(collateralToken)][market];
+        collateralToken.balanceOf(address(this));
+        // FIXME: Remove require.
+        require(collateralBalance != 0, "collateralBalance zero");
+        // Rounded to below for no out-of-funds, FIXME: no overflow:
+        return customerBalance * numerator * collateralBalance / denominator / INITIAL_CUSTOMER_BALANCE;
     }
 
     function _collateralStakedTokenId(IERC20 collateralToken, uint64 market) internal pure returns (uint256) {
@@ -208,8 +211,9 @@ contract ConditionalTokensMany is ERC1155 {
         return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_STAKED), collateralToken, market)));
     }
 
-    function _collateralIn(IERC20 collateralToken, uint256 amount) private {
+    function _collateralIn(IERC20 collateralToken, uint64 market, uint256 amount) private {
         require(collateralToken.transferFrom(msg.sender, address(this), amount), "cannot transfer");
+        collateralTotals[address(collateralToken)][market] += amount; // FIXME: Overflow possible?
     }
 
     modifier _isOracle(uint64 market) {
