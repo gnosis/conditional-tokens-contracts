@@ -192,6 +192,9 @@ contract("ConditionalTokensMany", function(accounts) {
           .should.be.bignumber.below(toBN("2"));
         // TODO
       });
+
+      // TODO: Unregistered customer receives zero.
+      // TODO: Send money to registered and unregistered customers.
     });
   });
 });
