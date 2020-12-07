@@ -127,7 +127,7 @@ contract ConditionalTokensMany is ERC1155 {
 
     // FIXME: It's possible to register a customer once for all markets at once.
     function registerCustomer(uint64 market, bytes calldata data) external {
-        require(!customers[msg.sender], "customer already registered");
+        require(!customers[msg.sender], "customer already registered"); // FIXME: Register for more than one market?
         customers[msg.sender] = true;
         uint256 conditionalTokenId = _conditionalTokenId(market, msg.sender);
         totalMarketBalances[conditionalTokenId] += INITIAL_CUSTOMER_BALANCE;
