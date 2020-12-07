@@ -125,6 +125,7 @@ contract ConditionalTokensMany is ERC1155 {
         emit TakeBackERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
+    // TODO: Ability to register somebody other as a customer. Useful for oracles.
     function registerCustomer(uint64 market, bytes calldata data) external {
         uint256 conditionalTokenId = _conditionalTokenId(market, msg.sender);
         require(!conditionalTokens[conditionalTokenId], "customer already registered");
