@@ -201,6 +201,7 @@ contract ConditionalTokensMany is ERC1155 {
         collateralToken.balanceOf(address(this));
         // Rounded to below for no out-of-funds, FIXME: no overflow:
         return customerBalance * numerator * collateralBalance / denominator / INITIAL_CUSTOMER_BALANCE;
+        // FIXME: Divide by numberOfCustomers
     }
 
     function _collateralStakedTokenId(IERC20 collateralToken, uint64 market) internal pure returns (uint256) {
