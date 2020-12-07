@@ -61,7 +61,7 @@ contract("ConditionalTokensMany", function(accounts) {
         ).should.be.bignumber.equal("0");
       });
 
-      it("should not be able to prepare the same condition more than once", async function() {
+      it("should not be able to register the same customer more than once for the same market", async function() {
         await this.conditionalTokens.registerCustomer(this.marketId1, [], {
           from: this.customer1
         });
@@ -71,6 +71,13 @@ contract("ConditionalTokensMany", function(accounts) {
           }),
           "customer already registered"
         );
+        // TODO: Check that can register the same customer for different markets.
+      });
+
+      it("cheking the math", async function() {
+        await this.conditionalTokens.registerCustomer(this.marketId1, [], {
+          from: this.customer1
+        });
       });
     });
   });

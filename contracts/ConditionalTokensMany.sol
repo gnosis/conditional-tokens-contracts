@@ -86,8 +86,8 @@ contract ConditionalTokensMany is ERC1155 {
     mapping(uint64 => uint) public payoutDenominator;
     /// Total balance of conditional for a given market and collateral.
     mapping(uint256 => uint) public totalMarketBalances;
-    /// All customers
-    mapping(address => bool) public customers;
+    /// All conditonal tokens,
+    mapping(uint256 => bool) public conditionalTokens;
 
     /// Register ourselves as an oracle for a new market.
     function createMarket() external {
@@ -125,11 +125,10 @@ contract ConditionalTokensMany is ERC1155 {
         emit TakeBackERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
-    // FIXME: It's possible to register a customer once for all markets at once.
     function registerCustomer(uint64 market, bytes calldata data) external {
-        require(!customers[msg.sender], "customer already registered"); // FIXME: Register for more than one market?
-        customers[msg.sender] = true;
         uint256 conditionalTokenId = _conditionalTokenId(market, msg.sender);
+        require(!conditionalTokens[conditionalTokenId], "customer already registered");
+        conditionalTokens[conditionalTokenId] = true;
         totalMarketBalances[conditionalTokenId] += INITIAL_CUSTOMER_BALANCE;
         _mint(msg.sender, conditionalTokenId, INITIAL_CUSTOMER_BALANCE, data);
         emit CustomerRegistered(msg.sender, market, data);
