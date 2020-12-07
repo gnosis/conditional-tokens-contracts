@@ -1,37 +1,16 @@
-const ethSigUtil = require("eth-sig-util");
-
 const { expectEvent, expectRevert } = require("openzeppelin-test-helpers");
-const { toBN, randomHex } = web3.utils;
-const { accounts } = web3.eth;
-const {
-  getConditionId,
-  getCollectionId,
-  combineCollectionIds,
-  getPositionId
-} = require("../utils/id-helpers")(web3.utils);
+const { toBN } = web3.utils;
 
 const ConditionalTokensMany = artifacts.require("ConditionalTokensMany");
 const ERC20Mintable = artifacts.require("MockCoin");
 
 contract("ConditionalTokensMany", function(accounts) {
-  const [
-    minter,
-    oracle,
-    notOracle,
-    eoaTrader,
-    fwdExecutor,
-    safeExecutor,
-    counterparty
-  ] = accounts;
+  const [oracle1, customer1, customer2, donor1] = accounts;
 
   beforeEach("initiate token contracts", async function() {
-    this.oracle1 = accounts[0];
-    this.customer1 = accounts[1];
-    this.customer2 = accounts[2];
-    this.donor1 = accounts[3];
     this.conditionalTokens = await ConditionalTokensMany.new();
     this.collateral = await ERC20Mintable.new(); // TODO: Check multiple collaterals
-    this.collateral.mint(this.donor1, "10000000");
+    this.collateral.mint(donor1, "10000000");
   });
 
   describe("createMarket", function() {
@@ -48,11 +27,11 @@ contract("ConditionalTokensMany", function(accounts) {
         this.market1.should.be.bignumber.equal("0");
         this.market2.should.be.bignumber.equal("1");
         expectEvent.inLogs(this.logs1, "MarketCreated", {
-          oracle: this.oracle1,
+          oracle: oracle1,
           marketId: this.market1
         });
         expectEvent.inLogs(this.logs2, "MarketCreated", {
-          oracle: this.oracle1,
+          oracle: oracle1,
           marketId: this.market2
         });
       });
@@ -68,11 +47,11 @@ contract("ConditionalTokensMany", function(accounts) {
 
       it("should not be able to register the same customer more than once for the same market", async function() {
         await this.conditionalTokens.registerCustomer(this.market1, [], {
-          from: this.customer1
+          from: customer1
         });
         await expectRevert(
           this.conditionalTokens.registerCustomer(this.market1, [], {
-            from: this.customer1
+            from: customer1
           }),
           "customer already registered"
         );
@@ -81,74 +60,76 @@ contract("ConditionalTokensMany", function(accounts) {
 
       it("checking the math", async function() {
         await this.conditionalTokens.registerCustomer(this.market1, [], {
-          from: this.customer1
+          from: customer1
         });
         await this.conditionalTokens.registerCustomer(this.market1, [], {
-          from: this.customer2
+          from: customer2
         });
         await this.conditionalTokens.registerCustomer(this.market2, [], {
-          from: this.customer1
+          from: customer1
         });
         await this.conditionalTokens.registerCustomer(this.market2, [], {
-          from: this.customer2
+          from: customer2
         });
+        const NUMBER_CUSTOMERS1 = toBN("2");
+        const NUMBER_CUSTOMERS2 = toBN("2");
 
         await this.collateral.approve(
           this.conditionalTokens.address,
           "1000000000000" /* a big number */,
-          { from: this.donor1 }
+          { from: donor1 }
         );
         await this.conditionalTokens.donate(
           this.collateral.address,
           this.market1,
           "400",
           [],
-          { from: this.donor1 }
+          { from: donor1 }
         );
         await this.conditionalTokens.stakeCollateral(
           this.collateral.address,
           this.market1,
           "600",
           [],
-          { from: this.donor1 }
+          { from: donor1 }
         );
         await this.conditionalTokens.donate(
           this.collateral.address,
           this.market2,
           "4000",
           [],
-          { from: this.donor1 }
+          { from: donor1 }
         );
         await this.conditionalTokens.stakeCollateral(
           this.collateral.address,
           this.market2,
           "6000",
           [],
-          { from: this.donor1 }
+          { from: donor1 }
         );
         const TOTAL_COLLATERAL1 = toBN("1000");
         const TOTAL_COLLATERAL2 = toBN("10000");
 
         await this.conditionalTokens.reportNumerator(
           this.market1,
-          this.customer1,
+          customer1,
           toBN("20")
         );
         await this.conditionalTokens.reportNumerator(
           this.market1,
-          this.customer2,
+          customer2,
           toBN("10")
         );
         await this.conditionalTokens.finishMarket(this.market1);
 
         await this.conditionalTokens.reportNumerator(
           this.market2,
-          this.customer1,
+          customer1,
           toBN("90")
         );
         await this.conditionalTokens.reportNumerator(
           this.market2,
-          this.customer2,
+          customer2,
           toBN("10")
         );
         await this.conditionalTokens.finishMarket(this.market2);
@@ -157,38 +138,58 @@ contract("ConditionalTokensMany", function(accounts) {
           await this.conditionalTokens.collateralBalanceOf(
             this.collateral.address,
             this.market1,
-            this.customer1
+            customer1
           )
-        ).should.be.bignumber.equal(
-          TOTAL_COLLATERAL1.mul(toBN("20")).div(toBN("30"))
-        );
+        )
+          .sub(
+            TOTAL_COLLATERAL1.mul(toBN("20"))
+              .div(toBN("30"))
+              .div(NUMBER_CUSTOMERS1)
+          )
+          .abs()
+          .should.be.bignumber.below(toBN("2"));
         (
           await this.conditionalTokens.collateralBalanceOf(
             this.collateral.address,
             this.market1,
-            this.customer2
+            customer2
           )
-        ).should.be.bignumber.equal(
-          TOTAL_COLLATERAL1.mul(toBN("10")).div(toBN("30"))
-        );
+        )
+          .sub(
+            TOTAL_COLLATERAL1.mul(toBN("10"))
+              .div(toBN("30"))
+              .div(NUMBER_CUSTOMERS1)
+          )
+          .abs()
+          .should.be.bignumber.below(toBN("2"));
         (
           await this.conditionalTokens.collateralBalanceOf(
             this.collateral.address,
             this.market2,
-            this.customer1
+            customer1
           )
-        ).should.be.bignumber.equal(
-          TOTAL_COLLATERAL2.mul(toBN("90")).div(toBN("100"))
-        );
+        )
+          .sub(
+            TOTAL_COLLATERAL2.mul(toBN("90"))
+              .div(toBN("100"))
+              .div(NUMBER_CUSTOMERS2)
+          )
+          .abs()
+          .should.be.bignumber.below(toBN("2"));
         (
           await this.conditionalTokens.collateralBalanceOf(
             this.collateral.address,
             this.market2,
-            this.customer2
+            customer2
           )
-        ).should.be.bignumber.equal(
-          TOTAL_COLLATERAL2.mul(toBN("10")).div(toBN("100"))
-        );
+        )
+          .sub(
+            TOTAL_COLLATERAL2.mul(toBN("10"))
+              .div(toBN("100"))
+              .div(NUMBER_CUSTOMERS2)
+          )
+          .abs()
+          .should.be.bignumber.below(toBN("2"));
         // TODO
       });
     });
