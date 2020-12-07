@@ -100,7 +100,7 @@ contract ConditionalTokensMany is ERC1155 {
     /// First need to approve the contract to spend the token.
     /// Not recommended to donate after any oracle has finished, because funds may be (partially) lost.
     function donate(IERC20 collateralToken, uint64 market, uint256 amount, bytes calldata data) external {
-        require(collateralToken.transferFrom(msg.sender, address(this), amount), "cannot transfer");
+        _collateralIn(collateralToken, amount);
         _mint(msg.sender, _collateralDonatedTokenId(collateralToken, market), amount, data);
         emit DonateERC20Collateral(collateralToken, msg.sender, amount, data);
     }
@@ -110,7 +110,7 @@ contract ConditionalTokensMany is ERC1155 {
     /// The stake is lost if either: the prediction period ends or the staker loses his private key (e.g. dies)
     /// Not recommended to stake after any oracle has finished, because funds may be (partially) lost (and you could not unstake).
     function stakeCollateral(IERC20 collateralToken, uint64 market, uint256 amount, bytes calldata data) external {
-        require(collateralToken.transferFrom(msg.sender, address(this), amount), "cannot transfer");
+        _collateralIn(collateralToken, amount);
         _mint(msg.sender, _collateralStakedTokenId(collateralToken, market), amount, data);
         emit StakeERC20Collateral(collateralToken, msg.sender, amount, data);
     }
@@ -141,16 +141,18 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
-    function reportNumerator(uint64 market, address customer, uint128 numerator) external {
-        require(oracles[market] == msg.sender, "not the oracle");
+    function reportNumerator(uint64 market, address customer, uint128 numerator) external
+        _isOracle(market)
+    {
         payoutNumerators[market][customer] = numerator;
         emit ReportedNumerator(market, msg.sender, customer, numerator);
     }
 
     /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
-    function reportNumeratorsBatch(uint64 market, address[] calldata addresses, uint128[] calldata numerators) external {
+    function reportNumeratorsBatch(uint64 market, address[] calldata addresses, uint128[] calldata numerators) external
+        _isOracle(market)
+    {
         require(addresses.length == numerators.length, "length mismatch");
-        require(oracles[market] == msg.sender, "not the oracle");
         for (uint i = 0; i < addresses.length; ++i) {
             address customer = addresses[i];
             payoutNumerators[market][customer] = numerators[i];
@@ -199,5 +201,14 @@ contract ConditionalTokensMany is ERC1155 {
 
     function _collateralDonatedTokenId(IERC20 collateralToken, uint64 market) internal pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_STAKED), collateralToken, market)));
+    }
+
+    function _collateralIn(IERC20 collateralToken, uint256 amount) private {
+        require(collateralToken.transferFrom(msg.sender, address(this), amount), "cannot transfer");
+    }
+
+    modifier _isOracle(uint64 market) {
+        require(oracles[market] == msg.sender, "not the oracle");
+        _;
     }
 }
