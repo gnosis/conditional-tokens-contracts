@@ -93,7 +93,7 @@ contract ConditionalTokensMany is ERC1155 {
     mapping(uint64 => uint) public payoutDenominator;
     /// All conditonal tokens,
     mapping(uint256 => bool) public conditionalTokens;
-    /// Total collaterals per market: collateral => (market => (outcome => total))
+    /// Total collaterals per market and outcome: collateral => (market => (outcome => total))
     mapping(address => mapping(uint64 => mapping(uint64 => uint256))) collateralTotals; // TODO: hash instead?
     /// Total conditional market balances
     mapping(uint64 => uint256) marketTotalBalances; // TODO: hash instead?
