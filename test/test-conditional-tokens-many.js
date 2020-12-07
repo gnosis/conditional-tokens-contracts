@@ -100,18 +100,19 @@ contract("ConditionalTokensMany", function(accounts) {
         const TOTAL_COLLATERAL1 = toBN("1000");
         const TOTAL_COLLATERAL2 = toBN("10000");
 
-        // await this.conditionalTokens.reportDenominator(this.market1, toBN("3"));
-        // await this.conditionalTokens.reportNumerator(
-        //   this.market1,
-        //   this.customer1,
-        //   toBN("20")
-        // );
-        // await this.conditionalTokens.reportNumerator(
-        //   this.market1,
-        //   this.customer2,
-        //   toBN("10")
-        // );
-        // await this.conditionalTokens.finishMarket(this.market1);
+        await this.conditionalTokens.reportDenominator(this.market1, toBN("3"));
+        await this.conditionalTokens.reportNumerator(
+          this.market1,
+          this.customer1,
+          toBN("20")
+        );
+        await this.conditionalTokens.reportNumerator(
+          this.market1,
+          this.customer2,
+          toBN("10")
+        );
+        await this.conditionalTokens.finishMarket(this.market1);
+
         await this.conditionalTokens.reportDenominator(this.market2, toBN("10"));
         await this.conditionalTokens.reportNumerator(
           this.market2,
@@ -125,13 +126,12 @@ contract("ConditionalTokensMany", function(accounts) {
         );
         await this.conditionalTokens.finishMarket(this.market2);
 
-        // TODO: Use named constants.
-        // (
-        //   await this.conditionalTokens.collateralBalanceOf(this.collateral.address, this.market1, this.customer1)
-        // ).should.be.bignumber.equal(TOTAL_COLLATERAL1.mul(toBN("20")).div(toBN("3")));
-        // (
-        //   await this.conditionalTokens.collateralBalanceOf(this.collateral.address, this.market1, this.customer2)
-        // ).should.be.bignumber.equal(TOTAL_COLLATERAL1.mul(toBN("10")).div(toBN("3")));
+        (
+          await this.conditionalTokens.collateralBalanceOf(this.collateral.address, this.market1, this.customer1)
+        ).should.be.bignumber.equal(TOTAL_COLLATERAL1.mul(toBN("20")).div(toBN("3")));
+        (
+          await this.conditionalTokens.collateralBalanceOf(this.collateral.address, this.market1, this.customer2)
+        ).should.be.bignumber.equal(TOTAL_COLLATERAL1.mul(toBN("10")).div(toBN("3")));
         (
           await this.conditionalTokens.collateralBalanceOf(this.collateral.address, this.market2, this.customer1)
         ).should.be.bignumber.equal(TOTAL_COLLATERAL2.mul(toBN("90")).div(toBN("10")));
