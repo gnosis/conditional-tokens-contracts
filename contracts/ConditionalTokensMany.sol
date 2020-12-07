@@ -132,6 +132,7 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     // TODO: Ability to register somebody other as a customer. Useful for oracles.
+    // FIXME: Need to register for each weighted sub-market. That's bad. (Need to abolish registration and?) instead have 1000 tokens by default?
     function registerCustomer(uint64 market, bytes calldata data) external {
         uint256 conditionalTokenId = _conditionalTokenId(market, msg.sender);
         require(!conditionalTokens[conditionalTokenId], "customer already registered");
