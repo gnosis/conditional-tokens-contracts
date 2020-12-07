@@ -186,7 +186,7 @@ contract ConditionalTokensMany is ERC1155 {
     function redeemPosition(IERC20 collateralToken, uint64 market, uint64 outcome, address customer) external {
         require(outcomeFinished[outcome], "too early"); // to prevent the denominator or the numerators change meantime
         uint256 amount = _collateralBalanceOf(collateralToken, market, outcome, customer);
-        payoutNumerators[outcome][customer] = 0;
+        payoutNumerators[outcome][customer] = 0; // FIXME: damages further redeems from other markets
         emit PayoutRedemption(msg.sender, collateralToken, market, outcome, customer, amount);
         collateralToken.transfer(customer, amount); // last to prevent reentrancy attack
     }
