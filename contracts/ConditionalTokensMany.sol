@@ -15,7 +15,7 @@ contract ConditionalTokensMany is ERC1155 {
 
     using ABDKMath64x64 for int128;
 
-    enum CollateralKind { TOKEN_STAKED }
+    enum CollateralKind { TOKEN_CONDITIONAL, TOKEN_DONATED, TOKEN_STAKED }
 
     uint constant INITIAL_CUSTOMER_BALANCE = 1000 * 10**18; // an arbitrarily choosen value
 
@@ -196,12 +196,6 @@ contract ConditionalTokensMany is ERC1155 {
         return _collateralBalanceOf(collateralToken, market, outcome, customer);
     }
 
-    // FIXME: Ensure differenet *TokenId() don't glitch
-
-    function _conditionalTokenId(uint64 market, address customer) private pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(market, customer)));
-    }
-
     // TODO: Slow to recalculate.
     function _collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer) internal view returns (uint256) {
         uint256 numerator = uint256(payoutNumerators[outcome][customer]);
@@ -214,8 +208,12 @@ contract ConditionalTokensMany is ERC1155 {
         return marketShare.mul(userShare).mulu(collateralBalance);
     }
 
+    function _conditionalTokenId(uint64 market, address customer) private pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_CONDITIONAL), market, customer)));
+    }
+
     function _collateralStakedTokenId(IERC20 collateralToken, uint64 market) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(collateralToken, market)));
+        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_DONATED), collateralToken, market)));
     }
 
     function _collateralDonatedTokenId(IERC20 collateralToken, uint64 market) internal pure returns (uint256) {

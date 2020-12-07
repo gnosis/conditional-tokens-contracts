@@ -144,6 +144,19 @@ contract("ConditionalTokensMany", function(accounts) {
         );
         await this.conditionalTokens.finishOutcome(this.outcome1);
 
+        console.log(
+          // FIXME: remove
+          await this.conditionalTokens.collateralBalanceOf(
+            this.collateral.address,
+            this.market1,
+            this.outcome1,
+            customer1
+          ),
+          TOTAL_COLLATERAL1.mul(toBN("20"))
+            .div(toBN("30"))
+            .div(NUMBER_CUSTOMERS1)
+        );
+
         (
           await this.conditionalTokens.collateralBalanceOf(
             this.collateral.address,
