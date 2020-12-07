@@ -62,7 +62,6 @@ contract("ConditionalTokensMany", function(accounts) {
       });
 
       it("should not be able to prepare the same condition more than once", async function() {
-        console.log(this.customer1);
         await this.conditionalTokens.registerCustomer(this.marketId1, [], {
           from: this.customer1
         });
