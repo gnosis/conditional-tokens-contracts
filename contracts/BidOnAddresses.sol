@@ -14,7 +14,7 @@ import { ERC1155 } from "./ERC1155/ERC1155.sol";
 /// - a combination of market ID, collateral address, and customer address (conditional tokens)
 /// - a combination of TOKEN_STAKED and collateral address (staked collateral tokens)
 /// - a combination of TOKEN_SUMMARY and collateral address (staked + staked collateral tokens)
-// TODO: Separate smart contract that acts as a smart wallet of staked tokens. Make it feature rich.
+// TODO: Separate smart contract that acts as a smart wallet of staked tokens. Make it feature rich. (Instead just set operator approval. Also ERC-20.)
 contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
     using ABDKMath64x64 for int128;
 
