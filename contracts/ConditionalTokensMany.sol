@@ -3,13 +3,11 @@ import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import { IERC20 } from "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
 
-// FIXME: Probably can use hashes to reduce the number of arguments and gas usage.
-
 /// We have four kinds of ERC-1155 token ID
 /// - a combination of market ID, collateral address, and customer address (conditional tokens);
 /// - a combination of TOKEN_DONATED and a collateral address (donated collateral tokens)
 /// - a combination of TOKEN_STAKED and collateral address (staked collateral tokens)
-/// - a store of already redeemed collateral
+/// - a store of already redeemed but not withdrawn collateral
 contract ConditionalTokensMany is ERC1155 {
     // TODO: ERC-1155 collateral.
     // TODO: Getters.
@@ -89,15 +87,15 @@ contract ConditionalTokensMany is ERC1155 {
     /// Whether an oracle finished its work.
     mapping(uint64 => bool) public outcomeFinished;
     /// Mapping (market => (customer => numerator)) for payout numerators.
-    mapping(uint64 => mapping(address => uint256)) public payoutNumerators; // TODO: hash instead?
+    mapping(uint64 => mapping(address => uint256)) public payoutNumerators;
     /// Mapping (market => denominator) for payout denominators.
     mapping(uint64 => uint) public payoutDenominator;
     /// All conditonal tokens,
     mapping(uint256 => bool) public conditionalTokens;
     /// Total collaterals per market and outcome: collateral => (market => (outcome => total))
-    mapping(address => mapping(uint64 => mapping(uint64 => uint256))) public collateralTotals; // TODO: hash instead?
+    mapping(uint256 => uint256) public collateralTotals;
     /// If a given conditional was already redeemed.
-    mapping(address => mapping(uint64 => mapping(uint256 => bool))) public redeemActivated;
+    mapping(address => mapping(uint64 => mapping(uint256 => bool))) public redeemActivated; // TODO: hash instead?
     /// The user lost the right to transfer conditional tokens.
     mapping(address => bool) public userUsedRedeem;
 
@@ -135,8 +133,7 @@ contract ConditionalTokensMany is ERC1155 {
     function takeStakeBack(IERC20 collateralToken, uint64 market, uint64 outcome, uint256 amount, bytes calldata data) external {
         require(outcomeFinished[outcome], "too late");
         uint tokenId = _collateralStakedTokenId(collateralToken, market, outcome);
-        collateralTotals[address(collateralToken)][market][outcome] =
-            collateralTotals[address(collateralToken)][market][outcome].sub(amount);
+        collateralTotals[tokenId] = collateralTotals[tokenId].sub(amount);
         require(collateralToken.transfer(msg.sender, amount), "cannot transfer");
         _burn(msg.sender, tokenId, amount);
         emit TakeBackERC20Collateral(collateralToken, msg.sender, amount, data);
@@ -181,14 +178,14 @@ contract ConditionalTokensMany is ERC1155 {
     function activateRedeem(IERC20 collateralToken, uint64 market, uint64 outcome, address tokenCustomer, bytes calldata data) external {
         require(outcomeFinished[outcome], "too early"); // to prevent the denominator or the numerators change meantime
         uint256 collateralBalance = _collateralBalanceOf(collateralToken, market, outcome, msg.sender, tokenCustomer);
-        uint256 conditionalTokenId = _conditionalTokenId(market, tokenCustomer); // TODO: calculates the same in _collateralBalanceOf
+        uint256 conditionalTokenId = _conditionalTokenId(market, tokenCustomer);
         require(!redeemActivated[msg.sender][outcome][conditionalTokenId], "Already redeemed.");
         redeemActivated[msg.sender][outcome][conditionalTokenId] = true;
         userUsedRedeem[msg.sender] = true;
         uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, outcome);
         // _burn(msg.sender, conditionalTokenId, conditionalBalance); // Burning it would break using the same token for multiple outcomes.
         _mint(msg.sender, redeemedTokenId, collateralBalance, data);
-        emit RedeemCalculated(msg.sender, collateralToken, market, outcome, collateralBalance); // TODO: Also return conditionalBalance?
+        emit RedeemCalculated(msg.sender, collateralToken, market, outcome, collateralBalance);
     }
 
     function withdrawCollateral(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, uint256 amount) external {
@@ -238,7 +235,8 @@ contract ConditionalTokensMany is ERC1155 {
         uint256 numerator = payoutNumerators[outcome][tokenCustomer];
         uint256 denominator = payoutDenominator[outcome];
         uint256 conditonalBalance = balanceOf(customer, _conditionalTokenId(market, tokenCustomer));
-        uint256 collateralTotalBalance = collateralTotals[address(collateralToken)][market][outcome];
+        uint tokenId = _collateralStakedTokenId(collateralToken, market, outcome);
+        uint256 collateralTotalBalance = collateralTotals[tokenId];
         // Rounded to below for no out-of-funds:
         int128 marketShare = ABDKMath64x64.divu(conditonalBalance, INITIAL_CUSTOMER_BALANCE);
         int128 rewardShare = ABDKMath64x64.divu(numerator, denominator);
@@ -262,9 +260,9 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     function _collateralIn(IERC20 collateralToken, uint64 market, uint64 outcome, uint256 amount) private {
-        require(collateralToken.transferFrom(msg.sender, address(this), amount), "cannot transfer");
-        collateralTotals[address(collateralToken)][market][outcome] =
-            collateralTotals[address(collateralToken)][market][outcome].add(amount);
+        uint tokenId = _collateralStakedTokenId(collateralToken, market, outcome);
+        collateralTotals[tokenId] = collateralTotals[tokenId].add(amount);
+        require(collateralToken.transferFrom(msg.sender, address(this), amount), "cannot transfer"); // last against reentrancy attack
     }
 
     function _checkTransferAllowed(uint256 id, address from) internal view returns (bool) {
