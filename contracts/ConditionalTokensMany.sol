@@ -96,10 +96,8 @@ contract ConditionalTokensMany is ERC1155 {
     mapping(uint256 => bool) public conditionalTokens;
     /// Total collaterals per market and outcome: collateral => (market => (outcome => total))
     mapping(address => mapping(uint64 => mapping(uint64 => uint256))) collateralTotals; // TODO: hash instead?
-    /// Whetehr user's collateral were redeemed: collateral => (market => (outcome => (user => redeemed))) // TODO: new token kind instead?
+    /// Whetehr user's collateral were redeemed: collateral => (market => (outcome => (user => redeemed)))
     mapping(address => mapping(uint64 => mapping(uint64 => mapping(address => bool)))) collateralRedeemed; // TODO: hash instead?
-    /// User's collaterals per market and outcome: collateral => (market => (outcome => (user => total))) // TODO: new token kind instead?
-    mapping(address => mapping(uint64 => mapping(uint64 => mapping(address => uint256)))) collateralBalances; // TODO: hash instead?
     /// Total conditional market balances
     mapping(uint64 => uint256) marketTotalBalances; // TODO: hash instead?
 
@@ -211,7 +209,6 @@ contract ConditionalTokensMany is ERC1155 {
         return _collateralBalanceOf(collateralToken, market, outcome, customer);
     }
 
-    // TODO: Slow to recalculate.
     function _collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer) internal view returns (uint256) {
         uint256 numerator = uint256(payoutNumerators[outcome][customer]);
         uint256 denominator = payoutDenominator[outcome];
