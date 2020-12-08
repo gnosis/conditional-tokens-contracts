@@ -180,10 +180,11 @@ contract("ConditionalTokensMany", function(accounts) {
               "1000000000000000" /* a big number */,
               { from: donor.account }
             );
+            const outcomeInfo = outcomesInfo[product.outcome];
             await this.conditionalTokens.donate(
               this.collateral.address,
               product.market,
-              product.outcome,
+              outcomeInfo.outcome,
               donor.amount,
               [],
               { from: donor.account }
@@ -195,10 +196,11 @@ contract("ConditionalTokensMany", function(accounts) {
               "1000000000000000" /* a big number */,
               { from: staker.account }
             );
+            const outcomeInfo = outcomesInfo[product.outcome];
             await this.conditionalTokens.stakeCollateral(
               this.collateral.address,
               product.market,
-              product.outcome,
+              outcomeInfo.outcome,
               staker.amount,
               [],
               { from: staker.account }
@@ -228,6 +230,21 @@ contract("ConditionalTokensMany", function(accounts) {
           }
           for (let customer of product.customers) {
             const outcomeInfo = outcomesInfo[product.outcome];
+            console.log([
+              (
+                await this.conditionalTokens.collateralBalanceOf(
+                  this.collateral.address,
+                  product.market,
+                  outcomeInfo.outcome,
+                  customer.account
+                )
+              ).toString(),
+              totalCollateral
+                .mul(customer.numerator)
+                .div(denominator)
+                .div(toBN(product.customers.length))
+                .toString()
+            ]);
             (
               await this.conditionalTokens.collateralBalanceOf(
                 this.collateral.address,

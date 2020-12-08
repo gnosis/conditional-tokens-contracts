@@ -132,7 +132,8 @@ contract ConditionalTokensMany is ERC1155 {
     function takeStakeBack(IERC20 collateralToken, uint64 market, uint64 outcome, uint256 amount, bytes calldata data) external {
         require(outcomeFinished[outcome], "too late");
         uint tokenId = _collateralStakedTokenId(collateralToken, market, outcome);
-        collateralTotals[address(collateralToken)][market][outcome] = collateralTotals[address(collateralToken)][market][outcome].sub(amount);
+        collateralTotals[address(collateralToken)][market][outcome] =
+            collateralTotals[address(collateralToken)][market][outcome].sub(amount);
         require(collateralToken.transfer(msg.sender, amount), "cannot transfer");
         _burn(msg.sender, tokenId, amount);
         emit TakeBackERC20Collateral(collateralToken, msg.sender, amount, data);
