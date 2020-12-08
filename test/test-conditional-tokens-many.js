@@ -281,9 +281,11 @@ contract("ConditionalTokensMany", function(accounts) {
               ),
               "Already redeemed."
             );
+
+            // Now will withdraw half twice.
             const halfBalance = initialCollateralBalance.div(toBN("2"));
 
-            async function withdrawHalf() {
+            {
               const oldBalance = await this.collateral.balanceOf(account);
               await this.conditionalTokens.withdrawCollateral(
                 this.collateral.address,
@@ -298,8 +300,20 @@ contract("ConditionalTokensMany", function(accounts) {
               newBalance.sub(oldBalance).should.be.bignumber.equal(halfBalance);
             }
 
-            await withdrawHalf.bind(this)();
-            await withdrawHalf.bind(this)();
+            {
+              const oldBalance = await this.collateral.balanceOf(account);
+              await this.conditionalTokens.withdrawCollateral(
+                this.collateral.address,
+                product.market,
+                outcomeInfo.outcome,
+                account,
+                halfBalance,
+                { from: account }
+              );
+
+              const newBalance = await this.collateral.balanceOf(account);
+              newBalance.sub(oldBalance).should.be.bignumber.equal(halfBalance);
+            }
 
             const remainingCollateralBalance = await this.conditionalTokens.balanceOf(
               account,
@@ -356,6 +370,7 @@ contract("ConditionalTokensMany", function(accounts) {
       // TODO: Unregistered customer receives zero.
       // TODO: Send money to registered and unregistered customers.
       // TODO: reportNumerator() called second time for the same customer.
+      // TODO: Test all functions and all variants.
     });
   });
 });
