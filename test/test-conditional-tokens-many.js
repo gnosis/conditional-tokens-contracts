@@ -91,7 +91,8 @@ contract("ConditionalTokensMany", function(accounts) {
             numerators: [{ numerator: toBN("33") }, { numerator: toBN("90") }]
           }
         ];
-        // TODO: Simplify customers array.
+        const markets = [this.market1, this.market2];
+        // TODO: Simplify customers array. // TODO: Should be grouped by markets.
         const products = [
           {
             market: this.market1,
@@ -148,16 +149,6 @@ contract("ConditionalTokensMany", function(accounts) {
         ];
 
         async function testOneProduct(product) {
-          for (let customerInfo of product.customers) {
-            await this.conditionalTokens.registerCustomer(
-              product.market,
-              customers[customerInfo.account],
-              [],
-              {
-                from: customers[customerInfo.account]
-              }
-            );
-          }
           for (let donor of product.donors) {
             await this.collateral.approve(
               this.conditionalTokens.address,
@@ -217,21 +208,6 @@ contract("ConditionalTokensMany", function(accounts) {
           ).should.be.bignumber.equal(denominator);
           for (let customer of product.customers) {
             const outcomeInfo = outcomesInfo[product.outcome];
-            console.log(
-              (
-                await this.conditionalTokens.collateralBalanceOf(
-                  this.collateral.address,
-                  product.market,
-                  outcomeInfo.outcome,
-                  customers[customer.account]
-                )
-              ).toString(),
-              totalCollateral
-                .mul(outcomeInfo.numerators[customer.account].numerator)
-                .div(denominator)
-                .div(toBN(product.customers.length))
-                .toString()
-            );
             (
               await this.conditionalTokens.collateralBalanceOf(
                 this.collateral.address,
@@ -252,6 +228,18 @@ contract("ConditionalTokensMany", function(accounts) {
         }
 
         // Promise.all(products.forEach(testOneProduct.bind(this)));
+        for (let customer of customers) {
+          for (let market of markets) {
+            await this.conditionalTokens.registerCustomer(
+              market,
+              customer,
+              [],
+              {
+                from: customer
+              }
+            );
+          }
+        }
         for (let product of products) {
           await testOneProduct.bind(this)(product);
         }
