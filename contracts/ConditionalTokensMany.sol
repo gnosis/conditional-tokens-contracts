@@ -82,7 +82,7 @@ contract ConditionalTokensMany is ERC1155 {
         uint payout
     );
 
-    uint64 private maxId; // FIXME: will 64 bit be enough after 100 years?! // FIXME: rename
+    uint64 private maxId; // FIXME: will 64 bit be enough after 100 years?!
 
     /// Mapping from outcome to oracle.
     mapping(uint64 => address) public oracles;
