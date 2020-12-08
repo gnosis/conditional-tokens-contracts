@@ -1,5 +1,6 @@
 const { expectEvent, expectRevert } = require("openzeppelin-test-helpers");
 const { toBN } = web3.utils;
+const { conditionalTokenId } = require("../utils/manyid-helpers")(web3.utils);
 
 const ConditionalTokensMany = artifacts.require("ConditionalTokensMany");
 const ERC20Mintable = artifacts.require("MockCoin");
@@ -208,6 +209,7 @@ contract("ConditionalTokensMany", function(accounts) {
           ).should.be.bignumber.equal(denominator);
           for (let customer of product.customers) {
             const outcomeInfo = outcomesInfo[product.outcome];
+            const account = customers[customer.account];
             (
               await this.conditionalTokens.collateralBalanceOf(
                 this.collateral.address,
@@ -219,8 +221,18 @@ contract("ConditionalTokensMany", function(accounts) {
               .sub(
                 totalCollateral
                   .mul(outcomeInfo.numerators[customer.account].numerator)
+                  .mul(
+                    await this.conditionalTokens.balanceOf(
+                      account,
+                      conditionalTokenId(product.market, account)
+                    )
+                  )
                   .div(denominator)
-                  .div(toBN(product.customers.length))
+                  .div(
+                    await this.conditionalTokens.marketTotalBalances(
+                      product.market
+                    )
+                  )
               )
               .abs()
               .should.be.bignumber.below(toBN("2"));

@@ -94,9 +94,9 @@ contract ConditionalTokensMany is ERC1155 {
     /// All conditonal tokens,
     mapping(uint256 => bool) public conditionalTokens;
     /// Total collaterals per market and outcome: collateral => (market => (outcome => total))
-    mapping(address => mapping(uint64 => mapping(uint64 => uint256))) collateralTotals; // TODO: hash instead?
+    mapping(address => mapping(uint64 => mapping(uint64 => uint256))) public collateralTotals; // TODO: hash instead?
     /// Total conditional market balances
-    mapping(uint64 => uint256) marketTotalBalances; // TODO: hash instead?
+    mapping(uint64 => uint256) public marketTotalBalances;
 
     /// Register ourselves as an oracle for a new market.
     function createMarket() external {
