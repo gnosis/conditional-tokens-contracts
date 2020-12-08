@@ -232,6 +232,7 @@ contract("ConditionalTokensMany", function(accounts) {
               this.collateral.address,
               product.market,
               outcomeInfo.outcome,
+              account,
               account
             );
             console.log("AAA", [
@@ -262,10 +263,12 @@ contract("ConditionalTokensMany", function(accounts) {
               .should.be.bignumber.below(toBN("2"));
 
             // Two calls should be like one.
+            // TODO: Redeem somebody other's token.
             await this.conditionalTokens.activateRedeem(
               this.collateral.address,
               product.market,
               outcomeInfo.outcome,
+              account,
               [],
               { from: account }
             );
@@ -273,6 +276,7 @@ contract("ConditionalTokensMany", function(accounts) {
               this.collateral.address,
               product.market,
               outcomeInfo.outcome,
+              account,
               [],
               { from: account }
             );

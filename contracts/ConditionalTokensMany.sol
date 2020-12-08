@@ -183,12 +183,11 @@ contract ConditionalTokensMany is ERC1155 {
         emit OutcomeFinished(msg.sender);
     }
 
-    function activateRedeem(IERC20 collateralToken, uint64 market, uint64 outcome, bytes calldata data) external {
+    function activateRedeem(IERC20 collateralToken, uint64 market, uint64 outcome, address tokenCustomer, bytes calldata data) external {
         require(outcomeFinished[outcome], "too early"); // to prevent the denominator or the numerators change meantime
         (uint256 conditionalBalance, uint256 collateralBalance) =
-            _collateralBalanceOf(collateralToken, market, outcome, msg.sender);
+            _collateralBalanceOf(collateralToken, market, outcome, msg.sender, tokenCustomer);
         uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, outcome);
-        // FIXME: Activate redeem for others' tokens
         uint256 conditionalTokenId = _conditionalTokenId(market, msg.sender); // TODO: calculates the same in _collateralBalanceOf
         _burn(msg.sender, conditionalTokenId, conditionalBalance);
         _mint(msg.sender, redeemedTokenId, collateralBalance, data);
@@ -202,17 +201,17 @@ contract ConditionalTokensMany is ERC1155 {
         collateralToken.transfer(customer, amount); // last to prevent reentrancy attack
     }
 
-    function collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer) external view returns (uint256) {
-        (, uint256 collateralBalance) = _collateralBalanceOf(collateralToken, market, outcome, customer);
+    function collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, address tokenCustomer) external view returns (uint256) {
+        (, uint256 collateralBalance) = _collateralBalanceOf(collateralToken, market, outcome, customer, tokenCustomer);
         return collateralBalance;
     }
 
-    function _collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer) internal view
+    function _collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, address tokenCustomer) internal view
         returns (uint256 conditonalBalance, uint256 collateralBalance)
     {
-        uint256 numerator = payoutNumerators[outcome][customer];
+        uint256 numerator = payoutNumerators[outcome][tokenCustomer];
         uint256 denominator = payoutDenominator[outcome];
-        conditonalBalance = balanceOf(customer, _conditionalTokenId(market, customer));
+        conditonalBalance = balanceOf(customer, _conditionalTokenId(market, tokenCustomer));
         uint256 collateralTotalBalance = collateralTotals[address(collateralToken)][market][outcome];
         // Rounded to below for no out-of-funds:
         int128 marketShare = ABDKMath64x64.divu(conditonalBalance, marketTotalBalances[market]);
