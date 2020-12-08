@@ -48,11 +48,11 @@ contract("ConditionalTokensMany", function(accounts) {
         this.marketId1.should.be.bignumber.equal("0");
         this.marketId2.should.be.bignumber.equal("1");
         expectEvent.inLogs(this.logs1, "MarketCreated", {
-          oracleOwner: oracle1,
+          creator: oracle1,
           marketId: this.marketId1
         });
         expectEvent.inLogs(this.logs2, "MarketCreated", {
-          oracleOwner: oracle1,
+          creator: oracle1,
           marketId: this.marketId2
         });
         // TODO: Check "OracleCreated"

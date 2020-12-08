@@ -23,7 +23,7 @@ contract ConditionalTokensMany is ERC1155 {
 
     uint constant INITIAL_CUSTOMER_BALANCE = 1000 * 10**18; // an arbitrarily choosen value
 
-    event MarketCreated(address oracleOwner, uint64 marketId);
+    event MarketCreated(address creator, uint64 marketId);
 
     event OracleCreated(address oracleOwner, uint64 oracleId);
 
