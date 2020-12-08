@@ -10,10 +10,10 @@ import { ERC1155 } from "./ERC1155/ERC1155.sol";
 /// See `docs/future-money.rst`.
 ///
 /// We have four kinds of ERC-1155 token ID
-/// - a combination of market ID, collateral address, and customer address (conditional tokens);
+/// - a combination of market ID, collateral address, and customer address (conditional tokens)
 /// - a combination of TOKEN_DONATED and a collateral address (donated collateral tokens)
 /// - a combination of TOKEN_STAKED and collateral address (staked collateral tokens)
-/// - a store of already redeemed but not withdrawn collateral
+/// - a store of already redeemed but not withdrawn collateral.
 contract ConditionalTokensMany is ERC1155 {
     // TODO: ERC-1155 collateral.
     // TODO: Getters.
