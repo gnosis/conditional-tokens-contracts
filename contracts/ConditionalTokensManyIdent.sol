@@ -1,4 +1,5 @@
 pragma solidity ^0.5.1;
+pragma experimental ABIEncoderV2;
 import "./ConditionalTokensMany.sol";
 
 /// ConditionalTokensMany with BrightID identity

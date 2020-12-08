@@ -1,6 +1,7 @@
 pragma solidity ^0.5.1;
+pragma experimental ABIEncoderV2;
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
-import { IERC20 } from "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import { IERC1155 } from "./ERC1155/IERC1155.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
 
 /// @title Bidding on Ethereum addresses
@@ -14,10 +15,15 @@ import { ERC1155 } from "./ERC1155/ERC1155.sol";
 /// - a combination of TOKEN_DONATED and a collateral address (donated collateral tokens)
 /// - a combination of TOKEN_STAKED and collateral address (staked collateral tokens)
 contract ConditionalTokensMany is ERC1155 {
-    // TODO: ERC-1155 collateral.
     // TODO: Getters.
 
     using ABDKMath64x64 for int128;
+
+    struct ERC1155Token {
+        /// Not required to emit events (useful to wrap ERC20).
+        IERC1155 contractAddress;
+        uint256 tokenId;
+    }
 
     enum CollateralKind { TOKEN_CONDITIONAL, TOKEN_DONATED, TOKEN_STAKED }
 
@@ -34,21 +40,21 @@ contract ConditionalTokensMany is ERC1155 {
     );
 
     event DonateERC20Collateral(
-        IERC20 indexed collateralToken,
+        ERC1155Token indexed collateralToken,
         address sender,
         uint256 amount,
         bytes data
     );
 
     event StakeERC20Collateral(
-        IERC20 indexed collateralToken,
+        ERC1155Token indexed collateralToken,
         address sender,
         uint256 amount,
         bytes data
     );
 
     event TakeBackERC20Collateral(
-        IERC20 indexed collateralToken,
+        ERC1155Token indexed collateralToken,
         address sender,
         uint256 amount
     );
@@ -69,7 +75,7 @@ contract ConditionalTokensMany is ERC1155 {
 
     event RedeemCalculated(
         address customer,
-        IERC20 indexed collateralToken,
+        ERC1155Token indexed collateralToken,
         uint64 indexed marketId,
         uint64 indexed oracleId,
         address condition,
@@ -77,7 +83,7 @@ contract ConditionalTokensMany is ERC1155 {
     );
 
     event CollateralWithdrawn(
-        IERC20 collateralToken,
+        ERC1155Token collateralToken,
         uint64 marketId,
         uint64 oracleId,
         address customer,
@@ -119,8 +125,8 @@ contract ConditionalTokensMany is ERC1155 {
     /// Donate funds in a ERC20 token.
     /// First need to approve the contract to spend the token.
     /// Not recommended to donate after any oracle has finished, because funds may be (partially) lost.
-    function donate(IERC20 collateralToken, uint64 marketId, uint64 oracleId, uint256 amount, bytes calldata data) external {
-        _collateralIn(collateralToken, marketId, oracleId, amount);
+    function donate(ERC1155Token calldata collateralToken, uint64 marketId, uint64 oracleId, uint256 amount, bytes calldata data) external {
+        _collateralIn(collateralToken, marketId, oracleId, amount, data);
         _mint(msg.sender, _collateralDonatedTokenId(collateralToken, marketId, oracleId), amount, data);
         emit DonateERC20Collateral(collateralToken, msg.sender, amount, data);
     }
@@ -129,18 +135,18 @@ contract ConditionalTokensMany is ERC1155 {
     /// First need to approve the contract to spend the token.
     /// The stake is lost if either: the prediction period ends or the staker loses his private key (e.g. dies).
     /// Not recommended to stake after the oracle has finished, because funds may be (partially) lost (you could not unstake).
-    function stakeCollateral(IERC20 collateralToken, uint64 marketId, uint64 oracleId, uint256 amount, bytes calldata data) external {
-        _collateralIn(collateralToken, marketId, oracleId, amount);
+    function stakeCollateral(ERC1155Token calldata collateralToken, uint64 marketId, uint64 oracleId, uint256 amount, bytes calldata data) external {
+        _collateralIn(collateralToken, marketId, oracleId, amount, data);
         _mint(msg.sender, _collateralStakedTokenId(collateralToken, marketId, oracleId), amount, data);
         emit StakeERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
     /// If the oracle has not yet finished you can take funds back.
-    function takeStakeBack(IERC20 collateralToken, uint64 marketId, uint64 oracleId, uint256 amount) external {
+    function takeStakeBack(ERC1155Token calldata collateralToken, uint64 marketId, uint64 oracleId, uint256 amount, bytes calldata data) external {
         require(oracleFinished[oracleId], "too late");
         uint tokenId = _collateralStakedTokenId(collateralToken, marketId, oracleId);
         collateralTotals[tokenId] = collateralTotals[tokenId].sub(amount);
-        require(collateralToken.transfer(msg.sender, amount), "cannot transfer");
+        collateralToken.contractAddress.safeTransferFrom(address(this), msg.sender, collateralToken.tokenId, amount, data);
         _burn(msg.sender, tokenId, amount);
         emit TakeBackERC20Collateral(collateralToken, msg.sender, amount);
     }
@@ -186,7 +192,7 @@ contract ConditionalTokensMany is ERC1155 {
     /// accordingly to the score of `condition` in the marketId by the oracle.
     /// After this function is called, it becomes impossible to transfer the corresponding conditional token of `msg.sender`
     /// (to prevent its repeated withdraw).
-    function withdrawCollateral(IERC20 collateralToken, uint64 marketId, uint64 oracleId, address to, address condition) external {
+    function withdrawCollateral(ERC1155Token calldata collateralToken, uint64 marketId, uint64 oracleId, address to, address condition, bytes calldata data) external {
         require(oracleFinished[oracleId], "too early"); // to prevent the denominator or the numerators change meantime
         uint256 collateralBalance = _initialCollateralBalanceOf(collateralToken, marketId, oracleId, msg.sender, condition);
         uint256 conditionalTokenId = _conditionalTokenId(marketId, condition);
@@ -194,13 +200,13 @@ contract ConditionalTokensMany is ERC1155 {
         redeemActivated[msg.sender][oracleId][conditionalTokenId] = true;
         userUsedRedeem[msg.sender][conditionalTokenId] = true;
         // _burn(msg.sender, conditionalTokenId, conditionalBalance); // Burning it would break using the same token for multiple outcomes.
-        collateralToken.transfer(to, collateralBalance); // last to prevent reentrancy attack
+        collateralToken.contractAddress.safeTransferFrom(address(this), to, collateralToken.tokenId, collateralBalance, data); // last to prevent reentrancy attack
     }
 
     /// Calculate the collateral balance corresponding to the current conditonal token `condition` state and
     /// current numerators.
     /// This function can be called before oracle is finished, but that's not recommended.
-    function initialCollateralBalanceOf(IERC20 collateralToken, uint64 marketId, uint64 oracleId, address customer, address condition) external view returns (uint256) {
+    function initialCollateralBalanceOf(ERC1155Token calldata collateralToken, uint64 marketId, uint64 oracleId, address customer, address condition) external view returns (uint256) {
         return _initialCollateralBalanceOf(collateralToken, marketId, oracleId, customer, condition);
     }
 
@@ -234,7 +240,7 @@ contract ConditionalTokensMany is ERC1155 {
         _baseSafeBatchTransferFrom(from, to, ids, values, data);
     }
 
-    function _initialCollateralBalanceOf(IERC20 collateralToken, uint64 marketId, uint64 oracleId, address customer, address condition) internal view
+    function _initialCollateralBalanceOf(ERC1155Token memory collateralToken, uint64 marketId, uint64 oracleId, address customer, address condition) internal view
         returns (uint256)
     {
         uint256 numerator = payoutNumerators[oracleId][condition];
@@ -252,18 +258,18 @@ contract ConditionalTokensMany is ERC1155 {
         return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_CONDITIONAL), marketId, condition)));
     }
 
-    function _collateralDonatedTokenId(IERC20 collateralToken, uint64 marketId, uint64 oracleId) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_DONATED), collateralToken, marketId, oracleId)));
+    function _collateralDonatedTokenId(ERC1155Token memory collateralToken, uint64 marketId, uint64 oracleId) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_DONATED), collateralToken.contractAddress, collateralToken.tokenId, marketId, oracleId)));
     }
 
-    function _collateralStakedTokenId(IERC20 collateralToken, uint64 marketId, uint64 oracleId) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_STAKED), collateralToken, marketId, oracleId)));
+    function _collateralStakedTokenId(ERC1155Token memory collateralToken, uint64 marketId, uint64 oracleId) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_STAKED), collateralToken.contractAddress, collateralToken.tokenId, marketId, oracleId)));
     }
 
-    function _collateralIn(IERC20 collateralToken, uint64 marketId, uint64 oracleId, uint256 amount) private {
+    function _collateralIn(ERC1155Token memory collateralToken, uint64 marketId, uint64 oracleId, uint256 amount, bytes memory data) private {
         uint tokenId = _collateralStakedTokenId(collateralToken, marketId, oracleId);
         collateralTotals[tokenId] = collateralTotals[tokenId].add(amount);
-        require(collateralToken.transferFrom(msg.sender, address(this), amount), "cannot transfer"); // last against reentrancy attack
+        collateralToken.contractAddress.safeTransferFrom(address(this), msg.sender, collateralToken.tokenId, amount, data); // last against reentrancy attack
     }
 
     function _checkTransferAllowed(uint256 id, address from) internal view returns (bool) {
