@@ -14,7 +14,6 @@ import { ERC1155 } from "./ERC1155/ERC1155.sol";
 /// - a combination of market ID, collateral address, and customer address (conditional tokens)
 /// - a combination of TOKEN_STAKED and collateral address (staked collateral tokens)
 /// - a combination of TOKEN_SUMMARY and collateral address (staked + staked collateral tokens)
-// TODO: API to convert staked to donated.
 contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
     using ABDKMath64x64 for int128;
 
@@ -53,6 +52,14 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         uint256 collateralTokenId,
         address sender,
         uint256 amount
+    );
+
+    event ConvertStakedToDonated(
+        IERC1155 collateralContractAddress,
+        uint256 collateralTokenId,
+        address sender,
+        uint256 amount,
+        bytes data
     );
 
     event ReportedNumerator(
@@ -138,6 +145,8 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         collateralContractAddress.safeTransferFrom(msg.sender, address(this), collateralTokenId, amount, data); // last against reentrancy attack
     }
 
+    // TODO: Allow stake/donate/convert to somebody other.
+
     /// Stake funds in a ERC20 token.
     /// First need to approve the contract to spend the token.
     /// The stake is lost if either: the prediction period ends or the staker loses his private key (e.g. dies).
@@ -157,6 +166,19 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         collateralTotalsMap[stakedCollateralTokenId] = collateralTotalsMap[stakedCollateralTokenId].sub(amount);
         collateralContractAddress.safeTransferFrom(address(this), msg.sender, stakedCollateralTokenId, amount, data);
         emit TakeBackERC20Collateral(collateralContractAddress, collateralTokenId, msg.sender, amount);
+    }
+
+    /// Donate funds from your stake.
+    function convertStakedToDonated(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, uint256 amount, bytes calldata data) external {
+        // Subtract from staked:
+        uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
+        _burn(msg.sender, stakedCollateralTokenId, amount);
+        collateralTotalsMap[stakedCollateralTokenId] = collateralTotalsMap[stakedCollateralTokenId].sub(amount);
+        // Add to donated:
+        uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
+        _mint(msg.sender, donatedCollateralTokenId, amount, data);
+        collateralTotalsMap[donatedCollateralTokenId] = collateralTotalsMap[donatedCollateralTokenId].add(amount);
+        emit ConvertStakedToDonated(collateralContractAddress, collateralTokenId, msg.sender, amount, data);
     }
 
     /// Anyone can register himself.
