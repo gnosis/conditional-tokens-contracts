@@ -1,12 +1,14 @@
 // To use this, just import this file and supply it with some web3 utils:
 //     require("@gnosis.pm/conditional-tokens-contracts/utils/manyid-helpers")(web3.utils)
 
-const TOKEN_CONDITIONAL = 0;
-const TOKEN_DONATED = 1;
-const TOKEN_STAKED = 2;
-const TOKEN_REDEEMED = 3;
+module.exports = function({ toBN, soliditySha3 }) {
+  const TOKEN_CONDITIONAL = 0;
+  const TOKEN_DONATED = 1;
+  const TOKEN_STAKED = 2;
+  const TOKEN_REDEEMED = 3;
+  
+  const INITIAL_CUSTOMER_BALANCE = toBN("1000").mul(toBN("10").pow(toBN("18")));
 
-module.exports = function({ soliditySha3 }) {
   function conditionalTokenId(market, customer) {
     return soliditySha3(
       { t: "uint8", v: TOKEN_CONDITIONAL },
@@ -50,6 +52,7 @@ module.exports = function({ soliditySha3 }) {
     TOKEN_CONDITIONAL,
     TOKEN_DONATED,
     TOKEN_STAKED,
-    TOKEN_REDEEMED
+    TOKEN_REDEEMED,
+    INITIAL_CUSTOMER_BALANCE
   };
 };

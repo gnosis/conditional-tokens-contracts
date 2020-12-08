@@ -1,6 +1,6 @@
 const { expectEvent, expectRevert } = require("openzeppelin-test-helpers");
 const { toBN } = web3.utils;
-const { conditionalTokenId } = require("../utils/manyid-helpers")(web3.utils);
+const { INITIAL_CUSTOMER_BALANCE, conditionalTokenId } = require("../utils/manyid-helpers")(web3.utils);
 
 const ConditionalTokensMany = artifacts.require("ConditionalTokensMany");
 const ERC20Mintable = artifacts.require("MockCoin");
@@ -254,9 +254,7 @@ contract("ConditionalTokensMany", function(accounts) {
                   )
                   .div(denominator)
                   .div(
-                    await this.conditionalTokens.marketTotalBalances(
-                      product.market
-                    )
+                    INITIAL_CUSTOMER_BALANCE
                   )
               )
               .abs()

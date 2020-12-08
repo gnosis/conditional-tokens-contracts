@@ -96,8 +96,6 @@ contract ConditionalTokensMany is ERC1155 {
     mapping(uint256 => bool) public conditionalTokens;
     /// Total collaterals per market and outcome: collateral => (market => (outcome => total))
     mapping(address => mapping(uint64 => mapping(uint64 => uint256))) public collateralTotals; // TODO: hash instead?
-    /// Total conditional market balances
-    mapping(uint64 => uint256) public marketTotalBalances;
 
     /// Register ourselves as an oracle for a new market.
     function createMarket() external {
@@ -147,7 +145,6 @@ contract ConditionalTokensMany is ERC1155 {
         require(!conditionalTokens[conditionalTokenId], "customer already registered");
         conditionalTokens[conditionalTokenId] = true;
         _mint(customer, conditionalTokenId, INITIAL_CUSTOMER_BALANCE, data);
-        marketTotalBalances[market] += INITIAL_CUSTOMER_BALANCE; // No chance of overflow.
         emit CustomerRegistered(customer, market, data);
     }
 
@@ -189,7 +186,7 @@ contract ConditionalTokensMany is ERC1155 {
             _collateralBalanceOf(collateralToken, market, outcome, msg.sender, tokenCustomer);
         uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, outcome);
         uint256 conditionalTokenId = _conditionalTokenId(market, tokenCustomer); // TODO: calculates the same in _collateralBalanceOf
-        _burn(msg.sender, conditionalTokenId, conditionalBalance);
+        _burn(msg.sender, conditionalTokenId, conditionalBalance); // FIXME: burns again for different outcomes
         _mint(msg.sender, redeemedTokenId, collateralBalance, data);
         emit RedeemCalculated(msg.sender, collateralToken, market, outcome, collateralBalance); // TODO: Also return conditionalBalance?
     }
@@ -214,9 +211,9 @@ contract ConditionalTokensMany is ERC1155 {
         conditonalBalance = balanceOf(customer, _conditionalTokenId(market, tokenCustomer));
         uint256 collateralTotalBalance = collateralTotals[address(collateralToken)][market][outcome];
         // Rounded to below for no out-of-funds:
-        int128 marketShare = ABDKMath64x64.divu(conditonalBalance, marketTotalBalances[market]);
-        int128 userShare = ABDKMath64x64.divu(numerator, denominator);
-        collateralBalance = marketShare.mul(userShare).mulu(collateralTotalBalance);
+        int128 marketShare = ABDKMath64x64.divu(conditonalBalance, INITIAL_CUSTOMER_BALANCE);
+        int128 rewardShare = ABDKMath64x64.divu(numerator, denominator);
+        collateralBalance = marketShare.mul(rewardShare).mulu(collateralTotalBalance);
     }
 
     function _conditionalTokenId(uint64 market, address tokenCustomer) private pure returns (uint256) {
