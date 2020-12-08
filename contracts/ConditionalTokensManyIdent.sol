@@ -1,8 +1,8 @@
 pragma solidity ^0.5.1;
-import "./ConditionalTokensMany.sol";
+import "./BidOnAddresses.sol";
 
-/// ConditionalTokensMany with BrightID identity
-contract ConditionalTokensManyIdent is ConditionalTokensMany {
+/// BidOnAddresses with BrightID identity
+contract ConditionalTokensManyIdent is BidOnAddresses {
     // TODO: Nontranferrable token with its rent given to alive person tradeable and redeemable.
     // TODO: Also combine both variants.
     // TODO: Account recovery.

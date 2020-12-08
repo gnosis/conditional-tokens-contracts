@@ -7,10 +7,10 @@ const {
   conditionalTokenId
 } = require("../utils/manyid-helpers")(web3.utils);
 
-const ConditionalTokensMany = artifacts.require("ConditionalTokensMany");
+const BidOnAddresses = artifacts.require("BidOnAddresses");
 const ERC1155Mintable = artifacts.require("ERC1155Mock");
 
-contract("ConditionalTokensMany", function(accounts) {
+contract("BidOnAddresses", function(accounts) {
   const [
     oracle1,
     customer1,
@@ -22,7 +22,7 @@ contract("ConditionalTokensMany", function(accounts) {
   ] = accounts;
 
   beforeEach("initiate token contracts", async function() {
-    this.conditionalTokens = await ConditionalTokensMany.new();
+    this.conditionalTokens = await BidOnAddresses.new();
     this.collateralContract = await ERC1155Mintable.new(); // TODO: Check multiple collaterals
     this.collateralTokenId = 123; // arbitrary
     this.collateralContract.mint(
