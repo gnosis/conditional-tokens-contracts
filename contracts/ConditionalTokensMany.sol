@@ -189,8 +189,8 @@ contract ConditionalTokensMany is ERC1155 {
             _collateralBalanceOf(collateralToken, market, outcome, msg.sender);
         uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, outcome);
         uint256 conditionalTokenId = _conditionalTokenId(market, msg.sender); // TODO: calculates the same in _collateralBalanceOf
-        _mint(msg.sender, redeemedTokenId, collateralBalance, data);
         _burn(msg.sender, conditionalTokenId, conditionalBalance);
+        _mint(msg.sender, redeemedTokenId, collateralBalance, data);
         emit RedeemCalculated(msg.sender, collateralToken, market, outcome, collateralBalance); // TODO: Also return conditionalBalance?
     }
 
