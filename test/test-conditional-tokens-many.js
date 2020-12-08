@@ -51,11 +51,16 @@ contract("ConditionalTokensMany", function(accounts) {
       });
 
       it("should not be able to register the same customer more than once for the same market", async function() {
-        await this.conditionalTokens.registerCustomer(this.market1, [], {
-          from: customer1
-        });
+        await this.conditionalTokens.registerCustomer(
+          this.market1,
+          customer1,
+          [],
+          {
+            from: customer1
+          }
+        );
         await expectRevert(
-          this.conditionalTokens.registerCustomer(this.market1, [], {
+          this.conditionalTokens.registerCustomer(this.market1, customer1, [], {
             from: customer1
           }),
           "customer already registered"
@@ -64,18 +69,38 @@ contract("ConditionalTokensMany", function(accounts) {
       });
 
       it("checking the math", async function() {
-        await this.conditionalTokens.registerCustomer(this.market1, [], {
-          from: customer1
-        });
-        await this.conditionalTokens.registerCustomer(this.market1, [], {
-          from: customer2
-        });
-        await this.conditionalTokens.registerCustomer(this.market2, [], {
-          from: customer1
-        });
-        await this.conditionalTokens.registerCustomer(this.market2, [], {
-          from: customer2
-        });
+        await this.conditionalTokens.registerCustomer(
+          this.market1,
+          customer1,
+          [],
+          {
+            from: customer1
+          }
+        );
+        await this.conditionalTokens.registerCustomer(
+          this.market1,
+          customer2,
+          [],
+          {
+            from: customer2
+          }
+        );
+        await this.conditionalTokens.registerCustomer(
+          this.market2,
+          customer1,
+          [],
+          {
+            from: customer1
+          }
+        );
+        await this.conditionalTokens.registerCustomer(
+          this.market2,
+          customer2,
+          [],
+          {
+            from: customer2
+          }
+        );
         const NUMBER_CUSTOMERS1 = toBN("2");
         const NUMBER_CUSTOMERS2 = toBN("2");
 
