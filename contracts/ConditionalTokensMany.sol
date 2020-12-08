@@ -68,7 +68,7 @@ contract ConditionalTokensMany is ERC1155 {
         uint256[] numerators
     );
 
-    event OutcomeFinished(address indexed oracleOwner);
+    event OracleFinished(address indexed oracleOwner);
 
     event RedeemCalculated(
         address customer,
@@ -182,7 +182,7 @@ contract ConditionalTokensMany is ERC1155 {
         _isOracle(oracleId)
     {
         oracleFinished[oracleId] = true;
-        emit OutcomeFinished(msg.sender);
+        emit OracleFinished(msg.sender);
     }
 
     /// Mints to `msg.sender` the token `_collateralRedeemedTokenId(collateralToken, marketId, oracleId)`
