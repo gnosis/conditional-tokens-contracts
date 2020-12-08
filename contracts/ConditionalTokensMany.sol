@@ -12,9 +12,8 @@ import { ERC1155 } from "./ERC1155/ERC1155.sol";
 ///
 /// We have four kinds of ERC-1155 token ID
 /// - a combination of market ID, collateral address, and customer address (conditional tokens)
-/// - a combination of TOKEN_DONATED and a collateral address (donated collateral tokens)
 /// - a combination of TOKEN_STAKED and collateral address (staked collateral tokens)
-/// - a combination of TOKEN_SUMMARY and sum of two previous
+/// - a combination of TOKEN_SUMMARY and collateral address (staked + staked collateral tokens)
 contract ConditionalTokensMany is ERC1155, IERC1155TokenReceiver {
     // TODO: Getters.
 
