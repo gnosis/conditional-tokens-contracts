@@ -80,22 +80,18 @@ contract("ConditionalTokensMany", function(accounts) {
       });
 
       it("checking the math", async function() {
+        const customers = [customer1, customer2];
         const outcomesInfo = [
           {
             outcome: this.outcome1,
-            numerators: [
-              { account: customer1, numerator: toBN("45") },
-              { account: customer2, numerator: toBN("60") }
-            ]
+            numerators: [{ numerator: toBN("45") }, { numerator: toBN("60") }]
           },
           {
             outcome: this.outcome2,
-            numerators: [
-              { account: customer1, numerator: toBN("33") },
-              { account: customer2, numerator: toBN("90") }
-            ]
+            numerators: [{ numerator: toBN("33") }, { numerator: toBN("90") }]
           }
         ];
+        // TODO: Simplify customers array.
         const products = [
           {
             market: this.market1,
@@ -108,10 +104,7 @@ contract("ConditionalTokensMany", function(accounts) {
               { account: staker1, amount: toBN("20000000000") },
               { account: staker2, amount: toBN("2000000000000") }
             ],
-            customers: [
-              { account: customer1, numerator: toBN("3") },
-              { account: customer2, numerator: toBN("2") }
-            ]
+            customers: [{ account: 0 }, { account: 1 }]
           },
           {
             market: this.market1,
@@ -124,10 +117,7 @@ contract("ConditionalTokensMany", function(accounts) {
               { account: staker1, amount: toBN("30000000000") },
               { account: staker2, amount: toBN("4000000000000") }
             ],
-            customers: [
-              { account: customer1, numerator: toBN("90") },
-              { account: customer2, numerator: toBN("10") }
-            ]
+            customers: [{ account: 0 }, { account: 1 }]
           },
           {
             market: this.market2,
@@ -140,10 +130,7 @@ contract("ConditionalTokensMany", function(accounts) {
               { account: staker1, amount: toBN("60000000000") },
               { account: staker2, amount: toBN("6000000000000") }
             ],
-            customers: [
-              { account: customer1, numerator: toBN("5") },
-              { account: customer2, numerator: toBN("4") }
-            ]
+            customers: [{ account: 0 }, { account: 1 }]
           },
           {
             market: this.market2,
@@ -156,10 +143,7 @@ contract("ConditionalTokensMany", function(accounts) {
               { account: staker1, amount: toBN("80000000000") },
               { account: staker2, amount: toBN("9000000000000") }
             ],
-            customers: [
-              { account: customer1, numerator: toBN("80") },
-              { account: customer2, numerator: toBN("20") }
-            ]
+            customers: [{ account: 0 }, { account: 1 }]
           }
         ];
 
@@ -167,10 +151,10 @@ contract("ConditionalTokensMany", function(accounts) {
           for (let customerInfo of product.customers) {
             await this.conditionalTokens.registerCustomer(
               product.market,
-              customerInfo.account,
+              customers[customerInfo.account],
               [],
               {
-                from: customerInfo.account
+                from: customers[customerInfo.account]
               }
             );
           }
@@ -208,11 +192,11 @@ contract("ConditionalTokensMany", function(accounts) {
           }
 
           const outcomeInfo = outcomesInfo[product.outcome];
-          for (let numeratorInfo of outcomeInfo.numerators) {
+          for (let i in outcomeInfo.numerators) {
             await this.conditionalTokens.reportNumerator(
               outcomeInfo.outcome,
-              numeratorInfo.account,
-              numeratorInfo.numerator
+              customers[i],
+              outcomeInfo.numerators[i].numerator
             );
           }
           await this.conditionalTokens.finishOutcome(outcomeInfo.outcome);
@@ -225,37 +209,40 @@ contract("ConditionalTokensMany", function(accounts) {
             totalCollateral = totalCollateral.add(staker.amount);
           }
           let denominator = toBN("0");
-          for (let customer of product.customers) {
-            denominator = denominator.add(customer.numerator);
+          for (let n of outcomeInfo.numerators) {
+            denominator = denominator.add(n.numerator);
           }
+          (
+            await this.conditionalTokens.payoutDenominator(outcomeInfo.outcome)
+          ).should.be.bignumber.equal(denominator);
           for (let customer of product.customers) {
             const outcomeInfo = outcomesInfo[product.outcome];
-            console.log([
+            console.log(
               (
                 await this.conditionalTokens.collateralBalanceOf(
                   this.collateral.address,
                   product.market,
                   outcomeInfo.outcome,
-                  customer.account
+                  customers[customer.account]
                 )
               ).toString(),
               totalCollateral
-                .mul(customer.numerator)
+                .mul(outcomeInfo.numerators[customer.account].numerator)
                 .div(denominator)
                 .div(toBN(product.customers.length))
                 .toString()
-            ]);
+            );
             (
               await this.conditionalTokens.collateralBalanceOf(
                 this.collateral.address,
                 product.market,
                 outcomeInfo.outcome,
-                customer.account
+                customers[customer.account]
               )
             )
               .sub(
                 totalCollateral
-                  .mul(customer.numerator)
+                  .mul(outcomeInfo.numerators[customer.account].numerator)
                   .div(denominator)
                   .div(toBN(product.customers.length))
               )
