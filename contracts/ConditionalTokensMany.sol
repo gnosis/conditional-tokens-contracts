@@ -138,19 +138,18 @@ contract ConditionalTokensMany is ERC1155 {
         emit TakeBackERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
-    // TODO: Ability to register somebody other as a customer. Useful for oracles.
-    // Can be called both before or after the oracle finish. However registering after the finish is useless.
-    function registerCustomer(uint64 market, bytes calldata data) external {
-        uint256 conditionalTokenId = _conditionalTokenId(market, msg.sender);
+    /// Anyone can register anyone. Usually a customer registers himself or else an oracle may register him.
+    /// Can be called both before or after the oracle finish. However registering after the finish is useless.
+    function registerCustomer(uint64 market, address customer, bytes calldata data) external {
+        uint256 conditionalTokenId = _conditionalTokenId(market, customer);
         require(!conditionalTokens[conditionalTokenId], "customer already registered");
         conditionalTokens[conditionalTokenId] = true;
-        _mint(msg.sender, conditionalTokenId, INITIAL_CUSTOMER_BALANCE, data);
+        _mint(customer, conditionalTokenId, INITIAL_CUSTOMER_BALANCE, data);
         marketTotalBalances[market] += INITIAL_CUSTOMER_BALANCE; // No chance of overflow.
-        emit CustomerRegistered(msg.sender, market, data);
+        emit CustomerRegistered(customer, market, data);
     }
 
     /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
-    // TODO: Make it a nontransferrable ERC-1155 token?
     function reportNumerator(uint64 outcomeId, address customer, uint256 numerator) external
         _isOracle(outcomeId)
     {
