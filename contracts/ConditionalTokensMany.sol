@@ -204,7 +204,7 @@ contract ConditionalTokensMany is ERC1155 {
         collateralToken.transfer(customer, amount); // last to prevent reentrancy attack
     }
 
-    function collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, address tokenCustomer) external view returns (uint256) {
+    function initialCollateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, address tokenCustomer) external view returns (uint256) {
         return _collateralBalanceOf(collateralToken, market, outcome, customer, tokenCustomer);
     }
 

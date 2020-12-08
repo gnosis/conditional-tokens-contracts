@@ -2,7 +2,8 @@ const { expectEvent, expectRevert } = require("openzeppelin-test-helpers");
 const { toBN } = web3.utils;
 const {
   INITIAL_CUSTOMER_BALANCE,
-  conditionalTokenId
+  conditionalTokenId,
+  collateralRedeemedTokenId
 } = require("../utils/manyid-helpers")(web3.utils);
 
 const ConditionalTokensMany = artifacts.require("ConditionalTokensMany");
@@ -187,18 +188,18 @@ contract("ConditionalTokensMany", function(accounts) {
           }
 
           // To complicate the task of the test, we will transfer some tokens from the first customer to the rest.
-          async function transferSomeConditional(amount) {
-            for (let i = 1; i != customers.length; ++i) {
-              await this.conditionalTokens.safeTransferFrom(
-                customers[0],
-                customers[i],
-                conditionalTokenId(product.market, customers[0]),
-                amount,
-                [],
-                { from: customers[0] }
-              );
-            }
-          }
+          // async function transferSomeConditional(amount) {
+          //   for (let i = 1; i != customers.length; ++i) {
+          //     await this.conditionalTokens.safeTransferFrom(
+          //       customers[0],
+          //       customers[i],
+          //       conditionalTokenId(product.market, customers[0]),
+          //       amount,
+          //       [],
+          //       { from: customers[0] }
+          //     );
+          //   }
+          // }
 
           // await transferSomeConditional.bind(this)(web3.utils.toWei("2.3")); // TODO: uncomment
 
@@ -231,14 +232,14 @@ contract("ConditionalTokensMany", function(accounts) {
           for (let customer of product.customers) {
             const outcomeInfo = outcomesInfo[product.outcome];
             const account = customers[customer.account];
-            const collateralBalance = await this.conditionalTokens.collateralBalanceOf(
+            const initialCollateralBalance = await this.conditionalTokens.initialCollateralBalanceOf(
               this.collateral.address,
               product.market,
               outcomeInfo.outcome,
               account,
               account
             );
-            collateralBalance
+            initialCollateralBalance
               .sub(
                 totalCollateral
                   .mul(outcomeInfo.numerators[customer.account].numerator)
@@ -275,28 +276,36 @@ contract("ConditionalTokensMany", function(accounts) {
               ),
               "Already redeemed."
             );
-            const halfBalance = collateralBalance.div(toBN("2"));
-            await this.conditionalTokens.withdrawCollateral(
-              this.collateral.address,
-              product.market,
-              outcomeInfo.outcome,
+            const halfBalance = initialCollateralBalance.div(toBN("2"));
+
+            async function withdrawHalf() {
+              const oldBalance = await this.collateral.balanceOf(account);
+              await this.conditionalTokens.withdrawCollateral(
+                this.collateral.address,
+                product.market,
+                outcomeInfo.outcome,
+                account,
+                halfBalance,
+                { from: account }
+              );
+
+              const newBalance = await this.collateral.balanceOf(account);
+              newBalance.sub(oldBalance).should.be.bignumber.equal(halfBalance);
+            }
+
+            await withdrawHalf.bind(this)();
+            await withdrawHalf.bind(this)();
+
+            const remainingCollateralBalance = await this.conditionalTokens.balanceOf(
               account,
-              halfBalance,
-              { from: account }
+              collateralRedeemedTokenId(
+                this.collateral.address,
+                product.market,
+                outcomeInfo.outcome
+              )
             );
-            // TODO
-            // (await this.collateral.balanceOf(account))
-            //   .sub(halfBalance)
-            //   .abs()
-            //   .should.be.bignumber.below("2");
-            await this.conditionalTokens.withdrawCollateral(
-              this.collateral.address,
-              product.market,
-              outcomeInfo.outcome,
-              account,
-              halfBalance,
-              { from: account }
-            );
+            remainingCollateralBalance.should.be.bignumber.below("2");
+
             await expectRevert(
               this.conditionalTokens.withdrawCollateral(
                 this.collateral.address,
@@ -310,10 +319,6 @@ contract("ConditionalTokensMany", function(accounts) {
             );
 
             // TODO: Also check withdrawal to a third-party account.
-            (await this.collateral.balanceOf(account))
-              .sub(collateralBalance)
-              .abs()
-              .should.be.bignumber.below("2");
           }
         }
 
