@@ -56,7 +56,7 @@ contract("ConditionalTokensMany", function(accounts) {
           oracleOwner: oracle1,
           marketId: this.market2
         });
-        // TODO: Check "OutcomeCreated"
+        // TODO: Check "OracleCreated"
       });
 
       it("should leave payout denominator unset", async function() {

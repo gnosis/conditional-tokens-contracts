@@ -26,7 +26,7 @@ contract ConditionalTokensMany is ERC1155 {
 
     event MarketCreated(address oracleOwner, uint64 marketId);
 
-    event OutcomeCreated(address oracleOwner, uint64 oracleId);
+    event OracleCreated(address oracleOwner, uint64 oracleId);
 
     event CustomerRegistered(
         address customer,
@@ -111,10 +111,11 @@ contract ConditionalTokensMany is ERC1155 {
         emit MarketCreated(msg.sender, marketId);
     }
 
+    /// Create a new oracle
     function createOracle() external {
         uint64 oracleId = maxId++;
         oracleOwners[oracleId] = msg.sender;
-        emit OutcomeCreated(msg.sender, oracleId);
+        emit OracleCreated(msg.sender, oracleId);
     }
 
     /// Donate funds in a ERC20 token.
