@@ -21,7 +21,7 @@ contract ConditionalTokensMany is ERC1155, IERC1155TokenReceiver {
     using ABDKMath64x64 for int128;
 
     // TODO: Don't store both the donated, staked, and their sum.
-    enum TokenKind { TOKEN_CONDITIONAL, TOKEN_DONATED, TOKEN_STAKED, TOKEN_SUMMARY }
+    enum TokenKind { TOKEN_CONDITIONAL, TOKEN_STAKED, TOKEN_SUMMARY }
 
     uint constant INITIAL_CUSTOMER_BALANCE = 1000 * 10**18; // an arbitrarily choosen value
 
@@ -135,7 +135,6 @@ contract ConditionalTokensMany is ERC1155, IERC1155TokenReceiver {
     /// Not recommended to donate after any oracle has finished, because funds may be (partially) lost.
     function donate(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, uint256 amount, bytes calldata data) external {
         _collateralIn(collateralContractAddress, collateralTokenId, marketId, oracleId, amount, data);
-        _mint(msg.sender, _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId), amount, data);
         emit DonateERC20Collateral(collateralContractAddress, collateralTokenId, msg.sender, amount, data);
     }
 
@@ -272,10 +271,6 @@ contract ConditionalTokensMany is ERC1155, IERC1155TokenReceiver {
 
     function _conditionalTokenId(uint64 marketId, address condition) private pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(uint8(TokenKind.TOKEN_CONDITIONAL), marketId, condition)));
-    }
-
-    function _collateralDonatedTokenId(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(uint8(TokenKind.TOKEN_DONATED), collateralContractAddress, collateralTokenId, marketId, oracleId)));
     }
 
     function _collateralStakedTokenId(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId) internal pure returns (uint256) {
