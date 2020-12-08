@@ -36,9 +36,9 @@ contract("ConditionalTokensMany", function(accounts) {
     context("with valid parameters", function() {
       beforeEach(async function() {
         ({ logs: this.logs1 } = await this.conditionalTokens.createMarket());
-        this.market1 = this.logs1[0].args.marketId;
+        this.marketId1 = this.logs1[0].args.marketId;
         ({ logs: this.logs2 } = await this.conditionalTokens.createMarket());
-        this.market2 = this.logs2[0].args.marketId;
+        this.marketId2 = this.logs2[0].args.marketId;
         ({ logs: this.logs3 } = await this.conditionalTokens.createOracle());
         this.oracleId1 = this.logs3[0].args.oracleId;
         ({ logs: this.logs4 } = await this.conditionalTokens.createOracle());
@@ -46,31 +46,31 @@ contract("ConditionalTokensMany", function(accounts) {
       });
 
       it("should emit a MarketCreated event", function() {
-        this.market1.should.be.bignumber.equal("0");
-        this.market2.should.be.bignumber.equal("1");
+        this.marketId1.should.be.bignumber.equal("0");
+        this.marketId2.should.be.bignumber.equal("1");
         expectEvent.inLogs(this.logs1, "MarketCreated", {
           oracleOwner: oracle1,
-          marketId: this.market1
+          marketId: this.marketId1
         });
         expectEvent.inLogs(this.logs2, "MarketCreated", {
           oracleOwner: oracle1,
-          marketId: this.market2
+          marketId: this.marketId2
         });
         // TODO: Check "OracleCreated"
       });
 
       it("should leave payout denominator unset", async function() {
         (
-          await this.conditionalTokens.payoutDenominator(this.market1)
+          await this.conditionalTokens.payoutDenominator(this.marketId1)
         ).should.be.bignumber.equal("0");
         (
-          await this.conditionalTokens.payoutDenominator(this.market2)
+          await this.conditionalTokens.payoutDenominator(this.marketId2)
         ).should.be.bignumber.equal("0");
       });
 
-      it("should not be able to register the same customer more than once for the same market", async function() {
+      it("should not be able to register the same customer more than once for the same marketId", async function() {
         await this.conditionalTokens.registerCustomer(
-          this.market1,
+          this.marketId1,
           customer1,
           [],
           {
@@ -78,12 +78,17 @@ contract("ConditionalTokensMany", function(accounts) {
           }
         );
         await expectRevert(
-          this.conditionalTokens.registerCustomer(this.market1, customer1, [], {
-            from: customer1
-          }),
+          this.conditionalTokens.registerCustomer(
+            this.marketId1,
+            customer1,
+            [],
+            {
+              from: customer1
+            }
+          ),
           "customer already registered"
         );
-        // TODO: Check that can register the same customer for different markets.
+        // TODO: Check that can register the same customer for different marketIds.
       });
 
       it("checking the math", async function() {
@@ -98,11 +103,11 @@ contract("ConditionalTokensMany", function(accounts) {
             numerators: [{ numerator: toBN("33") }, { numerator: toBN("90") }]
           }
         ];
-        const markets = [this.market1, this.market2];
-        // TODO: Simplify customers array. // TODO: Should be grouped by markets.
+        const marketIds = [this.marketId1, this.marketId2];
+        // TODO: Simplify customers array. // TODO: Should be grouped by marketIds.
         const products = [
           {
-            market: this.market1,
+            marketId: this.marketId1,
             oracleId: 0,
             donors: [
               { account: donor1, amount: toBN("10000000000") },
@@ -115,7 +120,7 @@ contract("ConditionalTokensMany", function(accounts) {
             customers: [{ account: 0 }, { account: 1 }]
           },
           {
-            market: this.market1,
+            marketId: this.marketId1,
             oracleId: 1,
             donors: [
               { account: donor1, amount: toBN("20000000000") },
@@ -128,7 +133,7 @@ contract("ConditionalTokensMany", function(accounts) {
             customers: [{ account: 0 }, { account: 1 }]
           },
           {
-            market: this.market2,
+            marketId: this.marketId2,
             oracleId: 0,
             donors: [
               { account: donor1, amount: toBN("50000000000") },
@@ -141,7 +146,7 @@ contract("ConditionalTokensMany", function(accounts) {
             customers: [{ account: 0 }, { account: 1 }]
           },
           {
-            market: this.market2,
+            marketId: this.marketId2,
             oracleId: 1,
             donors: [
               { account: donor1, amount: toBN("70000000000") },
@@ -165,7 +170,7 @@ contract("ConditionalTokensMany", function(accounts) {
             const oracleIdInfo = oracleIdsInfo[product.oracleId];
             await this.conditionalTokens.donate(
               this.collateral.address,
-              product.market,
+              product.marketId,
               oracleIdInfo.oracleId,
               donor.amount,
               [],
@@ -181,7 +186,7 @@ contract("ConditionalTokensMany", function(accounts) {
             const oracleIdInfo = oracleIdsInfo[product.oracleId];
             await this.conditionalTokens.stakeCollateral(
               this.collateral.address,
-              product.market,
+              product.marketId,
               oracleIdInfo.oracleId,
               staker.amount,
               [],
@@ -195,7 +200,7 @@ contract("ConditionalTokensMany", function(accounts) {
               await this.conditionalTokens.safeTransferFrom(
                 customers[0],
                 customers[i],
-                conditionalTokenId(product.market, customers[0]),
+                conditionalTokenId(product.marketId, customers[0]),
                 amount,
                 [],
                 { from: customers[0] }
@@ -241,7 +246,7 @@ contract("ConditionalTokensMany", function(accounts) {
             const account = customers[customer.account];
             const initialCollateralBalance = await this.conditionalTokens.initialCollateralBalanceOf(
               this.collateral.address,
-              product.market,
+              product.marketId,
               oracleIdInfo.oracleId,
               account,
               account
@@ -253,7 +258,7 @@ contract("ConditionalTokensMany", function(accounts) {
                   .mul(
                     await this.conditionalTokens.balanceOf(
                       account,
-                      conditionalTokenId(product.market, account)
+                      conditionalTokenId(product.marketId, account)
                     )
                   )
                   .div(denominator)
@@ -266,7 +271,7 @@ contract("ConditionalTokensMany", function(accounts) {
             // TODO: Redeem somebody other's token.
             await this.conditionalTokens.activateRedeem(
               this.collateral.address,
-              product.market,
+              product.marketId,
               oracleIdInfo.oracleId,
               account,
               [],
@@ -275,7 +280,7 @@ contract("ConditionalTokensMany", function(accounts) {
             await expectRevert(
               this.conditionalTokens.activateRedeem(
                 this.collateral.address,
-                product.market,
+                product.marketId,
                 oracleIdInfo.oracleId,
                 account,
                 [],
@@ -291,7 +296,7 @@ contract("ConditionalTokensMany", function(accounts) {
               const oldBalance = await this.collateral.balanceOf(account);
               await this.conditionalTokens.withdrawCollateral(
                 this.collateral.address,
-                product.market,
+                product.marketId,
                 oracleIdInfo.oracleId,
                 account,
                 halfBalance,
@@ -306,7 +311,7 @@ contract("ConditionalTokensMany", function(accounts) {
               const oldBalance = await this.collateral.balanceOf(account);
               await this.conditionalTokens.withdrawCollateral(
                 this.collateral.address,
-                product.market,
+                product.marketId,
                 oracleIdInfo.oracleId,
                 account,
                 halfBalance,
@@ -321,7 +326,7 @@ contract("ConditionalTokensMany", function(accounts) {
               account,
               collateralRedeemedTokenId(
                 this.collateral.address,
-                product.market,
+                product.marketId,
                 oracleIdInfo.oracleId
               )
             );
@@ -330,7 +335,7 @@ contract("ConditionalTokensMany", function(accounts) {
             await expectRevert(
               this.conditionalTokens.withdrawCollateral(
                 this.collateral.address,
-                product.market,
+                product.marketId,
                 oracleIdInfo.oracleId,
                 account,
                 halfBalance,
@@ -344,9 +349,9 @@ contract("ConditionalTokensMany", function(accounts) {
         }
 
         for (let customer of customers) {
-          for (let market of markets) {
+          for (let marketId of marketIds) {
             await this.conditionalTokens.registerCustomer(
-              market,
+              marketId,
               customer,
               [],
               {
