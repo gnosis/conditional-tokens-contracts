@@ -153,6 +153,7 @@ contract ConditionalTokensMany is ERC1155 {
     function reportNumerator(uint64 outcomeId, address customer, uint256 numerator) external
         _isOracle(outcomeId)
     {
+        // TODO: duplicate code
         payoutDenominator[outcomeId] = payoutDenominator[outcomeId].add(numerator).sub(payoutNumerators[outcomeId][customer]);
         payoutNumerators[outcomeId][customer] = numerator;
         emit ReportedNumerator(outcomeId, customer, numerator);
@@ -166,8 +167,9 @@ contract ConditionalTokensMany is ERC1155 {
         for (uint i = 0; i < addresses.length; ++i) {
             address customer = addresses[i];
             uint256 numerator = numerators[i];
+            // TODO: duplicate code
+            payoutDenominator[outcomeId] = payoutDenominator[outcomeId].add(numerator).sub(payoutNumerators[outcomeId][customer]);
             payoutNumerators[outcomeId][customer] = numerator;
-            payoutDenominator[outcomeId] += numerator;
         }
         emit ReportedNumeratorsBatch(outcomeId, addresses, numerators);
     }

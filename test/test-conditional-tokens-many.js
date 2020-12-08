@@ -5,12 +5,23 @@ const ConditionalTokensMany = artifacts.require("ConditionalTokensMany");
 const ERC20Mintable = artifacts.require("MockCoin");
 
 contract("ConditionalTokensMany", function(accounts) {
-  const [oracle1, customer1, customer2, donor1] = accounts;
+  const [
+    oracle1,
+    customer1,
+    customer2,
+    donor1,
+    donor2,
+    staker1,
+    staker2
+  ] = accounts;
 
   beforeEach("initiate token contracts", async function() {
     this.conditionalTokens = await ConditionalTokensMany.new();
     this.collateral = await ERC20Mintable.new(); // TODO: Check multiple collaterals
-    this.collateral.mint(donor1, "10000000");
+    this.collateral.mint(donor1, "1000000000000000000000");
+    this.collateral.mint(donor2, "1000000000000000000000");
+    this.collateral.mint(staker1, "1000000000000000000000");
+    this.collateral.mint(staker2, "1000000000000000000000");
   });
 
   describe("createMarket", function() {
@@ -69,166 +80,178 @@ contract("ConditionalTokensMany", function(accounts) {
       });
 
       it("checking the math", async function() {
-        await this.conditionalTokens.registerCustomer(
-          this.market1,
-          customer1,
-          [],
+        const outcomesInfo = [
           {
-            from: customer1
-          }
-        );
-        await this.conditionalTokens.registerCustomer(
-          this.market1,
-          customer2,
-          [],
+            outcome: this.outcome1,
+            numerators: [
+              { account: customer1, numerator: toBN("45") },
+              { account: customer2, numerator: toBN("60") }
+            ]
+          },
           {
-            from: customer2
+            outcome: this.outcome2,
+            numerators: [
+              { account: customer1, numerator: toBN("33") },
+              { account: customer2, numerator: toBN("90") }
+            ]
           }
-        );
-        await this.conditionalTokens.registerCustomer(
-          this.market2,
-          customer1,
-          [],
+        ];
+        const products = [
           {
-            from: customer1
-          }
-        );
-        await this.conditionalTokens.registerCustomer(
-          this.market2,
-          customer2,
-          [],
+            market: this.market1,
+            outcome: 0,
+            donors: [
+              { account: donor1, amount: toBN("10000000000") },
+              { account: donor2, amount: toBN("1000000000000") }
+            ],
+            stakers: [
+              { account: staker1, amount: toBN("20000000000") },
+              { account: staker2, amount: toBN("2000000000000") }
+            ],
+            customers: [
+              { account: customer1, numerator: toBN("3") },
+              { account: customer2, numerator: toBN("2") }
+            ]
+          },
           {
-            from: customer2
+            market: this.market1,
+            outcome: 1,
+            donors: [
+              { account: donor1, amount: toBN("20000000000") },
+              { account: donor2, amount: toBN("2000000000000") }
+            ],
+            stakers: [
+              { account: staker1, amount: toBN("30000000000") },
+              { account: staker2, amount: toBN("4000000000000") }
+            ],
+            customers: [
+              { account: customer1, numerator: toBN("90") },
+              { account: customer2, numerator: toBN("10") }
+            ]
+          },
+          {
+            market: this.market2,
+            outcome: 0,
+            donors: [
+              { account: donor1, amount: toBN("50000000000") },
+              { account: donor2, amount: toBN("5000000000000") }
+            ],
+            stakers: [
+              { account: staker1, amount: toBN("60000000000") },
+              { account: staker2, amount: toBN("6000000000000") }
+            ],
+            customers: [
+              { account: customer1, numerator: toBN("5") },
+              { account: customer2, numerator: toBN("4") }
+            ]
+          },
+          {
+            market: this.market2,
+            outcome: 1,
+            donors: [
+              { account: donor1, amount: toBN("70000000000") },
+              { account: donor2, amount: toBN("7000000000000") }
+            ],
+            stakers: [
+              { account: staker1, amount: toBN("80000000000") },
+              { account: staker2, amount: toBN("9000000000000") }
+            ],
+            customers: [
+              { account: customer1, numerator: toBN("80") },
+              { account: customer2, numerator: toBN("20") }
+            ]
           }
-        );
-        const NUMBER_CUSTOMERS1 = toBN("2");
-        const NUMBER_CUSTOMERS2 = toBN("2");
+        ];
 
-        await this.collateral.approve(
-          this.conditionalTokens.address,
-          "1000000000000" /* a big number */,
-          { from: donor1 }
-        );
-        // TODO: Test more than one market per outcome.
-        await this.conditionalTokens.donate(
-          this.collateral.address,
-          this.market1,
-          this.outcome1,
-          "400",
-          [],
-          { from: donor1 }
-        );
-        await this.conditionalTokens.stakeCollateral(
-          this.collateral.address,
-          this.market1,
-          this.outcome1,
-          "600",
-          [],
-          { from: donor1 }
-        );
-        await this.conditionalTokens.donate(
-          this.collateral.address,
-          this.market2,
-          this.outcome2,
-          "4000",
-          [],
-          { from: donor1 }
-        );
-        await this.conditionalTokens.stakeCollateral(
-          this.collateral.address,
-          this.market2,
-          this.outcome2,
-          "6000",
-          [],
-          { from: donor1 }
-        );
-        const TOTAL_COLLATERAL1 = toBN("1000");
-        const TOTAL_COLLATERAL2 = toBN("10000");
+        async function testOneProduct(product) {
+          for (let customerInfo of product.customers) {
+            await this.conditionalTokens.registerCustomer(
+              product.market,
+              customerInfo.account,
+              [],
+              {
+                from: customerInfo.account
+              }
+            );
+          }
+          for (let donor of product.donors) {
+            await this.collateral.approve(
+              this.conditionalTokens.address,
+              "1000000000000000" /* a big number */,
+              { from: donor.account }
+            );
+            await this.conditionalTokens.donate(
+              this.collateral.address,
+              product.market,
+              product.outcome,
+              donor.amount,
+              [],
+              { from: donor.account }
+            );
+          }
+          for (let staker of product.stakers) {
+            await this.collateral.approve(
+              this.conditionalTokens.address,
+              "1000000000000000" /* a big number */,
+              { from: staker.account }
+            );
+            await this.conditionalTokens.stakeCollateral(
+              this.collateral.address,
+              product.market,
+              product.outcome,
+              staker.amount,
+              [],
+              { from: staker.account }
+            );
+          }
 
-        await this.conditionalTokens.reportNumerator(
-          this.outcome1,
-          customer1,
-          toBN("20")
-        );
-        await this.conditionalTokens.reportNumerator(
-          this.outcome1,
-          customer2,
-          toBN("10")
-        );
-        await this.conditionalTokens.finishOutcome(this.outcome1);
+          const outcomeInfo = outcomesInfo[product.outcome];
+          for (let numeratorInfo of outcomeInfo.numerators) {
+            await this.conditionalTokens.reportNumerator(
+              outcomeInfo.outcome,
+              numeratorInfo.account,
+              numeratorInfo.numerator
+            );
+          }
+          await this.conditionalTokens.finishOutcome(outcomeInfo.outcome);
 
-        await this.conditionalTokens.reportNumerator(
-          this.outcome2,
-          customer1,
-          toBN("90")
-        );
-        await this.conditionalTokens.reportNumerator(
-          this.outcome2,
-          customer2,
-          toBN("10")
-        );
-        await this.conditionalTokens.finishOutcome(this.outcome1);
+          let totalCollateral = toBN("0");
+          for (let donor of product.donors) {
+            totalCollateral = totalCollateral.add(donor.amount);
+          }
+          for (let staker of product.stakers) {
+            totalCollateral = totalCollateral.add(staker.amount);
+          }
+          let denominator = toBN("0");
+          for (let customer of product.customers) {
+            denominator = denominator.add(customer.numerator);
+          }
+          for (let customer of product.customers) {
+            const outcomeInfo = outcomesInfo[product.outcome];
+            (
+              await this.conditionalTokens.collateralBalanceOf(
+                this.collateral.address,
+                product.market,
+                outcomeInfo.outcome,
+                customer.account
+              )
+            )
+              .sub(
+                totalCollateral
+                  .mul(customer.numerator)
+                  .div(denominator)
+                  .div(toBN(product.customers.length))
+              )
+              .abs()
+              .should.be.bignumber.below(toBN("2"));
+          }
+        }
 
-        (
-          await this.conditionalTokens.collateralBalanceOf(
-            this.collateral.address,
-            this.market1,
-            this.outcome1,
-            customer1
-          )
-        )
-          .sub(
-            TOTAL_COLLATERAL1.mul(toBN("20"))
-              .div(toBN("30"))
-              .div(NUMBER_CUSTOMERS1)
-          )
-          .abs()
-          .should.be.bignumber.below(toBN("2"));
-        (
-          await this.conditionalTokens.collateralBalanceOf(
-            this.collateral.address,
-            this.market1,
-            this.outcome1,
-            customer2
-          )
-        )
-          .sub(
-            TOTAL_COLLATERAL1.mul(toBN("10"))
-              .div(toBN("30"))
-              .div(NUMBER_CUSTOMERS1)
-          )
-          .abs()
-          .should.be.bignumber.below(toBN("2"));
-        (
-          await this.conditionalTokens.collateralBalanceOf(
-            this.collateral.address,
-            this.market2,
-            this.outcome2,
-            customer1
-          )
-        )
-          .sub(
-            TOTAL_COLLATERAL2.mul(toBN("90"))
-              .div(toBN("100"))
-              .div(NUMBER_CUSTOMERS2)
-          )
-          .abs()
-          .should.be.bignumber.below(toBN("2"));
-        (
-          await this.conditionalTokens.collateralBalanceOf(
-            this.collateral.address,
-            this.market2,
-            this.outcome2,
-            customer2
-          )
-        )
-          .sub(
-            TOTAL_COLLATERAL2.mul(toBN("10"))
-              .div(toBN("100"))
-              .div(NUMBER_CUSTOMERS2)
-          )
-          .abs()
-          .should.be.bignumber.below(toBN("2"));
+        // Promise.all(products.forEach(testOneProduct.bind(this)));
+        for (let product of products) {
+          await testOneProduct.bind(this)(product);
+        }
+
         // TODO
       });
 
