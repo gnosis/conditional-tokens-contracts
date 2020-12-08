@@ -11,7 +11,6 @@ import { ERC1155 } from "./ERC1155/ERC1155.sol";
 contract ConditionalTokensMany is ERC1155 {
     // TODO: ERC-1155 collateral.
     // TODO: Getters.
-    // TODO: Oracle based (with quadratic upgradeable voting) recovery of lost accounts.
 
     using ABDKMath64x64 for int128;
 
@@ -69,6 +68,7 @@ contract ConditionalTokensMany is ERC1155 {
         IERC20 indexed collateralToken,
         uint64 indexed market,
         uint64 indexed outcome,
+        address tokenCustomer,
         uint payout
     );
 
@@ -177,7 +177,7 @@ contract ConditionalTokensMany is ERC1155 {
 
     function activateRedeem(IERC20 collateralToken, uint64 market, uint64 outcome, address tokenCustomer, bytes calldata data) external {
         require(outcomeFinished[outcome], "too early"); // to prevent the denominator or the numerators change meantime
-        uint256 collateralBalance = _collateralBalanceOf(collateralToken, market, outcome, msg.sender, tokenCustomer);
+        uint256 collateralBalance = _initialCollateralBalanceOf(collateralToken, market, outcome, msg.sender, tokenCustomer);
         uint256 conditionalTokenId = _conditionalTokenId(market, tokenCustomer);
         require(!redeemActivated[msg.sender][outcome][conditionalTokenId], "Already redeemed.");
         redeemActivated[msg.sender][outcome][conditionalTokenId] = true;
@@ -185,7 +185,7 @@ contract ConditionalTokensMany is ERC1155 {
         uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, outcome);
         // _burn(msg.sender, conditionalTokenId, conditionalBalance); // Burning it would break using the same token for multiple outcomes.
         _mint(msg.sender, redeemedTokenId, collateralBalance, data);
-        emit RedeemCalculated(msg.sender, collateralToken, market, outcome, collateralBalance);
+        emit RedeemCalculated(msg.sender, collateralToken, market, outcome, tokenCustomer, collateralBalance);
     }
 
     function withdrawCollateral(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, uint256 amount) external {
@@ -196,7 +196,7 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     function initialCollateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, address tokenCustomer) external view returns (uint256) {
-        return _collateralBalanceOf(collateralToken, market, outcome, customer, tokenCustomer);
+        return _initialCollateralBalanceOf(collateralToken, market, outcome, customer, tokenCustomer);
     }
 
     // Disallow transfers of conditional tokens after redeem to prevent "gathering" them before redeeming each outcome.
@@ -229,7 +229,7 @@ contract ConditionalTokensMany is ERC1155 {
         _baseSafeBatchTransferFrom(from, to, ids, values, data);
     }
 
-    function _collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, address tokenCustomer) internal view
+    function _initialCollateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, address tokenCustomer) internal view
         returns (uint256)
     {
         uint256 numerator = payoutNumerators[outcome][tokenCustomer];

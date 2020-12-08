@@ -9,4 +9,5 @@ contract ConditionalTokensManyIdent is ConditionalTokensMany {
     // TODO: MACI by Vitalik
     // TODO: Allow change 100 years to something other by voting?
     // TODO: Microsoft Azure to run a BrightID node till we vote to make it decentralized.
+    // TODO: Oracle based (with quadratic upgradeable voting) recovery of lost accounts.
 }
