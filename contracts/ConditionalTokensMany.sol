@@ -82,7 +82,7 @@ contract ConditionalTokensMany is ERC1155 {
         uint payout
     );
 
-    uint64 private maxMarket; // FIXME: will 64 bit be enough after 100 years?! // FIXME: rename
+    uint64 private maxId; // FIXME: will 64 bit be enough after 100 years?! // FIXME: rename
 
     /// Mapping from outcome to oracle.
     mapping(uint64 => address) public oracles;
@@ -105,12 +105,12 @@ contract ConditionalTokensMany is ERC1155 {
 
     /// Register ourselves as an oracle for a new market.
     function createMarket() external {
-        uint64 marketId = maxMarket++;
+        uint64 marketId = maxId++;
         emit MarketCreated(msg.sender, marketId);
     }
 
     function createOutcome() external {
-        uint64 outcomeId = maxMarket++;
+        uint64 outcomeId = maxId++;
         oracles[outcomeId] = msg.sender;
         emit OutcomeCreated(msg.sender, outcomeId);
     }
