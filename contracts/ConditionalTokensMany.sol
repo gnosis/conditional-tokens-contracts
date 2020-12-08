@@ -72,7 +72,7 @@ contract ConditionalTokensMany is ERC1155 {
 
     event OutcomeFinished(address indexed oracle);
 
-    event PayoutRedemption(
+    event RedeemCalculated(
         address redeemer,
         IERC20 indexed collateralToken,
         uint64 indexed market,
@@ -81,6 +81,14 @@ contract ConditionalTokensMany is ERC1155 {
         uint payout
     );
 
+    event CollateralWithdrawn(
+        IERC20 collateralToken,
+        uint64 market,
+        uint64 outcome,
+        address customer,
+        uint256 amount
+    );
+    
     uint64 private maxId; // FIXME: will 64 bit be enough after 100 years?!
 
     /// Mapping from outcome to oracle.
@@ -95,8 +103,6 @@ contract ConditionalTokensMany is ERC1155 {
     mapping(uint256 => bool) public conditionalTokens;
     /// Total collaterals per market and outcome: collateral => (market => (outcome => total))
     mapping(address => mapping(uint64 => mapping(uint64 => uint256))) collateralTotals; // TODO: hash instead?
-    /// Whetehr user's collateral were redeemed: collateral => (market => (outcome => (user => redeemed)))
-    mapping(address => mapping(uint64 => mapping(uint64 => mapping(address => bool)))) collateralRedeemed; // TODO: hash instead?
     /// Total conditional market balances
     mapping(uint64 => uint256) marketTotalBalances; // TODO: hash instead?
 
@@ -184,36 +190,38 @@ contract ConditionalTokensMany is ERC1155 {
 
     function calculateRedeemAmount(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, bytes calldata data) external {
         require(outcomeFinished[outcome], "too early"); // to prevent the denominator or the numerators change meantime
-        if(collateralRedeemed[address(collateralToken)][market][outcome][customer]) {
-            return;
-        }
-        uint256 amount = _collateralBalanceOf(collateralToken, market, outcome, customer);
+        (uint256 conditionalBalance, uint256 collateralBalance) =
+            _collateralBalanceOf(collateralToken, market, outcome, customer);
         uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, outcome);
-        _mint(customer, redeemedTokenId, amount, data);
-        collateralRedeemed[address(collateralToken)][market][outcome][customer] = true;
-        // emit PayoutRedemption(msg.sender, collateralToken, market, outcome, customer, amount); // FIXME
+        uint256 conditionalTokenId = _conditionalTokenId(market, customer); // TODO: calculates the same in _collateralBalanceOf
+        _mint(customer, redeemedTokenId, collateralBalance, data);
+        _burn(customer, conditionalTokenId, conditionalBalance);
+        emit RedeemCalculated(msg.sender, collateralToken, market, outcome, customer, collateralBalance); // TODO: Also return conditionalBalance?
     }
 
     function withdrawCollateral(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, uint256 amount) external {
         uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, outcome);
         _burn(customer, redeemedTokenId, amount);
-        // FIXME: Emit.
+        emit CollateralWithdrawn(collateralToken, market, outcome, customer, amount);
         collateralToken.transfer(customer, amount); // last to prevent reentrancy attack
     }
 
     function collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer) external view returns (uint256) {
-        return _collateralBalanceOf(collateralToken, market, outcome, customer);
+        (, uint256 collateralBalance) = _collateralBalanceOf(collateralToken, market, outcome, customer);
+        return collateralBalance;
     }
 
-    function _collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer) internal view returns (uint256) {
+    function _collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer) internal view
+        returns (uint256 conditonalBalance, uint256 collateralBalance)
+    {
         uint256 numerator = uint256(payoutNumerators[outcome][customer]);
         uint256 denominator = payoutDenominator[outcome];
-        uint256 customerBalance = balanceOf(customer, _conditionalTokenId(market, customer)); // FIXME: What if it changes after finish?
-        uint256 collateralBalance = collateralTotals[address(collateralToken)][market][outcome];
+        conditonalBalance = balanceOf(customer, _conditionalTokenId(market, customer));
+        uint256 collateralTotalBalance = collateralTotals[address(collateralToken)][market][outcome];
         // Rounded to below for no out-of-funds:
-        int128 marketShare = ABDKMath64x64.divu(customerBalance, marketTotalBalances[market]);
+        int128 marketShare = ABDKMath64x64.divu(conditonalBalance, marketTotalBalances[market]);
         int128 userShare = ABDKMath64x64.divu(numerator, denominator);
-        return marketShare.mul(userShare).mulu(collateralBalance);
+        collateralBalance = marketShare.mul(userShare).mulu(collateralTotalBalance);
     }
 
     function _conditionalTokenId(uint64 market, address customer) private pure returns (uint256) {
