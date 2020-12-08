@@ -156,9 +156,7 @@ contract ConditionalTokensMany is ERC1155 {
     function reportNumerator(uint64 outcomeId, address customer, uint256 numerator) external
         _isOracle(outcomeId)
     {
-        // TODO: duplicate code
-        payoutDenominator[outcomeId] = payoutDenominator[outcomeId].add(numerator).sub(payoutNumerators[outcomeId][customer]);
-        payoutNumerators[outcomeId][customer] = numerator;
+        _updateNumerator(outcomeId, numerator, customer);
         emit ReportedNumerator(outcomeId, customer, numerator);
     }
 
@@ -166,13 +164,9 @@ contract ConditionalTokensMany is ERC1155 {
     function reportNumeratorsBatch(uint64 outcomeId, address[] calldata addresses, uint256[] calldata numerators) external
         _isOracle(outcomeId)
     {
-        require(addresses.length == numerators.length, "length mismatch");
+        require(addresses.length == numerators.length, "Length mismatch.");
         for (uint i = 0; i < addresses.length; ++i) {
-            address customer = addresses[i];
-            uint256 numerator = numerators[i];
-            // TODO: duplicate code
-            payoutDenominator[outcomeId] = payoutDenominator[outcomeId].add(numerator).sub(payoutNumerators[outcomeId][customer]);
-            payoutNumerators[outcomeId][customer] = numerator;
+            _updateNumerator(outcomeId, numerators[i], addresses[i]);
         }
         emit ReportedNumeratorsBatch(outcomeId, addresses, numerators);
     }
@@ -328,6 +322,11 @@ contract ConditionalTokensMany is ERC1155 {
         emit TransferBatch(msg.sender, from, to, ids, values);
 
         _doSafeBatchTransferAcceptanceCheck(msg.sender, from, to, ids, values, data);
+    }
+
+    function _updateNumerator(uint64 outcomeId, uint256 numerator, address customer) private {
+        payoutDenominator[outcomeId] = payoutDenominator[outcomeId].add(numerator).sub(payoutNumerators[outcomeId][customer]);
+        payoutNumerators[outcomeId][customer] = numerator;
     }
 
     modifier _isOracle(uint64 outcomeId) {
