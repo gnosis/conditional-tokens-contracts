@@ -190,20 +190,20 @@ contract("ConditionalTokensMany", function(accounts) {
           }
 
           // To complicate the task of the test, we will transfer some tokens from the first customer to the rest.
-          // async function transferSomeConditional(amount) {
-          //   for (let i = 1; i != customers.length; ++i) {
-          //     await this.conditionalTokens.safeTransferFrom(
-          //       customers[0],
-          //       customers[i],
-          //       conditionalTokenId(product.market, customers[0]),
-          //       amount,
-          //       [],
-          //       { from: customers[0] }
-          //     );
-          //   }
-          // }
+          async function transferSomeConditional(amount) {
+            for (let i = 1; i != customers.length; ++i) {
+              await this.conditionalTokens.safeTransferFrom(
+                customers[0],
+                customers[i],
+                conditionalTokenId(product.market, customers[0]),
+                amount,
+                [],
+                { from: customers[0] }
+              );
+            }
+          }
 
-          // await transferSomeConditional.bind(this)(web3.utils.toWei("2.3")); // TODO: uncomment
+          await transferSomeConditional.bind(this)(web3.utils.toWei("2.3"));
 
           const outcomeInfo = outcomesInfo[product.outcome];
           for (let i in outcomeInfo.numerators) {
@@ -215,7 +215,7 @@ contract("ConditionalTokensMany", function(accounts) {
           }
           await this.conditionalTokens.finishOutcome(outcomeInfo.outcome);
 
-          // await transferSomeConditional.bind(this)(web3.utils.toWei("1.2")); // TODO: uncomment
+          await transferSomeConditional.bind(this)(web3.utils.toWei("1.2"));
         }
 
         async function redeemOneProduct(product) {
