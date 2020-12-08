@@ -97,7 +97,7 @@ contract ConditionalTokensMany is ERC1155 {
     /// Total collaterals per market and outcome: collateral => (market => (outcome => total))
     mapping(address => mapping(uint64 => mapping(uint64 => uint256))) public collateralTotals; // TODO: hash instead?
     /// If a given conditional was already redeemed.
-    mapping(address => mapping(uint256 => bool)) public redeemActivated;
+    mapping(address => mapping(uint64 => mapping(uint256 => bool))) public redeemActivated;
     /// The user lost the right to transfer conditional tokens.
     mapping(address => bool) public userUsedRedeem;
 
@@ -188,8 +188,8 @@ contract ConditionalTokensMany is ERC1155 {
         require(outcomeFinished[outcome], "too early"); // to prevent the denominator or the numerators change meantime
         uint256 collateralBalance = _collateralBalanceOf(collateralToken, market, outcome, msg.sender, tokenCustomer);
         uint256 conditionalTokenId = _conditionalTokenId(market, tokenCustomer); // TODO: calculates the same in _collateralBalanceOf
-        require(!redeemActivated[msg.sender][conditionalTokenId]);
-        redeemActivated[msg.sender][conditionalTokenId] = true;
+        require(!redeemActivated[msg.sender][outcome][conditionalTokenId], "Already redeemed.");
+        redeemActivated[msg.sender][outcome][conditionalTokenId] = true;
         userUsedRedeem[msg.sender] = true;
         uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, outcome);
         // _burn(msg.sender, conditionalTokenId, conditionalBalance); // Burning it would break using the same token for multiple outcomes.

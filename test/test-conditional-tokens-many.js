@@ -272,7 +272,8 @@ contract("ConditionalTokensMany", function(accounts) {
                 account,
                 [],
                 { from: account }
-              )
+              ),
+              "Already redeemed."
             );
             const halfBalance = collateralBalance.div(toBN("2"));
             await this.conditionalTokens.withdrawCollateral(
