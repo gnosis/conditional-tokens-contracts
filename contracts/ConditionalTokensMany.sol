@@ -3,6 +3,9 @@ import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import { IERC20 } from "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
 
+/// @title Bidding on Ethereum addresses
+/// @author Victor Porton
+/// @notice Not audited, not enough tested.
 /// See `docs/future-money.rst`.
 ///
 /// We have four kinds of ERC-1155 token ID
