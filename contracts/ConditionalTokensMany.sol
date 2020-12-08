@@ -4,10 +4,11 @@ import { IERC20 } from "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
 import { CTHelpers } from "./CTHelpers.sol";
 
-/// We have three kinds of ERC-1155 token ID
+/// We have four kinds of ERC-1155 token ID
 /// - a combination of market ID, collateral address, and customer address (conditional tokens);
 /// - a collateral address (donated collateral tokens)
 /// - a combination of TOKEN_STAKED and collateral address (staked collateral tokens)
+/// - a store of already redeemed collateral
 contract ConditionalTokensMany is ERC1155 {
     // TODO: ERC-1155 collateral.
     // TODO: Getters.
