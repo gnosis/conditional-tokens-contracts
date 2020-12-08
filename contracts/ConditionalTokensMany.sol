@@ -96,8 +96,8 @@ contract ConditionalTokensMany is ERC1155 {
     mapping(uint256 => uint256) public collateralTotals;
     /// If a given conditional was already redeemed.
     mapping(address => mapping(uint64 => mapping(uint256 => bool))) public redeemActivated; // TODO: hash instead?
-    /// The user lost the right to transfer conditional tokens.
-    mapping(address => bool) public userUsedRedeem;
+    /// The user lost the right to transfer conditional tokens: (user => (conditionalToken => bool)).
+    mapping(address => mapping(uint256 => bool)) public userUsedRedeem;
 
     /// Register ourselves as an oracle for a new market.
     function createMarket() external {
@@ -181,7 +181,7 @@ contract ConditionalTokensMany is ERC1155 {
         uint256 conditionalTokenId = _conditionalTokenId(market, tokenCustomer);
         require(!redeemActivated[msg.sender][outcome][conditionalTokenId], "Already redeemed.");
         redeemActivated[msg.sender][outcome][conditionalTokenId] = true;
-        userUsedRedeem[msg.sender] = true;
+        userUsedRedeem[msg.sender][conditionalTokenId] = true;
         uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, outcome);
         // _burn(msg.sender, conditionalTokenId, conditionalBalance); // Burning it would break using the same token for multiple outcomes.
         _mint(msg.sender, redeemedTokenId, collateralBalance, data);
@@ -266,8 +266,7 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     function _checkTransferAllowed(uint256 id, address from) internal view returns (bool) {
-        // FIXME: Disallow only if you redeemed this particular conditional token?
-        require(!conditionalTokens[id] || !userUsedRedeem[from], "You can't trade conditional tokens after redeem.");
+        require(!userUsedRedeem[from][id], "You can't trade conditional tokens after redeem.");
     }
 
     function _baseSafeTransferFrom(
