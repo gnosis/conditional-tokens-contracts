@@ -111,7 +111,7 @@ contract ConditionalTokensMany is ERC1155 {
         emit MarketCreated(msg.sender, marketId);
     }
 
-    function createOutcome() external {
+    function createOracle() external {
         uint64 oracleId = maxId++;
         oracleOwners[oracleId] = msg.sender;
         emit OutcomeCreated(msg.sender, oracleId);

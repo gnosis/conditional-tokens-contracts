@@ -39,9 +39,9 @@ contract("ConditionalTokensMany", function(accounts) {
         this.market1 = this.logs1[0].args.marketId;
         ({ logs: this.logs2 } = await this.conditionalTokens.createMarket());
         this.market2 = this.logs2[0].args.marketId;
-        ({ logs: this.logs3 } = await this.conditionalTokens.createOutcome());
+        ({ logs: this.logs3 } = await this.conditionalTokens.createOracle());
         this.oracleId1 = this.logs3[0].args.oracleId;
-        ({ logs: this.logs4 } = await this.conditionalTokens.createOutcome());
+        ({ logs: this.logs4 } = await this.conditionalTokens.createOracle());
         this.oracleId2 = this.logs4[0].args.oracleId;
       });
 
