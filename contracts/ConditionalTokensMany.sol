@@ -20,7 +20,6 @@ contract ConditionalTokensMany is ERC1155, IERC1155TokenReceiver {
 
     using ABDKMath64x64 for int128;
 
-    // TODO: Don't store both the donated, staked, and their sum.
     enum TokenKind { TOKEN_CONDITIONAL, TOKEN_STAKED, TOKEN_SUMMARY }
 
     uint constant INITIAL_CUSTOMER_BALANCE = 1000 * 10**18; // an arbitrarily choosen value
