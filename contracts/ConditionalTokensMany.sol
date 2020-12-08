@@ -187,7 +187,7 @@ contract ConditionalTokensMany is ERC1155 {
         emit OutcomeFinished(msg.sender);
     }
 
-    function calculateReedemAmount(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, bytes calldata data) external {
+    function calculateRedeemAmount(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, bytes calldata data) external {
         require(outcomeFinished[outcome], "too early"); // to prevent the denominator or the numerators change meantime
         if(collateralRedeemed[address(collateralToken)][market][outcome][customer]) {
             return;
