@@ -134,6 +134,8 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         emit OracleCreated(msg.sender, oracleId);
     }
 
+    // TODO: Allow stake/donate/convert to somebody other.
+
     /// Donate funds in a ERC20 token.
     /// First need to approve the contract to spend the token.
     /// Not recommended to donate after any oracle has finished, because funds may be (partially) lost.
@@ -144,8 +146,6 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         emit DonateERC20Collateral(collateralContractAddress, collateralTokenId, msg.sender, amount, data);
         collateralContractAddress.safeTransferFrom(msg.sender, address(this), collateralTokenId, amount, data); // last against reentrancy attack
     }
-
-    // TODO: Allow stake/donate/convert to somebody other.
 
     /// Stake funds in a ERC20 token.
     /// First need to approve the contract to spend the token.
