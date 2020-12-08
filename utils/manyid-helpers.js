@@ -3,8 +3,8 @@
 
 module.exports = function({ toBN, soliditySha3 }) {
   const TOKEN_CONDITIONAL = 0;
-  const TOKEN_STAKED = 1;
-  const TOKEN_SUMMARY = 2;
+  const TOKEN_DONATED = 2;
+  const TOKEN_STAKED = 2;
 
   const INITIAL_CUSTOMER_BALANCE = toBN("1000").mul(toBN("10").pow(toBN("18")));
 
@@ -13,6 +13,15 @@ module.exports = function({ toBN, soliditySha3 }) {
       { t: "uint8", v: TOKEN_CONDITIONAL },
       { t: "uint64", v: market },
       { t: "address", v: customer }
+    );
+  }
+
+  function collateralDonatedTokenId(collateralToken, market, outcome) {
+    return soliditySha3(
+      { t: "uint8", v: TOKEN_DONATED },
+      { t: "address", v: collateralToken },
+      { t: "uint64", v: market },
+      { t: "uint64", v: outcome }
     );
   }
 
@@ -25,22 +34,13 @@ module.exports = function({ toBN, soliditySha3 }) {
     );
   }
 
-  function collateralSummaryTokenId(collateralToken, market, outcome) {
-    return soliditySha3(
-      { t: "uint8", v: TOKEN_SUMMARY },
-      { t: "address", v: collateralToken },
-      { t: "uint64", v: market },
-      { t: "uint64", v: outcome }
-    );
-  }
-
   return {
     conditionalTokenId,
+    collateralDonatedTokenId,
     collateralStakedTokenId,
-    collateralSummaryTokenId,
     TOKEN_CONDITIONAL,
+    TOKEN_DONATED,
     TOKEN_STAKED,
-    TOKEN_SUMMARY,
     INITIAL_CUSTOMER_BALANCE
   };
 };
