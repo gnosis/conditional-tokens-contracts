@@ -1,3 +1,5 @@
+"strict";
+
 const { expectEvent, expectRevert } = require("openzeppelin-test-helpers");
 const { toBN } = web3.utils;
 const {
@@ -153,7 +155,7 @@ contract("ConditionalTokensMany", function(accounts) {
           }
         ];
 
-        async function testOneProduct(product) {
+        async function setupOneProduct(product) {
           for (let donor of product.donors) {
             await this.collateral.approve(
               this.conditionalTokens.address,
@@ -214,7 +216,10 @@ contract("ConditionalTokensMany", function(accounts) {
           await this.conditionalTokens.finishOutcome(outcomeInfo.outcome);
 
           // await transferSomeConditional.bind(this)(web3.utils.toWei("1.2")); // TODO: uncomment
+        }
 
+        async function redeemOneProduct(product) {
+          const outcomeInfo = outcomesInfo[product.outcome];
           let totalCollateral = toBN("0");
           for (let donor of product.donors) {
             totalCollateral = totalCollateral.add(donor.amount);
@@ -339,7 +344,10 @@ contract("ConditionalTokensMany", function(accounts) {
         // Promise.all(products.map(testOneProduct.bind(this)));
         // But let us be on reliability side:
         for (let product of products) {
-          await testOneProduct.bind(this)(product);
+          await setupOneProduct.bind(this)(product);
+        }
+        for (let product of products) {
+          await redeemOneProduct.bind(this)(product);
         }
 
         // TODO
