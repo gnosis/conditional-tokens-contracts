@@ -222,11 +222,11 @@ contract ConditionalTokensMany is ERC1155 {
         return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_CONDITIONAL), market, customer)));
     }
 
-    function _collateralStakedTokenId(IERC20 collateralToken, uint64 market, uint64 outcome) internal pure returns (uint256) {
+    function _collateralDonatedTokenId(IERC20 collateralToken, uint64 market, uint64 outcome) internal pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_DONATED), collateralToken, market, outcome)));
     }
 
-    function _collateralDonatedTokenId(IERC20 collateralToken, uint64 market, uint64 outcome) internal pure returns (uint256) {
+    function _collateralStakedTokenId(IERC20 collateralToken, uint64 market, uint64 outcome) internal pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_STAKED), collateralToken, market, outcome)));
     }
 
