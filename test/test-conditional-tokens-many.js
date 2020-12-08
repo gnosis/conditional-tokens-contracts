@@ -40,9 +40,9 @@ contract("ConditionalTokensMany", function(accounts) {
         ({ logs: this.logs2 } = await this.conditionalTokens.createMarket());
         this.market2 = this.logs2[0].args.marketId;
         ({ logs: this.logs3 } = await this.conditionalTokens.createOutcome());
-        this.outcome1 = this.logs3[0].args.outcomeId;
+        this.oracleId1 = this.logs3[0].args.oracleId;
         ({ logs: this.logs4 } = await this.conditionalTokens.createOutcome());
-        this.outcome2 = this.logs4[0].args.outcomeId;
+        this.oracleId2 = this.logs4[0].args.oracleId;
       });
 
       it("should emit a MarketCreated event", function() {
@@ -88,13 +88,13 @@ contract("ConditionalTokensMany", function(accounts) {
 
       it("checking the math", async function() {
         const customers = [customer1, customer2];
-        const outcomesInfo = [
+        const oracleIdsInfo = [
           {
-            outcome: this.outcome1,
+            oracleId: this.oracleId1,
             numerators: [{ numerator: toBN("45") }, { numerator: toBN("60") }]
           },
           {
-            outcome: this.outcome2,
+            oracleId: this.oracleId2,
             numerators: [{ numerator: toBN("33") }, { numerator: toBN("90") }]
           }
         ];
@@ -103,7 +103,7 @@ contract("ConditionalTokensMany", function(accounts) {
         const products = [
           {
             market: this.market1,
-            outcome: 0,
+            oracleId: 0,
             donors: [
               { account: donor1, amount: toBN("10000000000") },
               { account: donor2, amount: toBN("1000000000000") }
@@ -116,7 +116,7 @@ contract("ConditionalTokensMany", function(accounts) {
           },
           {
             market: this.market1,
-            outcome: 1,
+            oracleId: 1,
             donors: [
               { account: donor1, amount: toBN("20000000000") },
               { account: donor2, amount: toBN("2000000000000") }
@@ -129,7 +129,7 @@ contract("ConditionalTokensMany", function(accounts) {
           },
           {
             market: this.market2,
-            outcome: 0,
+            oracleId: 0,
             donors: [
               { account: donor1, amount: toBN("50000000000") },
               { account: donor2, amount: toBN("5000000000000") }
@@ -142,7 +142,7 @@ contract("ConditionalTokensMany", function(accounts) {
           },
           {
             market: this.market2,
-            outcome: 1,
+            oracleId: 1,
             donors: [
               { account: donor1, amount: toBN("70000000000") },
               { account: donor2, amount: toBN("7000000000000") }
@@ -162,11 +162,11 @@ contract("ConditionalTokensMany", function(accounts) {
               "1000000000000000" /* a big number */,
               { from: donor.account }
             );
-            const outcomeInfo = outcomesInfo[product.outcome];
+            const oracleIdInfo = oracleIdsInfo[product.oracleId];
             await this.conditionalTokens.donate(
               this.collateral.address,
               product.market,
-              outcomeInfo.outcome,
+              oracleIdInfo.oracleId,
               donor.amount,
               [],
               { from: donor.account }
@@ -178,11 +178,11 @@ contract("ConditionalTokensMany", function(accounts) {
               "1000000000000000" /* a big number */,
               { from: staker.account }
             );
-            const outcomeInfo = outcomesInfo[product.outcome];
+            const oracleIdInfo = oracleIdsInfo[product.oracleId];
             await this.conditionalTokens.stakeCollateral(
               this.collateral.address,
               product.market,
-              outcomeInfo.outcome,
+              oracleIdInfo.oracleId,
               staker.amount,
               [],
               { from: staker.account }
@@ -205,21 +205,21 @@ contract("ConditionalTokensMany", function(accounts) {
 
           await transferSomeConditional.bind(this)(web3.utils.toWei("2.3"));
 
-          const outcomeInfo = outcomesInfo[product.outcome];
-          for (let i in outcomeInfo.numerators) {
+          const oracleIdInfo = oracleIdsInfo[product.oracleId];
+          for (let i in oracleIdInfo.numerators) {
             await this.conditionalTokens.reportNumerator(
-              outcomeInfo.outcome,
+              oracleIdInfo.oracleId,
               customers[i],
-              outcomeInfo.numerators[i].numerator
+              oracleIdInfo.numerators[i].numerator
             );
           }
-          await this.conditionalTokens.finishOutcome(outcomeInfo.outcome);
+          await this.conditionalTokens.finishOutcome(oracleIdInfo.oracleId);
 
           await transferSomeConditional.bind(this)(web3.utils.toWei("1.2"));
         }
 
         async function redeemOneProduct(product) {
-          const outcomeInfo = outcomesInfo[product.outcome];
+          const oracleIdInfo = oracleIdsInfo[product.oracleId];
           let totalCollateral = toBN("0");
           for (let donor of product.donors) {
             totalCollateral = totalCollateral.add(donor.amount);
@@ -228,26 +228,28 @@ contract("ConditionalTokensMany", function(accounts) {
             totalCollateral = totalCollateral.add(staker.amount);
           }
           let denominator = toBN("0");
-          for (let n of outcomeInfo.numerators) {
+          for (let n of oracleIdInfo.numerators) {
             denominator = denominator.add(n.numerator);
           }
           (
-            await this.conditionalTokens.payoutDenominator(outcomeInfo.outcome)
+            await this.conditionalTokens.payoutDenominator(
+              oracleIdInfo.oracleId
+            )
           ).should.be.bignumber.equal(denominator);
           for (let customer of product.customers) {
-            const outcomeInfo = outcomesInfo[product.outcome];
+            const oracleIdInfo = oracleIdsInfo[product.oracleId];
             const account = customers[customer.account];
             const initialCollateralBalance = await this.conditionalTokens.initialCollateralBalanceOf(
               this.collateral.address,
               product.market,
-              outcomeInfo.outcome,
+              oracleIdInfo.oracleId,
               account,
               account
             );
             initialCollateralBalance
               .sub(
                 totalCollateral
-                  .mul(outcomeInfo.numerators[customer.account].numerator)
+                  .mul(oracleIdInfo.numerators[customer.account].numerator)
                   .mul(
                     await this.conditionalTokens.balanceOf(
                       account,
@@ -265,7 +267,7 @@ contract("ConditionalTokensMany", function(accounts) {
             await this.conditionalTokens.activateRedeem(
               this.collateral.address,
               product.market,
-              outcomeInfo.outcome,
+              oracleIdInfo.oracleId,
               account,
               [],
               { from: account }
@@ -274,7 +276,7 @@ contract("ConditionalTokensMany", function(accounts) {
               this.conditionalTokens.activateRedeem(
                 this.collateral.address,
                 product.market,
-                outcomeInfo.outcome,
+                oracleIdInfo.oracleId,
                 account,
                 [],
                 { from: account }
@@ -290,7 +292,7 @@ contract("ConditionalTokensMany", function(accounts) {
               await this.conditionalTokens.withdrawCollateral(
                 this.collateral.address,
                 product.market,
-                outcomeInfo.outcome,
+                oracleIdInfo.oracleId,
                 account,
                 halfBalance,
                 { from: account }
@@ -305,7 +307,7 @@ contract("ConditionalTokensMany", function(accounts) {
               await this.conditionalTokens.withdrawCollateral(
                 this.collateral.address,
                 product.market,
-                outcomeInfo.outcome,
+                oracleIdInfo.oracleId,
                 account,
                 halfBalance,
                 { from: account }
@@ -320,7 +322,7 @@ contract("ConditionalTokensMany", function(accounts) {
               collateralRedeemedTokenId(
                 this.collateral.address,
                 product.market,
-                outcomeInfo.outcome
+                oracleIdInfo.oracleId
               )
             );
             remainingCollateralBalance.should.be.bignumber.below("2");
@@ -329,7 +331,7 @@ contract("ConditionalTokensMany", function(accounts) {
               this.conditionalTokens.withdrawCollateral(
                 this.collateral.address,
                 product.market,
-                outcomeInfo.outcome,
+                oracleIdInfo.oracleId,
                 account,
                 halfBalance,
                 { from: account }
