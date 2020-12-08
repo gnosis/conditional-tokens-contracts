@@ -16,7 +16,6 @@ import { ERC1155 } from "./ERC1155/ERC1155.sol";
 contract ConditionalTokensMany is ERC1155 {
     // TODO: ERC-1155 collateral.
     // TODO: Getters.
-    // TODO: Correct doc comments.
 
     using ABDKMath64x64 for int128;
 
