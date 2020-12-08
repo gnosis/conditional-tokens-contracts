@@ -50,22 +50,14 @@ contract ConditionalTokensMany is ERC1155 {
         bytes data
     );
 
-    event ReportedDenominator(
-        uint64 indexed outcomeId,
-        address indexed oracle, // TODO: not needed
-        uint256 denominator
-    );
-
     event ReportedNumerator(
         uint64 indexed outcomeId,
-        address indexed oracle, // TODO: not needed
         address customer,
         uint256 numerator
     );
 
     event ReportedNumeratorsBatch(
         uint64 indexed outcomeId,
-        address indexed oracle, // TODO: not needed
         address[] addresses,
         uint256[] numerators
     );
@@ -164,7 +156,7 @@ contract ConditionalTokensMany is ERC1155 {
     {
         payoutDenominator[outcomeId] = payoutDenominator[outcomeId].add(numerator).sub(payoutNumerators[outcomeId][customer]);
         payoutNumerators[outcomeId][customer] = numerator;
-        emit ReportedNumerator(outcomeId, msg.sender, customer, numerator);
+        emit ReportedNumerator(outcomeId, customer, numerator);
     }
 
     /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
@@ -178,7 +170,7 @@ contract ConditionalTokensMany is ERC1155 {
             payoutNumerators[outcomeId][customer] = numerator;
             payoutDenominator[outcomeId] += numerator;
         }
-        emit ReportedNumeratorsBatch(outcomeId, msg.sender, addresses, numerators);
+        emit ReportedNumeratorsBatch(outcomeId, addresses, numerators);
     }
 
     function finishOutcome(uint64 outcomeId) external
