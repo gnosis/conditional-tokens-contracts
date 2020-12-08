@@ -294,6 +294,11 @@ contract("ConditionalTokensMany", function(accounts) {
               halfBalance,
               { from: account }
             );
+            // TODO
+            // (await this.collateral.balanceOf(account))
+            //   .sub(halfBalance)
+            //   .abs()
+            //   .should.be.bignumber.below("2");
             await this.conditionalTokens.withdrawCollateral(
               this.collateral.address,
               product.market,

@@ -188,7 +188,7 @@ contract ConditionalTokensMany is ERC1155 {
         (uint256 conditionalBalance, uint256 collateralBalance) =
             _collateralBalanceOf(collateralToken, market, outcome, msg.sender, tokenCustomer);
         uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, outcome);
-        uint256 conditionalTokenId = _conditionalTokenId(market, msg.sender); // TODO: calculates the same in _collateralBalanceOf
+        uint256 conditionalTokenId = _conditionalTokenId(market, tokenCustomer); // TODO: calculates the same in _collateralBalanceOf
         _burn(msg.sender, conditionalTokenId, conditionalBalance);
         _mint(msg.sender, redeemedTokenId, collateralBalance, data);
         emit RedeemCalculated(msg.sender, collateralToken, market, outcome, collateralBalance); // TODO: Also return conditionalBalance?
@@ -212,6 +212,7 @@ contract ConditionalTokensMany is ERC1155 {
         uint256 numerator = payoutNumerators[outcome][tokenCustomer];
         uint256 denominator = payoutDenominator[outcome];
         conditonalBalance = balanceOf(customer, _conditionalTokenId(market, tokenCustomer));
+        require(conditonalBalance == INITIAL_CUSTOMER_BALANCE, "conditonalBalance == INITIAL_CUSTOMER_BALANCE"); // FIXME: remove
         uint256 collateralTotalBalance = collateralTotals[address(collateralToken)][market][outcome];
         // Rounded to below for no out-of-funds:
         int128 marketShare = ABDKMath64x64.divu(conditonalBalance, marketTotalBalances[market]);
