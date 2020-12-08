@@ -96,6 +96,10 @@ contract ConditionalTokensMany is ERC1155 {
     mapping(uint256 => bool) public conditionalTokens;
     /// Total collaterals per market and outcome: collateral => (market => (outcome => total))
     mapping(address => mapping(uint64 => mapping(uint64 => uint256))) public collateralTotals; // TODO: hash instead?
+    /// If a given conditional was already redeemed.
+    mapping(address => mapping(uint256 => bool)) public redeemActivated;
+    /// The user lost the right to transfer conditional tokens.
+    mapping(address => bool) public userUsedRedeem;
 
     /// Register ourselves as an oracle for a new market.
     function createMarket() external {
@@ -182,11 +186,13 @@ contract ConditionalTokensMany is ERC1155 {
 
     function activateRedeem(IERC20 collateralToken, uint64 market, uint64 outcome, address tokenCustomer, bytes calldata data) external {
         require(outcomeFinished[outcome], "too early"); // to prevent the denominator or the numerators change meantime
-        (uint256 conditionalBalance, uint256 collateralBalance) =
-            _collateralBalanceOf(collateralToken, market, outcome, msg.sender, tokenCustomer);
-        uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, outcome);
+        uint256 collateralBalance = _collateralBalanceOf(collateralToken, market, outcome, msg.sender, tokenCustomer);
         uint256 conditionalTokenId = _conditionalTokenId(market, tokenCustomer); // TODO: calculates the same in _collateralBalanceOf
-        _burn(msg.sender, conditionalTokenId, conditionalBalance); // FIXME: burns again for different outcomes
+        require(!redeemActivated[msg.sender][conditionalTokenId]);
+        redeemActivated[msg.sender][conditionalTokenId] = true;
+        userUsedRedeem[msg.sender] = true;
+        uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, outcome);
+        // _burn(msg.sender, conditionalTokenId, conditionalBalance); // Burning it would break using the same token for multiple outcomes.
         _mint(msg.sender, redeemedTokenId, collateralBalance, data);
         emit RedeemCalculated(msg.sender, collateralToken, market, outcome, collateralBalance); // TODO: Also return conditionalBalance?
     }
@@ -199,21 +205,50 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     function collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, address tokenCustomer) external view returns (uint256) {
-        (, uint256 collateralBalance) = _collateralBalanceOf(collateralToken, market, outcome, customer, tokenCustomer);
-        return collateralBalance;
+        return _collateralBalanceOf(collateralToken, market, outcome, customer, tokenCustomer);
+    }
+
+    // Disallow transfers of conditional tokens after redeem to prevent "gathering" them before redeeming each outcome.
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        uint256 value,
+        bytes calldata data
+    )
+        external
+    {
+        _checkTransferAllowed(id, from);
+        _baseSafeTransferFrom(from, to, id, value, data);
+    }
+
+    // Disallow transfers of conditional tokens after redeem to prevent "gathering" them before redeeming each outcome.
+    function safeBatchTransferFrom(
+        address from,
+        address to,
+        uint256[] calldata ids,
+        uint256[] calldata values,
+        bytes calldata data
+    )
+        external
+    {
+        for(uint i = 0; i < ids.length; ++i) {
+            _checkTransferAllowed(ids[i], from);
+        }
+        _baseSafeBatchTransferFrom(from, to, ids, values, data);
     }
 
     function _collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, address tokenCustomer) internal view
-        returns (uint256 conditonalBalance, uint256 collateralBalance)
+        returns (uint256)
     {
         uint256 numerator = payoutNumerators[outcome][tokenCustomer];
         uint256 denominator = payoutDenominator[outcome];
-        conditonalBalance = balanceOf(customer, _conditionalTokenId(market, tokenCustomer));
+        uint256 conditonalBalance = balanceOf(customer, _conditionalTokenId(market, tokenCustomer));
         uint256 collateralTotalBalance = collateralTotals[address(collateralToken)][market][outcome];
         // Rounded to below for no out-of-funds:
         int128 marketShare = ABDKMath64x64.divu(conditonalBalance, INITIAL_CUSTOMER_BALANCE);
         int128 rewardShare = ABDKMath64x64.divu(numerator, denominator);
-        collateralBalance = marketShare.mul(rewardShare).mulu(collateralTotalBalance);
+        return marketShare.mul(rewardShare).mulu(collateralTotalBalance);
     }
 
     function _conditionalTokenId(uint64 market, address tokenCustomer) private pure returns (uint256) {
@@ -236,6 +271,63 @@ contract ConditionalTokensMany is ERC1155 {
         require(collateralToken.transferFrom(msg.sender, address(this), amount), "cannot transfer");
         collateralTotals[address(collateralToken)][market][outcome] =
             collateralTotals[address(collateralToken)][market][outcome].add(amount);
+    }
+
+    function _checkTransferAllowed(uint256 id, address from) internal view returns (bool) {
+        // FIXME: Disallow only if you redeemed this particular conditional token?
+        require(!conditionalTokens[id] || !userUsedRedeem[from], "You can't trade conditional tokens after redeem.");
+    }
+
+    function _baseSafeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        uint256 value,
+        bytes memory data
+    )
+        private
+    {
+        require(to != address(0), "ERC1155: target address must be non-zero");
+        require(
+            from == msg.sender || _operatorApprovals[from][msg.sender] == true,
+            "ERC1155: need operator approval for 3rd party transfers."
+        );
+
+        _balances[id][from] = _balances[id][from].sub(value);
+        _balances[id][to] = value.add(_balances[id][to]);
+
+        emit TransferSingle(msg.sender, from, to, id, value);
+
+        _doSafeTransferAcceptanceCheck(msg.sender, from, to, id, value, data);
+    }
+
+    function _baseSafeBatchTransferFrom(
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory values,
+        bytes memory data
+    )
+        private
+    {
+        require(ids.length == values.length, "ERC1155: IDs and values must have same lengths");
+        require(to != address(0), "ERC1155: target address must be non-zero");
+        require(
+            from == msg.sender || _operatorApprovals[from][msg.sender] == true,
+            "ERC1155: need operator approval for 3rd party transfers."
+        );
+
+        for (uint256 i = 0; i < ids.length; ++i) {
+            uint256 id = ids[i];
+            uint256 value = values[i];
+
+            _balances[id][from] = _balances[id][from].sub(value);
+            _balances[id][to] = value.add(_balances[id][to]);
+        }
+
+        emit TransferBatch(msg.sender, from, to, ids, values);
+
+        _doSafeBatchTransferAcceptanceCheck(msg.sender, from, to, ids, values, data);
     }
 
     modifier _isOracle(uint64 outcomeId) {

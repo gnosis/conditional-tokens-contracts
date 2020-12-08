@@ -1,6 +1,9 @@
 const { expectEvent, expectRevert } = require("openzeppelin-test-helpers");
 const { toBN } = web3.utils;
-const { INITIAL_CUSTOMER_BALANCE, conditionalTokenId } = require("../utils/manyid-helpers")(web3.utils);
+const {
+  INITIAL_CUSTOMER_BALANCE,
+  conditionalTokenId
+} = require("../utils/manyid-helpers")(web3.utils);
 
 const ConditionalTokensMany = artifacts.require("ConditionalTokensMany");
 const ERC20Mintable = artifacts.require("MockCoin");
@@ -235,13 +238,6 @@ contract("ConditionalTokensMany", function(accounts) {
               account,
               account
             );
-            console.log("AAA", [
-              this.collateral.address,
-              product.market.toString(),
-              outcomeInfo.outcome.toString(),
-              account
-            ]);
-            console.log("collateralBalance", collateralBalance.toString());
             collateralBalance
               .sub(
                 totalCollateral
@@ -253,9 +249,7 @@ contract("ConditionalTokensMany", function(accounts) {
                     )
                   )
                   .div(denominator)
-                  .div(
-                    INITIAL_CUSTOMER_BALANCE
-                  )
+                  .div(INITIAL_CUSTOMER_BALANCE)
               )
               .abs()
               .should.be.bignumber.below(toBN("2"));
@@ -270,20 +264,17 @@ contract("ConditionalTokensMany", function(accounts) {
               [],
               { from: account }
             );
-            await this.conditionalTokens.activateRedeem(
-              this.collateral.address,
-              product.market,
-              outcomeInfo.outcome,
-              account,
-              [],
-              { from: account }
+            await expectRevert(
+              this.conditionalTokens.activateRedeem(
+                this.collateral.address,
+                product.market,
+                outcomeInfo.outcome,
+                account,
+                [],
+                { from: account }
+              )
             );
             const halfBalance = collateralBalance.div(toBN("2"));
-            console.log(
-              "XXX",
-              collateralBalance.toString(),
-              halfBalance.toString()
-            );
             await this.conditionalTokens.withdrawCollateral(
               this.collateral.address,
               product.market,

@@ -19,10 +19,10 @@ contract ERC1155 is ERC165, IERC1155
     using Address for address;
 
     // Mapping from token ID to owner balances
-    mapping (uint256 => mapping(address => uint256)) private _balances;
+    mapping (uint256 => mapping(address => uint256)) internal _balances;
 
     // Mapping from owner to operator approvals
-    mapping (address => mapping(address => bool)) private _operatorApprovals;
+    mapping (address => mapping(address => bool)) internal _operatorApprovals;
 
     constructor()
         public
