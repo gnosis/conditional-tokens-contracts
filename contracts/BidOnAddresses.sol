@@ -69,7 +69,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
     event OracleFinished(address indexed oracleOwner);
 
     event RedeemCalculated(
-        address customer,
+        address user,
         IERC1155 collateralContractAddress,
         uint256 collateralTokenId,
         uint64 indexed marketId,
@@ -83,7 +83,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         uint256 collateralTokenId,
         uint64 marketId,
         uint64 oracleId,
-        address customer,
+        address user,
         uint256 amount
     );
     
@@ -211,8 +211,8 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
     /// Calculate the collateral balance corresponding to the current conditonal token `condition` state and
     /// current numerators.
     /// This function can be called before oracle is finished, but that's not recommended.
-    function initialCollateralBalanceOf(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, address customer, address condition) external view returns (uint256) {
-        return _initialCollateralBalanceOf(collateralContractAddress, collateralTokenId, marketId, oracleId, customer, condition);
+    function initialCollateralBalanceOf(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, address user, address condition) external view returns (uint256) {
+        return _initialCollateralBalanceOf(collateralContractAddress, collateralTokenId, marketId, oracleId, user, condition);
     }
 
     /// Disallow transfers of conditional tokens after redeem to prevent "gathering" them before redeeming each oracle.
@@ -290,12 +290,12 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
 
     // Internal //
 
-    function _initialCollateralBalanceOf(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, address customer, address condition) internal view
+    function _initialCollateralBalanceOf(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, address user, address condition) internal view
         returns (uint256)
     {
         uint256 numerator = payoutNumeratorsMap[oracleId][condition];
         uint256 denominator = payoutDenominatorMap[oracleId];
-        uint256 conditonalBalance = balanceOf(customer, _conditionalTokenId(marketId, condition));
+        uint256 conditonalBalance = balanceOf(user, _conditionalTokenId(marketId, condition));
         uint ourCollateralTokenId = _collateralSummaryTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         uint256 collateralTotalBalance = collateralTotalsMap[ourCollateralTokenId];
         // Rounded to below for no out-of-funds:
