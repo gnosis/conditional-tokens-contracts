@@ -19,7 +19,7 @@ contract ConditionalTokensMany is ERC1155 {
 
     using ABDKMath64x64 for int128;
 
-    enum CollateralKind { TOKEN_CONDITIONAL, TOKEN_DONATED, TOKEN_STAKED }
+    enum TokenKInd { TOKEN_CONDITIONAL, TOKEN_DONATED, TOKEN_STAKED }
 
     uint constant INITIAL_CUSTOMER_BALANCE = 1000 * 10**18; // an arbitrarily choosen value
 
@@ -249,15 +249,15 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     function _conditionalTokenId(uint64 marketId, address condition) private pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_CONDITIONAL), marketId, condition)));
+        return uint256(keccak256(abi.encodePacked(uint8(TokenKInd.TOKEN_CONDITIONAL), marketId, condition)));
     }
 
     function _collateralDonatedTokenId(IERC20 collateralToken, uint64 marketId, uint64 oracleId) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_DONATED), collateralToken, marketId, oracleId)));
+        return uint256(keccak256(abi.encodePacked(uint8(TokenKInd.TOKEN_DONATED), collateralToken, marketId, oracleId)));
     }
 
     function _collateralStakedTokenId(IERC20 collateralToken, uint64 marketId, uint64 oracleId) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_STAKED), collateralToken, marketId, oracleId)));
+        return uint256(keccak256(abi.encodePacked(uint8(TokenKInd.TOKEN_STAKED), collateralToken, marketId, oracleId)));
     }
 
     function _collateralIn(IERC20 collateralToken, uint64 marketId, uint64 oracleId, uint256 amount) private {
