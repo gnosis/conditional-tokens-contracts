@@ -15,7 +15,7 @@ contract ConditionalTokensMany is ERC1155 {
 
     using ABDKMath64x64 for int128;
 
-    enum CollateralKind { TOKEN_CONDITIONAL, TOKEN_DONATED, TOKEN_STAKED }
+    enum CollateralKind { TOKEN_CONDITIONAL, TOKEN_DONATED, TOKEN_STAKED, TOKEN_REDEEMED }
 
     uint constant INITIAL_CUSTOMER_BALANCE = 1000 * 10**18; // an arbitrarily choosen value
 
@@ -187,19 +187,22 @@ contract ConditionalTokensMany is ERC1155 {
         emit OutcomeFinished(msg.sender);
     }
 
-    // TODO: Make it a ERC-1155 token balance? // TODO: Rename the function.
-    function redeemPosition(IERC20 collateralToken, uint64 market, uint64 outcome, address customer) external {
+    function calculateReedemAmount(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, bytes calldata data) external {
         require(outcomeFinished[outcome], "too early"); // to prevent the denominator or the numerators change meantime
-        require(!collateralRedeemed[address(collateralToken)][market][outcome][customer]);
+        if(collateralRedeemed[address(collateralToken)][market][outcome][customer]) {
+            return;
+        }
         uint256 amount = _collateralBalanceOf(collateralToken, market, outcome, customer);
-        collateralBalances[address(collateralToken)][market][outcome][customer] = amount;
+        uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, outcome);
+        _mint(customer, redeemedTokenId, amount, data);
         collateralRedeemed[address(collateralToken)][market][outcome][customer] = true;
         // emit PayoutRedemption(msg.sender, collateralToken, market, outcome, customer, amount); // FIXME
     }
 
     function withdrawCollateral(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, uint256 amount) external {
-        collateralBalances[address(collateralToken)][market][outcome][customer] =
-            collateralBalances[address(collateralToken)][market][outcome][customer].sub(amount);
+        uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, outcome);
+        _burn(customer, redeemedTokenId, amount);
+        // FIXME: Emit.
         collateralToken.transfer(customer, amount); // last to prevent reentrancy attack
     }
 
@@ -229,6 +232,10 @@ contract ConditionalTokensMany is ERC1155 {
 
     function _collateralDonatedTokenId(IERC20 collateralToken, uint64 market, uint64 outcome) internal pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_STAKED), collateralToken, market, outcome)));
+    }
+
+    function _collateralRedeemedTokenId(IERC20 collateralToken, uint64 market, uint64 outcome) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_REDEEMED), collateralToken, market, outcome)));
     }
 
     function _collateralIn(IERC20 collateralToken, uint64 market, uint64 outcome, uint256 amount) private {
