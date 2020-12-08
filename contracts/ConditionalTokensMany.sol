@@ -188,6 +188,7 @@ contract ConditionalTokensMany is ERC1155 {
         (uint256 conditionalBalance, uint256 collateralBalance) =
             _collateralBalanceOf(collateralToken, market, outcome, msg.sender);
         uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, outcome);
+        // FIXME: Activate redeem for others' tokens
         uint256 conditionalTokenId = _conditionalTokenId(market, msg.sender); // TODO: calculates the same in _collateralBalanceOf
         _burn(msg.sender, conditionalTokenId, conditionalBalance);
         _mint(msg.sender, redeemedTokenId, collateralBalance, data);
