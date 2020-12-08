@@ -8,7 +8,7 @@ const {
 } = require("../utils/manyid-helpers")(web3.utils);
 
 const ConditionalTokensMany = artifacts.require("ConditionalTokensMany");
-const ERC20Mintable = artifacts.require("MockCoin");
+const ERC1155Mintable = artifacts.require("ERC1155Mock");
 
 contract("ConditionalTokensMany", function(accounts) {
   const [
@@ -23,11 +23,32 @@ contract("ConditionalTokensMany", function(accounts) {
 
   beforeEach("initiate token contracts", async function() {
     this.conditionalTokens = await ConditionalTokensMany.new();
-    this.collateral = await ERC20Mintable.new(); // TODO: Check multiple collaterals
-    this.collateral.mint(donor1, "1000000000000000000000");
-    this.collateral.mint(donor2, "1000000000000000000000");
-    this.collateral.mint(staker1, "1000000000000000000000");
-    this.collateral.mint(staker2, "1000000000000000000000");
+    this.collateralContract = await ERC1155Mintable.new(); // TODO: Check multiple collaterals
+    this.collateralTokenId = 123; // arbitrary
+    this.collateralContract.mint(
+      donor1,
+      this.collateralTokenId,
+      "1000000000000000000000",
+      []
+    );
+    this.collateralContract.mint(
+      donor2,
+      this.collateralTokenId,
+      "1000000000000000000000",
+      []
+    );
+    this.collateralContract.mint(
+      staker1,
+      this.collateralTokenId,
+      "1000000000000000000000",
+      []
+    );
+    this.collateralContract.mint(
+      staker2,
+      this.collateralTokenId,
+      "1000000000000000000000",
+      []
+    );
   });
 
   describe("createMarket", function() {
@@ -151,14 +172,15 @@ contract("ConditionalTokensMany", function(accounts) {
 
         async function setupOneProduct(product) {
           for (let donor of product.donors) {
-            await this.collateral.approve(
+            await this.collateralContract.setApprovalForAll(
               this.conditionalTokens.address,
-              "1000000000000000" /* a big number */,
+              true,
               { from: donor.account }
             );
             const oracleIdInfo = oracleIdsInfo[product.oracleId];
             await this.conditionalTokens.donate(
-              this.collateral.address,
+              this.collateralContract.address,
+              this.collateralTokenId,
               product.marketId,
               oracleIdInfo.oracleId,
               donor.amount,
@@ -167,14 +189,15 @@ contract("ConditionalTokensMany", function(accounts) {
             );
           }
           for (let staker of product.stakers) {
-            await this.collateral.approve(
+            await this.collateralContract.setApprovalForAll(
               this.conditionalTokens.address,
-              "1000000000000000" /* a big number */,
+              true,
               { from: staker.account }
             );
             const oracleIdInfo = oracleIdsInfo[product.oracleId];
             await this.conditionalTokens.stakeCollateral(
-              this.collateral.address,
+              this.collateralContract.address,
+              this.collateralTokenId,
               product.marketId,
               oracleIdInfo.oracleId,
               staker.amount,
@@ -234,7 +257,8 @@ contract("ConditionalTokensMany", function(accounts) {
             const oracleIdInfo = oracleIdsInfo[product.oracleId];
             const account = customers[customer.account];
             const initialCollateralBalance = await this.conditionalTokens.initialCollateralBalanceOf(
-              this.collateral.address,
+              this.collateralContract.address,
+              this.collateralTokenId,
               product.marketId,
               oracleIdInfo.oracleId,
               account,
@@ -257,28 +281,38 @@ contract("ConditionalTokensMany", function(accounts) {
               .should.be.bignumber.below(toBN("2"));
 
             // TODO: Redeem somebody other's token.
-            const oldBalance = await this.collateral.balanceOf(account);
+            const oldBalance = await this.collateralContract.balanceOf(
+              account,
+              this.collateralTokenId
+            );
             await this.conditionalTokens.withdrawCollateral(
-              this.collateral.address,
+              this.collateralContract.address,
+              this.collateralTokenId,
               product.marketId,
               oracleIdInfo.oracleId,
               account,
               account,
+              [],
               { from: account }
             );
 
-            const newBalance = await this.collateral.balanceOf(account);
+            const newBalance = await this.collateralContract.balanceOf(
+              account,
+              this.collateralTokenId
+            );
             newBalance
               .sub(oldBalance)
               .should.be.bignumber.equal(initialCollateralBalance);
 
             await expectRevert(
               this.conditionalTokens.withdrawCollateral(
-                this.collateral.address,
+                this.collateralContract.address,
+                this.collateralTokenId,
                 product.marketId,
                 oracleIdInfo.oracleId,
                 account,
                 account,
+                [],
                 { from: account }
               ),
               "Already redeemed."
