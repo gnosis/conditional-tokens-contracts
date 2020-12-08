@@ -147,7 +147,7 @@ contract ConditionalTokensMany is ERC1155 {
         emit TakeBackERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
-    /// Anyone can register himself. Usually a customer registers himself or else an oracleOwner may register him.
+    /// Anyone can register himself.
     /// Can be called both before or after the oracle finish. However registering after the finish is useless.
     function registerCustomer(uint64 market, address customer, bytes calldata data) external {
         uint256 conditionalTokenId = _conditionalTokenId(market, customer);
@@ -176,13 +176,18 @@ contract ConditionalTokensMany is ERC1155 {
         emit ReportedNumeratorsBatch(oracleId, addresses, numerators);
     }
 
-    function finishOutcome(uint64 oracleId) external
+    /// Need to be called after all numerators were reported.
+    function finishOracle(uint64 oracleId) external
         _isOracle(oracleId)
     {
         oracleFinished[oracleId] = true;
         emit OutcomeFinished(msg.sender);
     }
 
+    /// Mints to `msg.sender` the token `_collateralRedeemedTokenId(collateralToken, market, oracleId)`
+    /// accordingly to the score of `tokenCustomer` in the market by the oracle.
+    /// After this function is called, it becomes impossible to transfer the corresponding conditional token of `msg.sender`
+    /// (to prevent its repeated activation).
     function activateRedeem(IERC20 collateralToken, uint64 market, uint64 oracleId, address tokenCustomer, bytes calldata data) external {
         require(oracleFinished[oracleId], "too early"); // to prevent the denominator or the numerators change meantime
         uint256 collateralBalance = _initialCollateralBalanceOf(collateralToken, market, oracleId, msg.sender, tokenCustomer);
@@ -196,6 +201,7 @@ contract ConditionalTokensMany is ERC1155 {
         emit RedeemCalculated(msg.sender, collateralToken, market, oracleId, tokenCustomer, collateralBalance);
     }
 
+    /// Withdraw previously activated collateral to the ERC-20 token.
     function withdrawCollateral(IERC20 collateralToken, uint64 market, uint64 oracleId, address customer, uint256 amount) external {
         uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, oracleId);
         _burn(msg.sender, redeemedTokenId, amount);
@@ -203,11 +209,14 @@ contract ConditionalTokensMany is ERC1155 {
         collateralToken.transfer(customer, amount); // last to prevent reentrancy attack
     }
 
+    /// Calculate the collateral balance corresponding to the current conditonal token `tokenCustomer` state and
+    /// current numerators.
+    /// This function can be called before oracle is finished, but that's not recommended.
     function initialCollateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 oracleId, address customer, address tokenCustomer) external view returns (uint256) {
         return _initialCollateralBalanceOf(collateralToken, market, oracleId, customer, tokenCustomer);
     }
 
-    // Disallow transfers of conditional tokens after redeem to prevent "gathering" them before redeeming each oracleId.
+    /// Disallow transfers of conditional tokens after redeem to prevent "gathering" them before redeeming each oracle.
     function safeTransferFrom(
         address from,
         address to,
@@ -221,7 +230,7 @@ contract ConditionalTokensMany is ERC1155 {
         _baseSafeTransferFrom(from, to, id, value, data);
     }
 
-    // Disallow transfers of conditional tokens after redeem to prevent "gathering" them before redeeming each oracleId.
+    /// Disallow transfers of conditional tokens after redeem to prevent "gathering" them before redeeming each oracle.
     function safeBatchTransferFrom(
         address from,
         address to,

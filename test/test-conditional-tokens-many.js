@@ -213,7 +213,7 @@ contract("ConditionalTokensMany", function(accounts) {
               oracleIdInfo.numerators[i].numerator
             );
           }
-          await this.conditionalTokens.finishOutcome(oracleIdInfo.oracleId);
+          await this.conditionalTokens.finishOracle(oracleIdInfo.oracleId);
 
           await transferSomeConditional.bind(this)(web3.utils.toWei("1.2"));
         }
