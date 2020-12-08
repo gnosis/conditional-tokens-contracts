@@ -68,23 +68,13 @@ contract("ConditionalTokensMany", function(accounts) {
       });
 
       it("should not be able to register the same customer more than once for the same marketId", async function() {
-        await this.conditionalTokens.registerCustomer(
-          this.marketId1,
-          customer1,
-          [],
-          {
-            from: customer1
-          }
-        );
+        await this.conditionalTokens.registerCustomer(this.marketId1, [], {
+          from: customer1
+        });
         await expectRevert(
-          this.conditionalTokens.registerCustomer(
-            this.marketId1,
-            customer1,
-            [],
-            {
-              from: customer1
-            }
-          ),
+          this.conditionalTokens.registerCustomer(this.marketId1, [], {
+            from: customer1
+          }),
           "customer already registered"
         );
         // TODO: Check that can register the same customer for different marketIds.
@@ -300,14 +290,9 @@ contract("ConditionalTokensMany", function(accounts) {
 
         for (let customer of customers) {
           for (let marketId of marketIds) {
-            await this.conditionalTokens.registerCustomer(
-              marketId,
-              customer,
-              [],
-              {
-                from: customer
-              }
-            );
+            await this.conditionalTokens.registerCustomer(marketId, [], {
+              from: customer
+            });
           }
         }
 

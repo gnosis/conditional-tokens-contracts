@@ -51,8 +51,7 @@ contract ConditionalTokensMany is ERC1155 {
     event TakeBackERC20Collateral(
         IERC20 indexed collateralToken,
         address sender,
-        uint256 amount,
-        bytes data
+        uint256 amount
     );
 
     event ReportedNumerator(
@@ -138,23 +137,23 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     /// If the oracle has not yet finished you can take funds back.
-    function takeStakeBack(IERC20 collateralToken, uint64 marketId, uint64 oracleId, uint256 amount, bytes calldata data) external {
+    function takeStakeBack(IERC20 collateralToken, uint64 marketId, uint64 oracleId, uint256 amount) external {
         require(oracleFinished[oracleId], "too late");
         uint tokenId = _collateralStakedTokenId(collateralToken, marketId, oracleId);
         collateralTotals[tokenId] = collateralTotals[tokenId].sub(amount);
         require(collateralToken.transfer(msg.sender, amount), "cannot transfer");
         _burn(msg.sender, tokenId, amount);
-        emit TakeBackERC20Collateral(collateralToken, msg.sender, amount, data);
+        emit TakeBackERC20Collateral(collateralToken, msg.sender, amount);
     }
 
     /// Anyone can register himself.
     /// Can be called both before or after the oracle finish. However registering after the finish is useless.
-    function registerCustomer(uint64 marketId, address customer, bytes calldata data) external {
-        uint256 conditionalTokenId = _conditionalTokenId(marketId, customer);
+    function registerCustomer(uint64 marketId, bytes calldata data) external {
+        uint256 conditionalTokenId = _conditionalTokenId(marketId, msg.sender);
         require(!conditionalTokens[conditionalTokenId], "customer already registered");
         conditionalTokens[conditionalTokenId] = true;
-        _mint(customer, conditionalTokenId, INITIAL_CUSTOMER_BALANCE, data);
-        emit CustomerRegistered(customer, marketId, data);
+        _mint(msg.sender, conditionalTokenId, INITIAL_CUSTOMER_BALANCE, data);
+        emit CustomerRegistered(msg.sender, marketId, data);
     }
 
     /// @dev Called by the oracle owner for reporting results of conditions.
