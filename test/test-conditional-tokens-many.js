@@ -209,6 +209,7 @@ contract("ConditionalTokensMany", function(accounts) {
 
       // TODO: Unregistered customer receives zero.
       // TODO: Send money to registered and unregistered customers.
+      // TODO: reportNumerator() called second time for the same customer.
     });
   });
 });

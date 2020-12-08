@@ -153,13 +153,11 @@ contract ConditionalTokensMany is ERC1155 {
 
     /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each outcome slot of the condition.
     // TODO: Make it a nontransferrable ERC-1155 token?
-    // FIXME: If the customer is not registered?
-    // FIXME: What if called second time for the same customer?
     function reportNumerator(uint64 outcomeId, address customer, uint256 numerator) external
         _isOracle(outcomeId)
     {
+        payoutDenominator[outcomeId] = payoutDenominator[outcomeId].add(numerator).sub(payoutNumerators[outcomeId][customer]);
         payoutNumerators[outcomeId][customer] = numerator;
-        payoutDenominator[outcomeId] += numerator;
         emit ReportedNumerator(outcomeId, msg.sender, customer, numerator);
     }
 
@@ -236,7 +234,8 @@ contract ConditionalTokensMany is ERC1155 {
 
     function _collateralIn(IERC20 collateralToken, uint64 market, uint64 outcome, uint256 amount) private {
         require(collateralToken.transferFrom(msg.sender, address(this), amount), "cannot transfer");
-        collateralTotals[address(collateralToken)][market][outcome] += amount; // FIXME: Overflow possible?
+        collateralTotals[address(collateralToken)][market][outcome] =
+            collateralTotals[address(collateralToken)][market][outcome].add(amount);
     }
 
     modifier _isOracle(uint64 outcomeId) {
