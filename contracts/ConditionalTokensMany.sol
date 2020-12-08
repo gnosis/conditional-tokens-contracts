@@ -6,7 +6,7 @@ import { CTHelpers } from "./CTHelpers.sol";
 
 /// We have four kinds of ERC-1155 token ID
 /// - a combination of market ID, collateral address, and customer address (conditional tokens);
-/// - a collateral address (donated collateral tokens)
+/// - a combination of TOKEN_DONATED and a collateral address (donated collateral tokens)
 /// - a combination of TOKEN_STAKED and collateral address (staked collateral tokens)
 /// - a store of already redeemed collateral
 contract ConditionalTokensMany is ERC1155 {
