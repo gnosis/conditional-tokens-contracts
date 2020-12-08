@@ -95,6 +95,10 @@ contract ConditionalTokensMany is ERC1155 {
     mapping(uint256 => bool) public conditionalTokens;
     /// Total collaterals per market and outcome: collateral => (market => (outcome => total))
     mapping(address => mapping(uint64 => mapping(uint64 => uint256))) collateralTotals; // TODO: hash instead?
+    /// Whetehr user's collateral were redeemed: collateral => (market => (outcome => (user => redeemed))) // TODO: new token kind instead?
+    mapping(address => mapping(uint64 => mapping(uint64 => mapping(address => bool)))) collateralRedeemed; // TODO: hash instead?
+    /// User's collaterals per market and outcome: collateral => (market => (outcome => (user => total))) // TODO: new token kind instead?
+    mapping(address => mapping(uint64 => mapping(uint64 => mapping(address => uint256)))) collateralBalances; // TODO: hash instead?
     /// Total conditional market balances
     mapping(uint64 => uint256) marketTotalBalances; // TODO: hash instead?
 
@@ -183,15 +187,22 @@ contract ConditionalTokensMany is ERC1155 {
         emit OutcomeFinished(msg.sender);
     }
 
+    // TODO: Make it a ERC-1155 token balance? // TODO: Rename the function.
     function redeemPosition(IERC20 collateralToken, uint64 market, uint64 outcome, address customer) external {
         require(outcomeFinished[outcome], "too early"); // to prevent the denominator or the numerators change meantime
+        require(!collateralRedeemed[address(collateralToken)][market][outcome][customer]);
         uint256 amount = _collateralBalanceOf(collateralToken, market, outcome, customer);
-        payoutNumerators[outcome][customer] = 0; // FIXME: damages further redeems from other markets
-        emit PayoutRedemption(msg.sender, collateralToken, market, outcome, customer, amount);
+        collateralBalances[address(collateralToken)][market][outcome][customer] = amount;
+        collateralRedeemed[address(collateralToken)][market][outcome][customer] = true;
+        // emit PayoutRedemption(msg.sender, collateralToken, market, outcome, customer, amount); // FIXME
+    }
+
+    function withdrawCollateral(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, uint256 amount) external {
+        collateralBalances[address(collateralToken)][market][outcome][customer] =
+            collateralBalances[address(collateralToken)][market][outcome][customer].sub(amount);
         collateralToken.transfer(customer, amount); // last to prevent reentrancy attack
     }
 
-    // TODO: Make it a ERC-1155 token balance?
     function collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer) external view returns (uint256) {
         return _collateralBalanceOf(collateralToken, market, outcome, customer);
     }
@@ -200,7 +211,7 @@ contract ConditionalTokensMany is ERC1155 {
     function _collateralBalanceOf(IERC20 collateralToken, uint64 market, uint64 outcome, address customer) internal view returns (uint256) {
         uint256 numerator = uint256(payoutNumerators[outcome][customer]);
         uint256 denominator = payoutDenominator[outcome];
-        uint256 customerBalance = balanceOf(customer, _conditionalTokenId(market, customer));
+        uint256 customerBalance = balanceOf(customer, _conditionalTokenId(market, customer)); // FIXME: What if it changes after finish?
         uint256 collateralBalance = collateralTotals[address(collateralToken)][market][outcome];
         // Rounded to below for no out-of-funds:
         int128 marketShare = ABDKMath64x64.divu(customerBalance, marketTotalBalances[market]);
