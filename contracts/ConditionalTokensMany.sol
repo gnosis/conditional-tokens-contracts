@@ -13,7 +13,6 @@ import { ERC1155 } from "./ERC1155/ERC1155.sol";
 /// - a combination of market ID, collateral address, and customer address (conditional tokens)
 /// - a combination of TOKEN_DONATED and a collateral address (donated collateral tokens)
 /// - a combination of TOKEN_STAKED and collateral address (staked collateral tokens)
-/// - a store of already redeemed but not withdrawn collateral.
 contract ConditionalTokensMany is ERC1155 {
     // TODO: ERC-1155 collateral.
     // TODO: Getters.
@@ -21,7 +20,7 @@ contract ConditionalTokensMany is ERC1155 {
 
     using ABDKMath64x64 for int128;
 
-    enum CollateralKind { TOKEN_CONDITIONAL, TOKEN_DONATED, TOKEN_STAKED, TOKEN_REDEEMED }
+    enum CollateralKind { TOKEN_CONDITIONAL, TOKEN_DONATED, TOKEN_STAKED }
 
     uint constant INITIAL_CUSTOMER_BALANCE = 1000 * 10**18; // an arbitrarily choosen value
 
@@ -185,29 +184,19 @@ contract ConditionalTokensMany is ERC1155 {
         emit OracleFinished(msg.sender);
     }
 
-    /// Mints to `msg.sender` the token `_collateralRedeemedTokenId(collateralToken, marketId, oracleId)`
+    /// Transfer to `msg.sender` the collateral ERC-20 token
     /// accordingly to the score of `tokenCustomer` in the marketId by the oracle.
     /// After this function is called, it becomes impossible to transfer the corresponding conditional token of `msg.sender`
-    /// (to prevent its repeated activation).
-    function activateRedeem(IERC20 collateralToken, uint64 marketId, uint64 oracleId, address tokenCustomer, bytes calldata data) external {
+    /// (to prevent its repeated withdraw).
+    function withdrawCollateral(IERC20 collateralToken, uint64 marketId, uint64 oracleId, address to, address tokenCustomer) external {
         require(oracleFinished[oracleId], "too early"); // to prevent the denominator or the numerators change meantime
         uint256 collateralBalance = _initialCollateralBalanceOf(collateralToken, marketId, oracleId, msg.sender, tokenCustomer);
         uint256 conditionalTokenId = _conditionalTokenId(marketId, tokenCustomer);
         require(!redeemActivated[msg.sender][oracleId][conditionalTokenId], "Already redeemed.");
         redeemActivated[msg.sender][oracleId][conditionalTokenId] = true;
         userUsedRedeem[msg.sender][conditionalTokenId] = true;
-        uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, marketId, oracleId);
         // _burn(msg.sender, conditionalTokenId, conditionalBalance); // Burning it would break using the same token for multiple outcomes.
-        _mint(msg.sender, redeemedTokenId, collateralBalance, data);
-        emit RedeemCalculated(msg.sender, collateralToken, marketId, oracleId, tokenCustomer, collateralBalance);
-    }
-
-    /// Withdraw previously activated collateral to the ERC-20 token.
-    function withdrawCollateral(IERC20 collateralToken, uint64 marketId, uint64 oracleId, address customer, uint256 amount) external {
-        uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, marketId, oracleId);
-        _burn(msg.sender, redeemedTokenId, amount);
-        emit CollateralWithdrawn(collateralToken, marketId, oracleId, customer, amount);
-        collateralToken.transfer(customer, amount); // last to prevent reentrancy attack
+        collateralToken.transfer(to, collateralBalance); // last to prevent reentrancy attack
     }
 
     /// Calculate the collateral balance corresponding to the current conditonal token `tokenCustomer` state and
@@ -271,10 +260,6 @@ contract ConditionalTokensMany is ERC1155 {
 
     function _collateralStakedTokenId(IERC20 collateralToken, uint64 marketId, uint64 oracleId) internal pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_STAKED), collateralToken, marketId, oracleId)));
-    }
-
-    function _collateralRedeemedTokenId(IERC20 collateralToken, uint64 marketId, uint64 oracleId) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(uint8(CollateralKind.TOKEN_REDEEMED), collateralToken, marketId, oracleId)));
     }
 
     function _collateralIn(IERC20 collateralToken, uint64 marketId, uint64 oracleId, uint256 amount) private {

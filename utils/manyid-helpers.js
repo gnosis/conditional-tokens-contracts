@@ -5,8 +5,7 @@ module.exports = function({ toBN, soliditySha3 }) {
   const TOKEN_CONDITIONAL = 0;
   const TOKEN_DONATED = 1;
   const TOKEN_STAKED = 2;
-  const TOKEN_REDEEMED = 3;
-  
+
   const INITIAL_CUSTOMER_BALANCE = toBN("1000").mul(toBN("10").pow(toBN("18")));
 
   function conditionalTokenId(market, customer) {
@@ -35,24 +34,13 @@ module.exports = function({ toBN, soliditySha3 }) {
     );
   }
 
-  function collateralRedeemedTokenId(collateralToken, market, outcome) {
-    return soliditySha3(
-      { t: "uint8", v: TOKEN_REDEEMED },
-      { t: "address", v: collateralToken },
-      { t: "uint64", v: market },
-      { t: "uint64", v: outcome }
-    );
-  }
-
   return {
     conditionalTokenId,
     collateralDonatedTokenId,
     collateralStakedTokenId,
-    collateralRedeemedTokenId,
     TOKEN_CONDITIONAL,
     TOKEN_DONATED,
     TOKEN_STAKED,
-    TOKEN_REDEEMED,
     INITIAL_CUSTOMER_BALANCE
   };
 };

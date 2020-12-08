@@ -4,8 +4,7 @@ const { expectEvent, expectRevert } = require("openzeppelin-test-helpers");
 const { toBN } = web3.utils;
 const {
   INITIAL_CUSTOMER_BALANCE,
-  conditionalTokenId,
-  collateralRedeemedTokenId
+  conditionalTokenId
 } = require("../utils/manyid-helpers")(web3.utils);
 
 const ConditionalTokensMany = artifacts.require("ConditionalTokensMany");
@@ -267,70 +266,21 @@ contract("ConditionalTokensMany", function(accounts) {
               .abs()
               .should.be.bignumber.below(toBN("2"));
 
-            // Two calls should be like one.
             // TODO: Redeem somebody other's token.
-            await this.conditionalTokens.activateRedeem(
+            const oldBalance = await this.collateral.balanceOf(account);
+            await this.conditionalTokens.withdrawCollateral(
               this.collateral.address,
               product.marketId,
               oracleIdInfo.oracleId,
               account,
-              [],
+              account,
               { from: account }
             );
-            await expectRevert(
-              this.conditionalTokens.activateRedeem(
-                this.collateral.address,
-                product.marketId,
-                oracleIdInfo.oracleId,
-                account,
-                [],
-                { from: account }
-              ),
-              "Already redeemed."
-            );
 
-            // Now will withdraw half twice.
-            const halfBalance = initialCollateralBalance.div(toBN("2"));
-
-            {
-              const oldBalance = await this.collateral.balanceOf(account);
-              await this.conditionalTokens.withdrawCollateral(
-                this.collateral.address,
-                product.marketId,
-                oracleIdInfo.oracleId,
-                account,
-                halfBalance,
-                { from: account }
-              );
-
-              const newBalance = await this.collateral.balanceOf(account);
-              newBalance.sub(oldBalance).should.be.bignumber.equal(halfBalance);
-            }
-
-            {
-              const oldBalance = await this.collateral.balanceOf(account);
-              await this.conditionalTokens.withdrawCollateral(
-                this.collateral.address,
-                product.marketId,
-                oracleIdInfo.oracleId,
-                account,
-                halfBalance,
-                { from: account }
-              );
-
-              const newBalance = await this.collateral.balanceOf(account);
-              newBalance.sub(oldBalance).should.be.bignumber.equal(halfBalance);
-            }
-
-            const remainingCollateralBalance = await this.conditionalTokens.balanceOf(
-              account,
-              collateralRedeemedTokenId(
-                this.collateral.address,
-                product.marketId,
-                oracleIdInfo.oracleId
-              )
-            );
-            remainingCollateralBalance.should.be.bignumber.below("2");
+            const newBalance = await this.collateral.balanceOf(account);
+            newBalance
+              .sub(oldBalance)
+              .should.be.bignumber.equal(initialCollateralBalance);
 
             await expectRevert(
               this.conditionalTokens.withdrawCollateral(
@@ -338,10 +288,10 @@ contract("ConditionalTokensMany", function(accounts) {
                 product.marketId,
                 oracleIdInfo.oracleId,
                 account,
-                halfBalance,
+                account,
                 { from: account }
               ),
-              "SafeMath: subtraction overflow"
+              "Already redeemed."
             );
 
             // TODO: Also check withdrawal to a third-party account.
