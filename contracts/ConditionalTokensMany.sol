@@ -24,9 +24,9 @@ contract ConditionalTokensMany is ERC1155 {
 
     uint constant INITIAL_CUSTOMER_BALANCE = 1000 * 10**18; // an arbitrarily choosen value
 
-    event MarketCreated(address oracle, uint64 marketId);
+    event MarketCreated(address oracleOwner, uint64 marketId);
 
-    event OutcomeCreated(address oracle, uint64 oracleId);
+    event OutcomeCreated(address oracleOwner, uint64 oracleId);
 
     event CustomerRegistered(
         address customer,
@@ -67,7 +67,7 @@ contract ConditionalTokensMany is ERC1155 {
         uint256[] numerators
     );
 
-    event OutcomeFinished(address indexed oracle);
+    event OutcomeFinished(address indexed oracleOwner);
 
     event RedeemCalculated(
         address customer,
@@ -88,8 +88,8 @@ contract ConditionalTokensMany is ERC1155 {
     
     uint64 private maxId;
 
-    /// Mapping from oracleId to oracle.
-    mapping(uint64 => address) public oracles;
+    /// Mapping from oracleId to oracle owner.
+    mapping(uint64 => address) public oracleOwners;
     /// Whether an oracle finished its work.
     mapping(uint64 => bool) public outcomeFinished;
     /// Mapping (market => (customer => numerator)) for payout numerators.
@@ -105,7 +105,7 @@ contract ConditionalTokensMany is ERC1155 {
     /// The user lost the right to transfer conditional tokens: (user => (conditionalToken => bool)).
     mapping(address => mapping(uint256 => bool)) public userUsedRedeem;
 
-    /// Register ourselves as an oracle for a new market.
+    /// Create a new conditional market
     function createMarket() external {
         uint64 marketId = maxId++;
         emit MarketCreated(msg.sender, marketId);
@@ -113,7 +113,7 @@ contract ConditionalTokensMany is ERC1155 {
 
     function createOutcome() external {
         uint64 oracleId = maxId++;
-        oracles[oracleId] = msg.sender;
+        oracleOwners[oracleId] = msg.sender;
         emit OutcomeCreated(msg.sender, oracleId);
     }
 
@@ -145,7 +145,7 @@ contract ConditionalTokensMany is ERC1155 {
         emit TakeBackERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
-    /// Anyone can register anyone. Usually a customer registers himself or else an oracle may register him.
+    /// Anyone can register anyone. Usually a customer registers himself or else an oracleOwner may register him.
     /// Can be called both before or after the oracle finish. However registering after the finish is useless.
     function registerCustomer(uint64 market, address customer, bytes calldata data) external {
         uint256 conditionalTokenId = _conditionalTokenId(market, customer);
@@ -155,7 +155,7 @@ contract ConditionalTokensMany is ERC1155 {
         emit CustomerRegistered(customer, market, data);
     }
 
-    /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each oracleId slot of the condition.
+    /// @dev Called by the oracle owner for reporting results of conditions.
     function reportNumerator(uint64 oracleId, address customer, uint256 numerator) external
         _isOracle(oracleId)
     {
@@ -163,7 +163,7 @@ contract ConditionalTokensMany is ERC1155 {
         emit ReportedNumerator(oracleId, customer, numerator);
     }
 
-    /// @dev Called by the oracle for reporting results of conditions. Will set the payout vector for the condition with the ID ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``, where oracle is the message sender, questionId is one of the parameters of this function, and outcomeSlotCount is the length of the payouts parameter, which contains the payoutNumerators for each oracleId slot of the condition.
+    /// @dev Called by the oracle owner for reporting results of conditions.
     function reportNumeratorsBatch(uint64 oracleId, address[] calldata addresses, uint256[] calldata numerators) external
         _isOracle(oracleId)
     {
@@ -333,7 +333,7 @@ contract ConditionalTokensMany is ERC1155 {
     }
 
     modifier _isOracle(uint64 oracleId) {
-        require(oracles[oracleId] == msg.sender, "not the oracle");
+        require(oracleOwners[oracleId] == msg.sender, "Not the oracle owner.");
         _;
     }
 }
