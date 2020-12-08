@@ -197,7 +197,7 @@ contract("ConditionalTokensMany", function(accounts) {
             }
           }
 
-          await transferSomeConditional.bind(this)(web3.utils.toWei("2.3"));
+          // await transferSomeConditional.bind(this)(web3.utils.toWei("2.3")); // TODO: uncomment
 
           const outcomeInfo = outcomesInfo[product.outcome];
           for (let i in outcomeInfo.numerators) {
@@ -209,7 +209,7 @@ contract("ConditionalTokensMany", function(accounts) {
           }
           await this.conditionalTokens.finishOutcome(outcomeInfo.outcome);
 
-          await transferSomeConditional.bind(this)(web3.utils.toWei("1.2"));
+          // await transferSomeConditional.bind(this)(web3.utils.toWei("1.2")); // TODO: uncomment
 
           let totalCollateral = toBN("0");
           for (let donor of product.donors) {
@@ -228,14 +228,20 @@ contract("ConditionalTokensMany", function(accounts) {
           for (let customer of product.customers) {
             const outcomeInfo = outcomesInfo[product.outcome];
             const account = customers[customer.account];
-            (
-              await this.conditionalTokens.collateralBalanceOf(
-                this.collateral.address,
-                product.market,
-                outcomeInfo.outcome,
-                customers[customer.account]
-              )
-            )
+            const collateralBalance = await this.conditionalTokens.collateralBalanceOf(
+              this.collateral.address,
+              product.market,
+              outcomeInfo.outcome,
+              account
+            );
+            console.log("AAA", [
+              this.collateral.address,
+              product.market.toString(),
+              outcomeInfo.outcome.toString(),
+              account
+            ]);
+            console.log("collateralBalance", collateralBalance.toString());
+            collateralBalance
               .sub(
                 totalCollateral
                   .mul(outcomeInfo.numerators[customer.account].numerator)
@@ -254,6 +260,61 @@ contract("ConditionalTokensMany", function(accounts) {
               )
               .abs()
               .should.be.bignumber.below(toBN("2"));
+
+            // Two calls should be like one.
+            await this.conditionalTokens.activateRedeem(
+              this.collateral.address,
+              product.market,
+              outcomeInfo.outcome,
+              [],
+              { from: account }
+            );
+            await this.conditionalTokens.activateRedeem(
+              this.collateral.address,
+              product.market,
+              outcomeInfo.outcome,
+              [],
+              { from: account }
+            );
+            const halfBalance = collateralBalance.div(toBN("2"));
+            console.log(
+              "XXX",
+              collateralBalance.toString(),
+              halfBalance.toString()
+            );
+            await this.conditionalTokens.withdrawCollateral(
+              this.collateral.address,
+              product.market,
+              outcomeInfo.outcome,
+              account,
+              halfBalance,
+              { from: account }
+            );
+            await this.conditionalTokens.withdrawCollateral(
+              this.collateral.address,
+              product.market,
+              outcomeInfo.outcome,
+              account,
+              halfBalance,
+              { from: account }
+            );
+            await expectRevert(
+              this.conditionalTokens.withdrawCollateral(
+                this.collateral.address,
+                product.market,
+                outcomeInfo.outcome,
+                account,
+                halfBalance,
+                { from: account }
+              ),
+              "SafeMath: subtraction overflow"
+            );
+
+            // TODO: Also check withdrawal to a third-party account.
+            (await this.collateral.balanceOf(account))
+              .sub(collateralBalance)
+              .abs()
+              .should.be.bignumber.below("2");
           }
         }
 

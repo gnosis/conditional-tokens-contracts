@@ -3,6 +3,8 @@ import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import { IERC20 } from "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
 
+// FIXME: Probably can use hashes to reduce the number of arguments and gas usage.
+
 /// We have four kinds of ERC-1155 token ID
 /// - a combination of market ID, collateral address, and customer address (conditional tokens);
 /// - a combination of TOKEN_DONATED and a collateral address (donated collateral tokens)
@@ -65,11 +67,10 @@ contract ConditionalTokensMany is ERC1155 {
     event OutcomeFinished(address indexed oracle);
 
     event RedeemCalculated(
-        address redeemer,
+        address customer,
         IERC20 indexed collateralToken,
         uint64 indexed market,
         uint64 indexed outcome,
-        address customer,
         uint payout
     );
 
@@ -182,20 +183,20 @@ contract ConditionalTokensMany is ERC1155 {
         emit OutcomeFinished(msg.sender);
     }
 
-    function calculateRedeemAmount(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, bytes calldata data) external {
+    function activateRedeem(IERC20 collateralToken, uint64 market, uint64 outcome, bytes calldata data) external {
         require(outcomeFinished[outcome], "too early"); // to prevent the denominator or the numerators change meantime
         (uint256 conditionalBalance, uint256 collateralBalance) =
-            _collateralBalanceOf(collateralToken, market, outcome, customer);
+            _collateralBalanceOf(collateralToken, market, outcome, msg.sender);
         uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, outcome);
-        uint256 conditionalTokenId = _conditionalTokenId(market, customer); // TODO: calculates the same in _collateralBalanceOf
-        _mint(customer, redeemedTokenId, collateralBalance, data);
-        _burn(customer, conditionalTokenId, conditionalBalance);
-        emit RedeemCalculated(msg.sender, collateralToken, market, outcome, customer, collateralBalance); // TODO: Also return conditionalBalance?
+        uint256 conditionalTokenId = _conditionalTokenId(market, msg.sender); // TODO: calculates the same in _collateralBalanceOf
+        _mint(msg.sender, redeemedTokenId, collateralBalance, data);
+        _burn(msg.sender, conditionalTokenId, conditionalBalance);
+        emit RedeemCalculated(msg.sender, collateralToken, market, outcome, collateralBalance); // TODO: Also return conditionalBalance?
     }
 
     function withdrawCollateral(IERC20 collateralToken, uint64 market, uint64 outcome, address customer, uint256 amount) external {
         uint256 redeemedTokenId = _collateralRedeemedTokenId(collateralToken, market, outcome);
-        _burn(customer, redeemedTokenId, amount);
+        _burn(msg.sender, redeemedTokenId, amount);
         emit CollateralWithdrawn(collateralToken, market, outcome, customer, amount);
         collateralToken.transfer(customer, amount); // last to prevent reentrancy attack
     }
