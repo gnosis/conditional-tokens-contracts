@@ -149,10 +149,10 @@ contract ConditionalTokensMany is ERC1155, IERC1155TokenReceiver {
     /// If the oracle has not yet finished you can take funds back.
     function takeStakeBack(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, uint256 amount, bytes calldata data) external {
         require(oracleFinished[oracleId], "too late");
-        uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-        collateralTotals[stakedCollateralTokenId] = collateralTotals[stakedCollateralTokenId].sub(amount); // TODO: Use collateralTokenId instead?
+        uint ourCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
+        collateralTotals[ourCollateralTokenId] = collateralTotals[ourCollateralTokenId].sub(amount); // TODO: Use collateralTokenId instead?
         collateralContractAddress.safeTransferFrom(address(this), msg.sender, collateralTokenId, amount, data);
-        _burn(msg.sender, stakedCollateralTokenId, amount);
+        _burn(msg.sender, ourCollateralTokenId, amount);
         emit TakeBackERC20Collateral(collateralContractAddress, collateralTokenId, msg.sender, amount);
     }
 
