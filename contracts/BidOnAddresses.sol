@@ -134,7 +134,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         emit OracleCreated(msg.sender, oracleId);
     }
 
-    // TODO: Allow stake/donate/convert to somebody other.
+    // TODO: Allow stake/takeBack/donate/convert to somebody other.
 
     /// Donate funds in a ERC20 token.
     /// First need to approve the contract to spend the token.
