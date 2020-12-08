@@ -91,7 +91,7 @@ contract ConditionalTokensMany is ERC1155 {
     /// Mapping from oracleId to oracle owner.
     mapping(uint64 => address) public oracleOwners;
     /// Whether an oracle finished its work.
-    mapping(uint64 => bool) public outcomeFinished;
+    mapping(uint64 => bool) public oracleFinished;
     /// Mapping (market => (customer => numerator)) for payout numerators.
     mapping(uint64 => mapping(address => uint256)) public payoutNumerators;
     /// Mapping (market => denominator) for payout denominators.
@@ -127,18 +127,19 @@ contract ConditionalTokensMany is ERC1155 {
         emit DonateERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
-    /// Donate funds in a ERC20 token.
+    /// Stake funds in a ERC20 token.
     /// First need to approve the contract to spend the token.
-    /// The stake is lost if either: the prediction period ends or the staker loses his private key (e.g. dies)
-    /// Not recommended to stake after any oracle has finished, because funds may be (partially) lost (and you could not unstake).
+    /// The stake is lost if either: the prediction period ends or the staker loses his private key (e.g. dies).
+    /// Not recommended to stake after the oracle has finished, because funds may be (partially) lost (you could not unstake).
     function stakeCollateral(IERC20 collateralToken, uint64 market, uint64 oracleId, uint256 amount, bytes calldata data) external {
         _collateralIn(collateralToken, market, oracleId, amount);
         _mint(msg.sender, _collateralStakedTokenId(collateralToken, market, oracleId), amount, data);
         emit StakeERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
+    /// If the oracle has not yet finished you can take funds back.
     function takeStakeBack(IERC20 collateralToken, uint64 market, uint64 oracleId, uint256 amount, bytes calldata data) external {
-        require(outcomeFinished[oracleId], "too late");
+        require(oracleFinished[oracleId], "too late");
         uint tokenId = _collateralStakedTokenId(collateralToken, market, oracleId);
         collateralTotals[tokenId] = collateralTotals[tokenId].sub(amount);
         require(collateralToken.transfer(msg.sender, amount), "cannot transfer");
@@ -146,7 +147,7 @@ contract ConditionalTokensMany is ERC1155 {
         emit TakeBackERC20Collateral(collateralToken, msg.sender, amount, data);
     }
 
-    /// Anyone can register anyone. Usually a customer registers himself or else an oracleOwner may register him.
+    /// Anyone can register himself. Usually a customer registers himself or else an oracleOwner may register him.
     /// Can be called both before or after the oracle finish. However registering after the finish is useless.
     function registerCustomer(uint64 market, address customer, bytes calldata data) external {
         uint256 conditionalTokenId = _conditionalTokenId(market, customer);
@@ -178,12 +179,12 @@ contract ConditionalTokensMany is ERC1155 {
     function finishOutcome(uint64 oracleId) external
         _isOracle(oracleId)
     {
-        outcomeFinished[oracleId] = true;
+        oracleFinished[oracleId] = true;
         emit OutcomeFinished(msg.sender);
     }
 
     function activateRedeem(IERC20 collateralToken, uint64 market, uint64 oracleId, address tokenCustomer, bytes calldata data) external {
-        require(outcomeFinished[oracleId], "too early"); // to prevent the denominator or the numerators change meantime
+        require(oracleFinished[oracleId], "too early"); // to prevent the denominator or the numerators change meantime
         uint256 collateralBalance = _initialCollateralBalanceOf(collateralToken, market, oracleId, msg.sender, tokenCustomer);
         uint256 conditionalTokenId = _conditionalTokenId(market, tokenCustomer);
         require(!redeemActivated[msg.sender][oracleId][conditionalTokenId], "Already redeemed.");
