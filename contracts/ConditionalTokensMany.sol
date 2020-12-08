@@ -80,7 +80,7 @@ contract ConditionalTokensMany is ERC1155 {
         uint256 amount
     );
     
-    uint64 private maxId; // FIXME: will 64 bit be enough after 100 years?!
+    uint64 private maxId;
 
     /// Mapping from outcome to oracle.
     mapping(uint64 => address) public oracles;
