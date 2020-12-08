@@ -15,8 +15,6 @@ import { ERC1155 } from "./ERC1155/ERC1155.sol";
 /// - a combination of TOKEN_STAKED and collateral address (staked collateral tokens)
 /// - a combination of TOKEN_SUMMARY and collateral address (staked + staked collateral tokens)
 contract ConditionalTokensMany is ERC1155, IERC1155TokenReceiver {
-    // TODO: Getters.
-
     using ABDKMath64x64 for int128;
 
     enum TokenKind { TOKEN_CONDITIONAL, TOKEN_STAKED, TOKEN_SUMMARY }
@@ -92,21 +90,21 @@ contract ConditionalTokensMany is ERC1155, IERC1155TokenReceiver {
     uint64 private maxId;
 
     /// Mapping from oracleId to oracle owner.
-    mapping(uint64 => address) public oracleOwners;
+    mapping(uint64 => address) private oracleOwnersMap;
     /// Whether an oracle finished its work.
-    mapping(uint64 => bool) public oracleFinished;
+    mapping(uint64 => bool) private oracleFinishedMap;
     /// Mapping (marketId => (customer => numerator)) for payout numerators.
-    mapping(uint64 => mapping(address => uint256)) public payoutNumerators;
+    mapping(uint64 => mapping(address => uint256)) private payoutNumeratorsMap;
     /// Mapping (marketId => denominator) for payout denominators.
-    mapping(uint64 => uint) public payoutDenominator;
-    /// All conditonal tokens,
-    mapping(uint256 => bool) public conditionalTokens;
+    mapping(uint64 => uint) private payoutDenominatorMap;
+    /// All conditional tokens,
+    mapping(uint256 => bool) private conditionalTokensMap;
     /// Total collaterals per marketId and oracleId: collateral => (marketId => (oracleId => total))
-    mapping(uint256 => uint256) public collateralTotals;
+    mapping(uint256 => uint256) private collateralTotalsMap;
     /// If a given conditional was already redeemed.
-    mapping(address => mapping(uint64 => mapping(uint256 => bool))) public redeemActivated; // TODO: hash instead?
+    mapping(address => mapping(uint64 => mapping(uint256 => bool))) private redeemActivatedMap; // TODO: hash instead?
     /// The user lost the right to transfer conditional tokens: (user => (conditionalToken => bool)).
-    mapping(address => mapping(uint256 => bool)) public userUsedRedeem;
+    mapping(address => mapping(uint256 => bool)) private userUsedRedeemMap;
 
     constructor() public {
         _registerInterface(
@@ -124,7 +122,7 @@ contract ConditionalTokensMany is ERC1155, IERC1155TokenReceiver {
     /// Create a new oracle
     function createOracle() external {
         uint64 oracleId = maxId++;
-        oracleOwners[oracleId] = msg.sender;
+        oracleOwnersMap[oracleId] = msg.sender;
         emit OracleCreated(msg.sender, oracleId);
     }
 
@@ -148,10 +146,12 @@ contract ConditionalTokensMany is ERC1155, IERC1155TokenReceiver {
 
     /// If the oracle has not yet finished you can take funds back.
     function takeStakeBack(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, uint256 amount, bytes calldata data) external {
-        require(oracleFinished[oracleId], "too late");
-        uint ourCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-        collateralTotals[ourCollateralTokenId] = collateralTotals[ourCollateralTokenId].sub(amount);
-        collateralContractAddress.safeTransferFrom(address(this), msg.sender, collateralTokenId, amount, data);
+        require(oracleFinishedMap[oracleId], "too late");
+        uint ourCollateralTokenId = _collateralSummaryTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
+        uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
+        collateralTotalsMap[ourCollateralTokenId] = collateralTotalsMap[ourCollateralTokenId].sub(amount);
+        collateralContractAddress.safeTransferFrom(address(this), msg.sender, ourCollateralTokenId, amount, data);
+        collateralContractAddress.safeTransferFrom(address(this), msg.sender, stakedCollateralTokenId, amount, data);
         _burn(msg.sender, ourCollateralTokenId, amount);
         emit TakeBackERC20Collateral(collateralContractAddress, collateralTokenId, msg.sender, amount);
     }
@@ -160,8 +160,8 @@ contract ConditionalTokensMany is ERC1155, IERC1155TokenReceiver {
     /// Can be called both before or after the oracle finish. However registering after the finish is useless.
     function registerCustomer(uint64 marketId, bytes calldata data) external {
         uint256 conditionalTokenId = _conditionalTokenId(marketId, msg.sender);
-        require(!conditionalTokens[conditionalTokenId], "customer already registered");
-        conditionalTokens[conditionalTokenId] = true;
+        require(!conditionalTokensMap[conditionalTokenId], "customer already registered");
+        conditionalTokensMap[conditionalTokenId] = true;
         _mint(msg.sender, conditionalTokenId, INITIAL_CUSTOMER_BALANCE, data);
         emit CustomerRegistered(msg.sender, marketId, data);
     }
@@ -189,7 +189,7 @@ contract ConditionalTokensMany is ERC1155, IERC1155TokenReceiver {
     function finishOracle(uint64 oracleId) external
         _isOracle(oracleId)
     {
-        oracleFinished[oracleId] = true;
+        oracleFinishedMap[oracleId] = true;
         emit OracleFinished(msg.sender);
     }
 
@@ -198,12 +198,12 @@ contract ConditionalTokensMany is ERC1155, IERC1155TokenReceiver {
     /// After this function is called, it becomes impossible to transfer the corresponding conditional token of `msg.sender`
     /// (to prevent its repeated withdraw).
     function withdrawCollateral(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, address to, address condition, bytes calldata data) external {
-        require(oracleFinished[oracleId], "too early"); // to prevent the denominator or the numerators change meantime
+        require(oracleFinishedMap[oracleId], "too early"); // to prevent the denominator or the numerators change meantime
         uint256 collateralBalance = _initialCollateralBalanceOf(collateralContractAddress, collateralTokenId, marketId, oracleId, msg.sender, condition);
         uint256 conditionalTokenId = _conditionalTokenId(marketId, condition);
-        require(!redeemActivated[msg.sender][oracleId][conditionalTokenId], "Already redeemed.");
-        redeemActivated[msg.sender][oracleId][conditionalTokenId] = true;
-        userUsedRedeem[msg.sender][conditionalTokenId] = true;
+        require(!redeemActivatedMap[msg.sender][oracleId][conditionalTokenId], "Already redeemed.");
+        redeemActivatedMap[msg.sender][oracleId][conditionalTokenId] = true;
+        userUsedRedeemMap[msg.sender][conditionalTokenId] = true;
         // _burn(msg.sender, conditionalTokenId, conditionalBalance); // Burning it would break using the same token for multiple outcomes.
         collateralContractAddress.safeTransferFrom(address(this), to, collateralTokenId, collateralBalance, data); // last to prevent reentrancy attack
     }
@@ -253,14 +253,51 @@ contract ConditionalTokensMany is ERC1155, IERC1155TokenReceiver {
         return bytes4(0); // We should never receive batch transfers.
     }
 
+    // Getters //
+
+    function oracleOwner(uint64 oracleId) public view returns (address) {
+        return oracleOwnersMap[oracleId];
+    }
+
+    function isOracleFinished(uint64 oracleId) public view returns (bool) {
+        return oracleFinishedMap[oracleId];
+    }
+
+    function payoutNumerator(uint64 marketId, address customer) public view returns (uint256) {
+        return payoutNumeratorsMap[marketId][customer];
+    }
+
+    function payoutDenominator(uint64 marketId) public view returns (uint256) {
+        return payoutDenominatorMap[marketId];
+    }
+
+    function isConditionalToken(uint256 tokenId) public view returns (bool) {
+        return conditionalTokensMap[tokenId];
+    }
+
+    /// @param hash should be a result of `_collateralSummaryTokenId()`.
+    function collateralTotal(uint256 hash) public view returns (uint256) {
+        collateralTotalsMap[hash];
+    }
+
+    function isRedeemActivated(address holder, uint64 oracleId, uint256 conditionalTokenId) public view returns (bool) {
+        return redeemActivatedMap[holder][oracleId][conditionalTokenId];
+    }
+
+    function isConditonalLocked(address holder, uint256 conditionalTokenId) public view returns (bool) {
+        return userUsedRedeemMap[holder][conditionalTokenId];
+    }
+
+    // Internal //
+
     function _initialCollateralBalanceOf(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, address customer, address condition) internal view
         returns (uint256)
     {
-        uint256 numerator = payoutNumerators[oracleId][condition];
-        uint256 denominator = payoutDenominator[oracleId];
+        uint256 numerator = payoutNumeratorsMap[oracleId][condition];
+        uint256 denominator = payoutDenominatorMap[oracleId];
         uint256 conditonalBalance = balanceOf(customer, _conditionalTokenId(marketId, condition));
         uint ourCollateralTokenId = _collateralSummaryTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-        uint256 collateralTotalBalance = collateralTotals[ourCollateralTokenId];
+        uint256 collateralTotalBalance = collateralTotalsMap[ourCollateralTokenId];
         // Rounded to below for no out-of-funds:
         int128 marketIdShare = ABDKMath64x64.divu(conditonalBalance, INITIAL_CUSTOMER_BALANCE);
         int128 rewardShare = ABDKMath64x64.divu(numerator, denominator);
@@ -281,12 +318,12 @@ contract ConditionalTokensMany is ERC1155, IERC1155TokenReceiver {
 
     function _collateralIn(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, uint256 amount, bytes memory data) private {
         uint ourCollateralTokenId = _collateralSummaryTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-        collateralTotals[ourCollateralTokenId] = collateralTotals[ourCollateralTokenId].add(amount);
+        collateralTotalsMap[ourCollateralTokenId] = collateralTotalsMap[ourCollateralTokenId].add(amount);
         collateralContractAddress.safeTransferFrom(msg.sender, address(this), collateralTokenId, amount, data); // last against reentrancy attack
     }
 
     function _checkTransferAllowed(uint256 id, address from) internal view returns (bool) {
-        require(!userUsedRedeem[from][id], "You can't trade conditional tokens after redeem.");
+        require(!userUsedRedeemMap[from][id], "You can't trade conditional tokens after redeem.");
     }
 
     function _baseSafeTransferFrom(
@@ -342,12 +379,12 @@ contract ConditionalTokensMany is ERC1155, IERC1155TokenReceiver {
     }
 
     function _updateNumerator(uint64 oracleId, uint256 numerator, address customer) private {
-        payoutDenominator[oracleId] = payoutDenominator[oracleId].add(numerator).sub(payoutNumerators[oracleId][customer]);
-        payoutNumerators[oracleId][customer] = numerator;
+        payoutDenominatorMap[oracleId] = payoutDenominatorMap[oracleId].add(numerator).sub(payoutNumeratorsMap[oracleId][customer]);
+        payoutNumeratorsMap[oracleId][customer] = numerator;
     }
 
     modifier _isOracle(uint64 oracleId) {
-        require(oracleOwners[oracleId] == msg.sender, "Not the oracle owner.");
+        require(oracleOwnersMap[oracleId] == msg.sender, "Not the oracle owner.");
         _;
     }
 }
