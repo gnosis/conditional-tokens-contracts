@@ -227,7 +227,6 @@ contract("ConditionalTokensMany", function(accounts) {
           }
         }
 
-        // Promise.all(products.forEach(testOneProduct.bind(this)));
         for (let customer of customers) {
           for (let market of markets) {
             await this.conditionalTokens.registerCustomer(
@@ -240,6 +239,10 @@ contract("ConditionalTokensMany", function(accounts) {
             );
           }
         }
+
+        // Can be written shorter:
+        // Promise.all(products.map(testOneProduct.bind(this)));
+        // But let us be on reliability side:
         for (let product of products) {
           await testOneProduct.bind(this)(product);
         }
