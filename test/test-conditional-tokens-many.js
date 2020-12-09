@@ -184,6 +184,7 @@ contract("BidOnAddresses", function(accounts) {
               product.marketId,
               oracleIdInfo.oracleId,
               donor.amount,
+              donor.account,
               [],
               { from: donor.account }
             );
@@ -201,6 +202,7 @@ contract("BidOnAddresses", function(accounts) {
               product.marketId,
               oracleIdInfo.oracleId,
               staker.amount,
+              staker.account,
               [],
               { from: staker.account }
             );

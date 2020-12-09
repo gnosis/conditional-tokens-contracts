@@ -134,8 +134,6 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         emit OracleCreated(msg.sender, oracleId);
     }
 
-    // TODO: Allow stake/takeBack/donate/convert to somebody other.
-
     /// Donate funds in a ERC1155 token.
     /// First need to approve the contract to spend the token.
     /// Not recommended to donate after any oracle has finished, because funds may be (partially) lost.
@@ -145,9 +143,10 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         uint64 marketId,
         uint64 oracleId,
         uint256 amount,
+        address to,
         bytes calldata data) external
     {
-        _mint(msg.sender, _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId), amount, data);
+        _mint(to, _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId), amount, data);
         uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         collateralTotalsMap[donatedCollateralTokenId] = collateralTotalsMap[donatedCollateralTokenId].add(amount);
         emit DonateCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount, data);
@@ -164,9 +163,10 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         uint64 marketId,
         uint64 oracleId,
         uint256 amount,
+        address to,
         bytes calldata data) external
     {
-        _mint(msg.sender, _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId), amount, data);
+        _mint(to, _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId), amount, data);
         uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         collateralTotalsMap[stakedCollateralTokenId] = collateralTotalsMap[stakedCollateralTokenId].add(amount);
         emit StakeCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount, data);
@@ -180,12 +180,13 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         uint64 marketId,
         uint64 oracleId,
         uint256 amount,
+        address to,
         bytes calldata data) external
     {
         require(oracleFinishedMap[oracleId], "too late");
         uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         collateralTotalsMap[stakedCollateralTokenId] = collateralTotalsMap[stakedCollateralTokenId].sub(amount);
-        collateralContractAddress.safeTransferFrom(address(this), msg.sender, stakedCollateralTokenId, amount, data);
+        collateralContractAddress.safeTransferFrom(address(this), to, stakedCollateralTokenId, amount, data);
         emit TakeBackCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount);
     }
 
@@ -196,6 +197,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         uint64 marketId,
         uint64 oracleId,
         uint256 amount,
+        address to,
         bytes calldata data) external
     {
         // Subtract from staked:
@@ -204,7 +206,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         collateralTotalsMap[stakedCollateralTokenId] = collateralTotalsMap[stakedCollateralTokenId].sub(amount);
         // Add to donated:
         uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-        _mint(msg.sender, donatedCollateralTokenId, amount, data);
+        _mint(to, donatedCollateralTokenId, amount, data);
         collateralTotalsMap[donatedCollateralTokenId] = collateralTotalsMap[donatedCollateralTokenId].add(amount);
         emit ConvertStakedToDonated(collateralContractAddress, collateralTokenId, msg.sender, amount, data);
     }
