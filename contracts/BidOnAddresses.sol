@@ -190,7 +190,14 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
     }
 
     /// Donate funds from your stake.
-    function convertStakedToDonated(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, uint256 amount, bytes calldata data) external {
+    function convertStakedToDonated(
+        IERC1155 collateralContractAddress,
+        uint256 collateralTokenId,
+        uint64 marketId,
+        uint64 oracleId,
+        uint256 amount,
+        bytes calldata data) external
+    {
         // Subtract from staked:
         uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         _burn(msg.sender, stakedCollateralTokenId, amount);
