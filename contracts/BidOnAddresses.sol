@@ -139,7 +139,14 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
     /// Donate funds in a ERC1155 token.
     /// First need to approve the contract to spend the token.
     /// Not recommended to donate after any oracle has finished, because funds may be (partially) lost.
-    function donate(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, uint256 amount, bytes calldata data) external {
+    function donate(
+        IERC1155 collateralContractAddress,
+        uint256 collateralTokenId,
+        uint64 marketId,
+        uint64 oracleId,
+        uint256 amount,
+        bytes calldata data) external
+    {
         _mint(msg.sender, _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId), amount, data);
         uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         collateralTotalsMap[donatedCollateralTokenId] = collateralTotalsMap[donatedCollateralTokenId].add(amount);
@@ -151,7 +158,14 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
     /// First need to approve the contract to spend the token.
     /// The stake is lost if either: the prediction period ends or the staker loses his private key (e.g. dies).
     /// Not recommended to stake after the oracle has finished, because funds may be (partially) lost (you could not unstake).
-    function stakeCollateral(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, uint256 amount, bytes calldata data) external {
+    function stakeCollateral(
+        IERC1155 collateralContractAddress,
+        uint256 collateralTokenId,
+        uint64 marketId,
+        uint64 oracleId,
+        uint256 amount,
+        bytes calldata data) external
+    {
         _mint(msg.sender, _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId), amount, data);
         uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         collateralTotalsMap[stakedCollateralTokenId] = collateralTotalsMap[stakedCollateralTokenId].add(amount);
@@ -160,7 +174,14 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
     }
 
     /// If the oracle has not yet finished you can take funds back.
-    function takeStakeBack(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, uint256 amount, bytes calldata data) external {
+    function takeStakeBack(
+        IERC1155 collateralContractAddress,
+        uint256 collateralTokenId,
+        uint64 marketId,
+        uint64 oracleId,
+        uint256 amount,
+        bytes calldata data) external
+    {
         require(oracleFinishedMap[oracleId], "too late");
         uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         collateralTotalsMap[stakedCollateralTokenId] = collateralTotalsMap[stakedCollateralTokenId].sub(amount);
