@@ -31,7 +31,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         bytes data
     );
 
-    event DonateERC20Collateral(
+    event DonateCollateral(
         IERC1155 collateralContractAddress,
         uint256 collateralTokenId,
         address sender,
@@ -39,7 +39,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         bytes data
     );
 
-    event StakeERC20Collateral(
+    event StakeCollateral(
         IERC1155 collateralContractAddress,
         uint256 collateralTokenId,
         address sender,
@@ -47,7 +47,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         bytes data
     );
 
-    event TakeBackERC20Collateral(
+    event TakeBackCollateral(
         IERC1155 collateralContractAddress,
         uint256 collateralTokenId,
         address sender,
@@ -136,18 +136,18 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
 
     // TODO: Allow stake/takeBack/donate/convert to somebody other.
 
-    /// Donate funds in a ERC20 token.
+    /// Donate funds in a ERC1155 token.
     /// First need to approve the contract to spend the token.
     /// Not recommended to donate after any oracle has finished, because funds may be (partially) lost.
     function donate(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, uint256 amount, bytes calldata data) external {
         _mint(msg.sender, _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId), amount, data);
         uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         collateralTotalsMap[donatedCollateralTokenId] = collateralTotalsMap[donatedCollateralTokenId].add(amount);
-        emit DonateERC20Collateral(collateralContractAddress, collateralTokenId, msg.sender, amount, data);
+        emit DonateCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount, data);
         collateralContractAddress.safeTransferFrom(msg.sender, address(this), collateralTokenId, amount, data); // last against reentrancy attack
     }
 
-    /// Stake funds in a ERC20 token.
+    /// Stake funds in a ERC1155 token.
     /// First need to approve the contract to spend the token.
     /// The stake is lost if either: the prediction period ends or the staker loses his private key (e.g. dies).
     /// Not recommended to stake after the oracle has finished, because funds may be (partially) lost (you could not unstake).
@@ -155,7 +155,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         _mint(msg.sender, _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId), amount, data);
         uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         collateralTotalsMap[stakedCollateralTokenId] = collateralTotalsMap[stakedCollateralTokenId].add(amount);
-        emit StakeERC20Collateral(collateralContractAddress, collateralTokenId, msg.sender, amount, data);
+        emit StakeCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount, data);
         collateralContractAddress.safeTransferFrom(msg.sender, address(this), collateralTokenId, amount, data); // last against reentrancy attack
     }
 
@@ -165,7 +165,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         collateralTotalsMap[stakedCollateralTokenId] = collateralTotalsMap[stakedCollateralTokenId].sub(amount);
         collateralContractAddress.safeTransferFrom(address(this), msg.sender, stakedCollateralTokenId, amount, data);
-        emit TakeBackERC20Collateral(collateralContractAddress, collateralTokenId, msg.sender, amount);
+        emit TakeBackCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount);
     }
 
     /// Donate funds from your stake.
