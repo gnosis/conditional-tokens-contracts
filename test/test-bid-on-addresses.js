@@ -5,7 +5,7 @@ const { toBN } = web3.utils;
 const {
   INITIAL_CUSTOMER_BALANCE,
   conditionalTokenId
-} = require("../utils/manyid-helpers")(web3.utils);
+} = require("../utils/bin-on-addresses-helpers")(web3.utils);
 
 const BidOnAddresses = artifacts.require("BidOnAddresses");
 const ERC1155Mintable = artifacts.require("ERC1155Mock");
