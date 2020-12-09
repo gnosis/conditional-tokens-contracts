@@ -36,6 +36,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         uint256 collateralTokenId,
         address sender,
         uint256 amount,
+        address to,
         bytes data
     );
 
@@ -44,6 +45,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         uint256 collateralTokenId,
         address sender,
         uint256 amount,
+        address to,
         bytes data
     );
 
@@ -51,7 +53,8 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         IERC1155 collateralContractAddress,
         uint256 collateralTokenId,
         address sender,
-        uint256 amount
+        uint256 amount,
+        address to
     );
 
     event ConvertStakedToDonated(
@@ -59,6 +62,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         uint256 collateralTokenId,
         address sender,
         uint256 amount,
+        address to,
         bytes data
     );
 
@@ -149,7 +153,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         _mint(to, _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId), amount, data);
         uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         collateralTotalsMap[donatedCollateralTokenId] = collateralTotalsMap[donatedCollateralTokenId].add(amount);
-        emit DonateCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount, data);
+        emit DonateCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount, to, data);
         collateralContractAddress.safeTransferFrom(msg.sender, address(this), collateralTokenId, amount, data); // last against reentrancy attack
     }
 
@@ -169,7 +173,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         _mint(to, _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId), amount, data);
         uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         collateralTotalsMap[stakedCollateralTokenId] = collateralTotalsMap[stakedCollateralTokenId].add(amount);
-        emit StakeCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount, data);
+        emit StakeCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount, to, data);
         collateralContractAddress.safeTransferFrom(msg.sender, address(this), collateralTokenId, amount, data); // last against reentrancy attack
     }
 
@@ -187,7 +191,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         collateralTotalsMap[stakedCollateralTokenId] = collateralTotalsMap[stakedCollateralTokenId].sub(amount);
         collateralContractAddress.safeTransferFrom(address(this), to, stakedCollateralTokenId, amount, data);
-        emit TakeBackCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount);
+        emit TakeBackCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount, to);
     }
 
     /// Donate funds from your stake.
@@ -208,7 +212,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         _mint(to, donatedCollateralTokenId, amount, data);
         collateralTotalsMap[donatedCollateralTokenId] = collateralTotalsMap[donatedCollateralTokenId].add(amount);
-        emit ConvertStakedToDonated(collateralContractAddress, collateralTokenId, msg.sender, amount, data);
+        emit ConvertStakedToDonated(collateralContractAddress, collateralTokenId, msg.sender, amount, to, data);
     }
 
     /// Anyone can register himself.
