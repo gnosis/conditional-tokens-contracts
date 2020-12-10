@@ -1,4 +1,5 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: LGPL-3.0-or-later
+pragma solidity ^0.7.1;
 
 import "./IERC1155.sol";
 import "./IERC1155TokenReceiver.sol";
@@ -25,7 +26,6 @@ contract ERC1155 is ERC165, IERC1155
     mapping (address => mapping(address => bool)) private _operatorApprovals;
 
     constructor()
-        public
     {
         _registerInterface(
             ERC1155(0).safeTransferFrom.selector ^
@@ -43,7 +43,7 @@ contract ERC1155 is ERC165, IERC1155
         @param id ID of the token
         @return The owner's balance of the token type requested
      */
-    function balanceOf(address owner, uint256 id) public view returns (uint256) {
+    function balanceOf(address owner, uint256 id) public view override returns (uint256) {
         require(owner != address(0), "ERC1155: balance query for the zero address");
         return _balances[id][owner];
     }
@@ -60,6 +60,7 @@ contract ERC1155 is ERC165, IERC1155
     )
         public
         view
+        override
         returns (uint256[] memory)
     {
         require(owners.length == ids.length, "ERC1155: owners and IDs must have same lengths");
@@ -80,7 +81,7 @@ contract ERC1155 is ERC165, IERC1155
      * @param operator address to set the approval
      * @param approved representing the status of the approval to be set
      */
-    function setApprovalForAll(address operator, bool approved) external {
+    function setApprovalForAll(address operator, bool approved) external override {
         _operatorApprovals[msg.sender][operator] = approved;
         emit ApprovalForAll(msg.sender, operator, approved);
     }
@@ -91,7 +92,7 @@ contract ERC1155 is ERC165, IERC1155
         @param operator  Address of authorized operator
         @return           True if the operator is approved, false if not
     */
-    function isApprovedForAll(address owner, address operator) external view returns (bool) {
+    function isApprovedForAll(address owner, address operator) external view override returns (bool) {
         return _operatorApprovals[owner][operator];
     }
 
@@ -112,7 +113,7 @@ contract ERC1155 is ERC165, IERC1155
         uint256 value,
         bytes calldata data
     )
-        external
+        external override
     {
         require(to != address(0), "ERC1155: target address must be non-zero");
         require(
@@ -146,7 +147,7 @@ contract ERC1155 is ERC165, IERC1155
         uint256[] calldata values,
         bytes calldata data
     )
-        external
+        external override
     {
         require(ids.length == values.length, "ERC1155: IDs and values must have same lengths");
         require(to != address(0), "ERC1155: target address must be non-zero");

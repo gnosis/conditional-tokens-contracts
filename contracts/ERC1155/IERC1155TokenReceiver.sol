@@ -1,4 +1,5 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: LGPL-3.0-or-later
+pragma solidity ^0.7.1;
 
 import "openzeppelin-solidity/contracts/introspection/IERC165.sol";
 
@@ -6,7 +7,7 @@ import "openzeppelin-solidity/contracts/introspection/IERC165.sol";
     @title ERC-1155 Multi Token Receiver Interface
     @dev See https://eips.ethereum.org/EIPS/eip-1155
 */
-contract IERC1155TokenReceiver is IERC165 {
+abstract contract IERC1155TokenReceiver is IERC165 {
 
     /**
         @dev Handles the receipt of a single ERC1155 token type. This function is
@@ -28,7 +29,7 @@ contract IERC1155TokenReceiver is IERC165 {
         uint256 value,
         bytes calldata data
     )
-        external
+        external virtual
         returns(bytes4);
 
     /**
@@ -51,6 +52,6 @@ contract IERC1155TokenReceiver is IERC165 {
         uint256[] calldata values,
         bytes calldata data
     )
-        external
+        external virtual
         returns(bytes4);
 }
