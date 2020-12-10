@@ -1,9 +1,13 @@
-pragma solidity ^0.5.1;
+// SPDX-License-Identifier: LGPL-3.0-or-later
+pragma solidity ^0.7.1;
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import { IERC20 } from "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
 import { CTHelpers } from "./CTHelpers.sol";
 
 contract ConditionalTokens is ERC1155 {
+
+    using SafeMath for uint256;
 
     /// @dev Emitted upon the successful preparation of a condition.
     /// @param conditionId The condition's ID. This ID may be derived from the other three parameters via ``keccak256(abi.encodePacked(oracle, questionId, outcomeSlotCount))``.

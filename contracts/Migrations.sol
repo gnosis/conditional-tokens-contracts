@@ -1,4 +1,5 @@
-pragma solidity ^0.5.1;
+// SPDX-License-Identifier: LGPL-3.0-or-later
+pragma solidity ^0.7.1;
 
 
 contract Migrations {
@@ -9,7 +10,7 @@ contract Migrations {
         if (msg.sender == owner) _;
     }
 
-    constructor() public {
+    constructor() {
         owner = msg.sender;
     }
 
