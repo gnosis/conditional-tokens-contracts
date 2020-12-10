@@ -10,7 +10,7 @@ import { ERC1155 } from "./ERC1155/ERC1155.sol";
 /// This allows anyone claim 1000 conditional tokens in order for him to transfer money from the future.
 /// See `docs/future-money.rst`.
 ///
-/// We have four kinds of ERC-1155 token ID
+/// We have three kinds of ERC-1155 token ID
 /// - a combination of market ID, collateral address, and customer address (conditional tokens)
 /// - a combination of TOKEN_STAKED and collateral address (staked collateral tokens)
 /// - a combination of TOKEN_SUMMARY and collateral address (staked + staked collateral tokens)
