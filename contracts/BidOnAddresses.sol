@@ -25,6 +25,8 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
 
     event OracleCreated(address oracleOwner, uint64 oracleId);
 
+    event OracleOwnerChanged(address oracleOwner, uint64 oracleId);
+
     event CustomerRegistered(
         address customer,
         uint64 marketId,
@@ -138,6 +140,11 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         oracleOwnersMap[oracleId] = msg.sender;
         emit OracleCreated(msg.sender, oracleId);
         return oracleId;
+    }
+
+    function changeOracleOwner(address oracleOwner, uint64 oracleId) public _isOracle(oracleId) {
+        oracleOwnersMap[oracleId] = msg.sender;
+        emit OracleOwnerChanged(oracleOwner, oracleId);
     }
 
     /// Donate funds in a ERC1155 token.
