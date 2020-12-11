@@ -270,10 +270,9 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         require(oracleFinishedMap[oracleId], "too early"); // to prevent the denominator or the numerators change meantime
         uint256 collateralBalance = _initialCollateralBalanceOf(collateralContractAddress, collateralTokenId, marketId, oracleId, msg.sender, condition);
         uint256 conditionalTokenId = _conditionalTokenId(marketId, condition);
-        address _originalAddress = originalAddress(msg.sender);
-        require(!redeemActivatedMap[_originalAddress][oracleId][conditionalTokenId], "Already redeemed.");
-        redeemActivatedMap[_originalAddress][oracleId][conditionalTokenId] = true;
-        userUsedRedeemMap[_originalAddress][conditionalTokenId] = true;
+        require(!redeemActivatedMap[msg.sender][oracleId][conditionalTokenId], "Already redeemed.");
+        redeemActivatedMap[msg.sender][oracleId][conditionalTokenId] = true;
+        userUsedRedeemMap[msg.sender][conditionalTokenId] = true;
         // _burn(msg.sender, conditionalTokenId, conditionalBalance); // Burning it would break using the same token for multiple outcomes.
         collateralContractAddress.safeTransferFrom(address(this), msg.sender, collateralTokenId, collateralBalance, data); // last to prevent reentrancy attack
     }
