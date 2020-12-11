@@ -262,20 +262,20 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         emit OracleFinished(msg.sender);
     }
 
-    /// Transfer to `to` the collateral ERC-20 token
+    /// Transfer to `msg.sender` the collateral ERC-20 token (we can't transfer to somebody other, because anybody can transfer).
     /// accordingly to the score of `condition` in the marketId by the oracle.
-    /// After this function is called, it becomes impossible to transfer the corresponding conditional token of `to`
+    /// After this function is called, it becomes impossible to transfer the corresponding conditional token of `msg.sender`
     /// (to prevent its repeated withdraw).
-    /// Note that this can be called by anybody (for anybody)! That's useful for multi-level withdrawals through a submarket.
-    function withdrawCollateral(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, address to, address condition, bytes calldata data) external {
+    function withdrawCollateral(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, address condition, bytes calldata data) external {
         require(oracleFinishedMap[oracleId], "too early"); // to prevent the denominator or the numerators change meantime
-        uint256 collateralBalance = _initialCollateralBalanceOf(collateralContractAddress, collateralTokenId, marketId, oracleId, to, condition);
+        uint256 collateralBalance = _initialCollateralBalanceOf(collateralContractAddress, collateralTokenId, marketId, oracleId, msg.sender, condition);
         uint256 conditionalTokenId = _conditionalTokenId(marketId, condition);
-        require(!redeemActivatedMap[to][oracleId][conditionalTokenId], "Already redeemed.");
-        redeemActivatedMap[to][oracleId][conditionalTokenId] = true;
-        userUsedRedeemMap[to][conditionalTokenId] = true;
+        address _originalAddress = originalAddress(msg.sender);
+        require(!redeemActivatedMap[_originalAddress][oracleId][conditionalTokenId], "Already redeemed.");
+        redeemActivatedMap[_originalAddress][oracleId][conditionalTokenId] = true;
+        userUsedRedeemMap[_originalAddress][conditionalTokenId] = true;
         // _burn(msg.sender, conditionalTokenId, conditionalBalance); // Burning it would break using the same token for multiple outcomes.
-        collateralContractAddress.safeTransferFrom(address(this), to, collateralTokenId, collateralBalance, data); // last to prevent reentrancy attack
+        collateralContractAddress.safeTransferFrom(address(this), msg.sender, collateralTokenId, collateralBalance, data); // last to prevent reentrancy attack
     }
 
     /// Calculate the collateral balance corresponding to the current conditonal token `condition` state and
