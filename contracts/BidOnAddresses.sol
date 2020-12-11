@@ -126,16 +126,18 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
     }
 
     /// Create a new conditional marketId
-    function createMarket() external {
+    function createMarket() external returns (uint64) {
         uint64 marketId = maxId++;
         emit MarketCreated(msg.sender, marketId);
+        return marketId;
     }
 
     /// Create a new oracle
-    function createOracle() external {
+    function createOracle() external returns (uint64) {
         uint64 oracleId = maxId++;
         oracleOwnersMap[oracleId] = msg.sender;
         emit OracleCreated(msg.sender, oracleId);
+        return oracleId;
     }
 
     /// Donate funds in a ERC1155 token.
