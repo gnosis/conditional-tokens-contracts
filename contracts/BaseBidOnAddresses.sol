@@ -9,6 +9,7 @@ import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 // TODO: Staking makes it important to easily set the swap date.
 // TODO: Allocate to oracles a portion of the conditional token and/or collateral, rather than the collateral.
 // TODO: Allow to lock staked tokens? (as a separate contract?)
+// TODO: Move to another Ethereum account without a confirmation, using the old account.
 
 // TODO: Token URL setting.
 /// @title Bidding on Ethereum addresses
