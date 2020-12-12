@@ -101,6 +101,8 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         uint256 amount
     );
     
+    address dao;
+
     uint64 private maxId;
 
     /// Mapping from oracleId to oracle owner.
@@ -125,6 +127,19 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
             BidOnAddresses(0).onERC1155Received.selector ^
             BidOnAddresses(0).onERC1155BatchReceived.selector
         );
+    }
+
+    constructor(address _dao, string memory uri_) BaseRestorableSalary(uri_) {
+        dao = _dao;
+    }
+
+    function setDAO(address _dao) public onlyDAO {
+        dao = _dao;
+    }
+
+    modifier onlyDAO() {
+        require(msg.sender == dao  , "Only DAO can do.");
+        _;
     }
 
     /// Create a new conditional marketId
