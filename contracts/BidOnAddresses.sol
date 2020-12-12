@@ -5,7 +5,6 @@ import { IERC1155TokenReceiver } from "./ERC1155/IERC1155TokenReceiver.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
 
 // TODO: Allow to lock staked tokens? (as a separate contract?)
-// TODO: Move to another Ethereum account without a confirmation, using the old account.
 
 // TODO: Token URL setting.
 
