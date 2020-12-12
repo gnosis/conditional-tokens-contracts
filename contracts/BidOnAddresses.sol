@@ -5,6 +5,7 @@ import { IERC1155TokenReceiver } from "./ERC1155/IERC1155TokenReceiver.sol";
 import { ERC1155WithTotals } from "./ERC1155/ERC1155WithTotals.sol";
 
 // TODO: Be able to stake an interest-paying ERC-20 token and receive interest in ERC-20.
+// TODO: Also need anyone be able to get this interest into a system after the swap.
 
 /// @title Bidding on Ethereum addresses
 /// @author Victor Porton
