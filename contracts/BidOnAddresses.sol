@@ -281,11 +281,13 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     function collateralOwingDonated(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, address condition, address user) public view returns(uint256) {
         uint256 numerator = payoutNumeratorsMap[oracleId][condition];
         uint256 denominator = payoutDenominatorMap[oracleId];
-        uint256 conditonalBalance = balanceOf(user, _conditionalTokenId(marketId, condition));
+        uint256 conditonalToken = _conditionalTokenId(marketId, condition);
+        uint256 conditonalBalance = balanceOf(user, conditonalToken);
+        uint256 totalConditonalBalance = totalBalanceOf(conditonalToken);
         uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         uint256 donatedCollateralTotalBalance = totalBalanceOf(donatedCollateralTokenId);
         // Rounded to below for no out-of-funds:
-        int128 marketIdShare = ABDKMath64x64.divu(conditonalBalance, INITIAL_CUSTOMER_BALANCE);
+        int128 marketIdShare = ABDKMath64x64.divu(conditonalBalance, totalConditonalBalance);
         int128 rewardShare = ABDKMath64x64.divu(numerator, denominator);
         uint256 _newDividends = donatedCollateralTotalBalance - lastDonatedCollateralBalanceMap[oracleId][user];
         return marketIdShare.mul(rewardShare).mulu(_newDividends);
@@ -294,11 +296,13 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     function collateralOwingStaked(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, address condition, address user) public view returns(uint256) {
         uint256 numerator = payoutNumeratorsMap[oracleId][condition];
         uint256 denominator = payoutDenominatorMap[oracleId];
-        uint256 conditonalBalance = balanceOf(user, _conditionalTokenId(marketId, condition));
+        uint256 conditonalToken = _conditionalTokenId(marketId, condition);
+        uint256 conditonalBalance = balanceOf(user, conditonalToken);
+        uint256 totalConditonalBalance = totalBalanceOf(conditonalToken);
         uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         uint256 stakedCollateralTotalBalance = totalBalanceOf(stakedCollateralTokenId);
         // Rounded to below for no out-of-funds:
-        int128 marketIdShare = ABDKMath64x64.divu(conditonalBalance, INITIAL_CUSTOMER_BALANCE);
+        int128 marketIdShare = ABDKMath64x64.divu(conditonalBalance, totalConditonalBalance);
         int128 rewardShare = ABDKMath64x64.divu(numerator, denominator);
         uint256 _newDividends = stakedCollateralTotalBalance - lastStakedCollateralBalanceMap[oracleId][user];
         return marketIdShare.mul(rewardShare).mulu(_newDividends);
