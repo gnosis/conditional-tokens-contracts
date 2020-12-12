@@ -258,7 +258,7 @@ contract("BidOnAddresses", function(accounts) {
           for (let customer of product.customers) {
             const oracleIdInfo = oracleIdsInfo[product.oracleId];
             const account = customers[customer.account];
-            const initialCollateralBalance = await this.conditionalTokens.initialCollateralBalanceOf(
+            const initialCollateralBalance = await this.conditionalTokens.collateralOwing(
               this.collateralContract.address,
               this.collateralTokenId,
               product.marketId,
@@ -305,20 +305,16 @@ contract("BidOnAddresses", function(accounts) {
               .sub(oldBalance)
               .should.be.bignumber.equal(initialCollateralBalance);
 
-            await expectRevert(
-              this.conditionalTokens.withdrawCollateral(
-                this.collateralContract.address,
-                this.collateralTokenId,
-                product.marketId,
-                oracleIdInfo.oracleId,
-                account,
-                [],
-                { from: account }
-              ),
-              "Already redeemed."
+            // Should do nothing.
+            await this.conditionalTokens.withdrawCollateral(
+              this.collateralContract.address,
+              this.collateralTokenId,
+              product.marketId,
+              oracleIdInfo.oracleId,
+              account,
+              [],
+              { from: account }
             );
-
-            // TODO: Also check withdrawal to a third-party account.
           }
         }
 
