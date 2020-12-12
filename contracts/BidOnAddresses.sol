@@ -381,7 +381,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
     }
 
     function minFinishTime(uint64 oracleId) public view returns (uint) {
-        minFinishTimes[oracleId];
+        return minFinishTimes[oracleId];
     }
 
     // Internal //
