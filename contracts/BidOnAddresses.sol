@@ -109,7 +109,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         uint256 amount
     );
     
-    address dao;
+    address dao; // FIXME: No need for dao here, just use the oracle's account? Also revert the DAO removal in RestorableSalarties
 
     uint64 private maxId;
 
