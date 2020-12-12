@@ -22,7 +22,9 @@ contract("BidOnAddresses", function(accounts) {
   ] = accounts;
 
   beforeEach("initiate token contracts", async function() {
-    this.conditionalTokens = await BidOnAddresses.new();
+    this.conditionalTokens = await BidOnAddresses.new(
+      "0x0000000000000000000000000000000000000000"
+    );
     this.collateralContract = await ERC1155Mintable.new(); // TODO: Check multiple collaterals
     this.collateralTokenId = 123; // arbitrary
     this.collateralContract.mint(
