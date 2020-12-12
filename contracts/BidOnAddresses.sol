@@ -14,9 +14,6 @@ import { ERC1155WithTotals } from "./ERC1155/ERC1155WithTotals.sol";
 /// - a combination of market ID, collateral address, and customer address (conditional tokens)
 /// - a combination of TOKEN_STAKED and collateral address (staked collateral tokens)
 /// - a combination of TOKEN_SUMMARY and collateral address (staked + staked collateral tokens)
-///
-/// TODO (solved): Proper processing of donations after the oracle finished. (Need to remember the last collateral amount for a user.)
-/// Necessary for the multi-level system in `salary` branch.
 contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     using ABDKMath64x64 for int128;
 
@@ -123,7 +120,7 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     /// The user lost the right to transfer conditional tokens: (user => (conditionalToken => bool)).
     mapping(address => mapping(uint256 => bool)) private userUsedRedeemMap;
     /// Mapping (token => (user => amount)) used to calculate withdrawal of collateral amounts.
-    mapping(uint256 => mapping(address => uint256)) private lastCollateralBalanceMap; // TODO: getter?
+    mapping(uint256 => mapping(address => uint256)) private lastCollateralBalanceMap; // TODO: Would getter be useful?
 
     constructor() public {
         _registerInterface(
