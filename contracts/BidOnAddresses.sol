@@ -4,8 +4,6 @@ import { IERC1155 } from "./ERC1155/IERC1155.sol";
 import { IERC1155TokenReceiver } from "./ERC1155/IERC1155TokenReceiver.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
 
-// TODO: Allow to lock staked tokens? (as a separate contract?)
-
 /// @title Bidding on Ethereum addresses
 /// @author Victor Porton
 /// @notice Not audited, not enough tested.
