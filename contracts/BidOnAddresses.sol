@@ -15,7 +15,7 @@ import { ERC1155WithTotals } from "./ERC1155/ERC1155WithTotals.sol";
 /// - a combination of TOKEN_STAKED and collateral address (staked collateral tokens)
 /// - a combination of TOKEN_SUMMARY and collateral address (staked + staked collateral tokens)
 ///
-/// FIXME (implemented but tests do not pass): Proper processing of donations after the oracle finished. (Need to remember the last collateral amount for a user.)
+/// TODO (solved): Proper processing of donations after the oracle finished. (Need to remember the last collateral amount for a user.)
 /// Necessary for the multi-level system in `salary` branch.
 contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     using ABDKMath64x64 for int128;
