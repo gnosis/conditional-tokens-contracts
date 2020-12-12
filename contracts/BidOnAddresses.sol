@@ -4,6 +4,13 @@ import { IERC1155 } from "./ERC1155/IERC1155.sol";
 import { IERC1155TokenReceiver } from "./ERC1155/IERC1155TokenReceiver.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
 
+// TODO: Staking makes it important to easily set the swap date.
+// TODO: Allocate to oracles a portion of the conditional token and/or collateral, rather than the collateral.
+// TODO: Allow to lock staked tokens? (as a separate contract?)
+// TODO: Move to another Ethereum account without a confirmation, using the old account.
+
+// TODO: Token URL setting.
+
 /// @title Bidding on Ethereum addresses
 /// @author Victor Porton
 /// @notice Not audited, not enough tested.
@@ -15,6 +22,9 @@ import { ERC1155 } from "./ERC1155/ERC1155.sol";
 /// - a combination of TOKEN_STAKED and collateral address (staked collateral tokens)
 /// - a combination of TOKEN_SUMMARY and collateral address (staked + staked collateral tokens)
 contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
+    // TODO: IERC1155Views
+    // TODO: Allocate also kX (or a fixed amount?) tokens to the DAO.
+    // TODO: Does it make sense to be able to change the amount of salary per second?
     using ABDKMath64x64 for int128;
 
     enum TokenKind { TOKEN_CONDITIONAL, TOKEN_DONATED, TOKEN_STAKED }
