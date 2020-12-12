@@ -47,12 +47,12 @@ contract ERC1155WithTotals is ERC1155 {
     }
 
     function _doMint(address to, uint256 id, uint256 value) private {
-        totalBalances[id] = totalBalances[id].add(_balances[id][to]);
-        _balances[id][to] = value + _balances[id][to]; // The previous didn't overflow, therefore this doesn't overflow.
+        totalBalances[id] = totalBalances[id].add(value);
+        _balances[id][to] = _balances[id][to] + value; // The previous didn't overflow, therefore this doesn't overflow.
     }
 
     function _doBurn(address to, uint256 id, uint256 value) private {
         _balances[id][to] = _balances[id][to].sub(value);
-        totalBalances[id] = totalBalances[id] - _balances[id][to]; // The previous didn't overflow, therefore this doesn't overflow.
+        totalBalances[id] = totalBalances[id] - value; // The previous didn't overflow, therefore this doesn't overflow.
     }
 }
