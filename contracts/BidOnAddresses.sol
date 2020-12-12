@@ -4,7 +4,6 @@ import { IERC1155 } from "./ERC1155/IERC1155.sol";
 import { IERC1155TokenReceiver } from "./ERC1155/IERC1155TokenReceiver.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
 
-// TODO: Allocate to oracles a portion of the conditional token and/or collateral, rather than the collateral.
 // TODO: Allow to lock staked tokens? (as a separate contract?)
 // TODO: Move to another Ethereum account without a confirmation, using the old account.
 
