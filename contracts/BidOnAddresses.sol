@@ -22,7 +22,7 @@ import { ERC1155 } from "./ERC1155/ERC1155.sol";
 /// - a combination of TOKEN_SUMMARY and collateral address (staked + staked collateral tokens)
 contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
     // TODO: IERC1155Views
-    // TODO: Allocate also kX (or a fixed amount?) tokens to the DAO.
+    // TODO: Allocate also kX tokens to the DAO.
     using ABDKMath64x64 for int128;
 
     enum TokenKind { TOKEN_CONDITIONAL, TOKEN_DONATED, TOKEN_STAKED }
