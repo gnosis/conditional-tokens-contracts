@@ -330,13 +330,11 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
             uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
             uint256 donatedCollateralBalance = balanceOf(address(this), donatedCollateralTokenId);
             lastDonatedCollateralBalanceMap[oracleId][msg.sender] = donatedCollateralBalance;
-            _burn(address(this), donatedCollateralTokenId, _owingDonated);
         }
         if(_owingStaked != 0) {
             uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
             uint256 stakedCollateralBalance = balanceOf(address(this), stakedCollateralTokenId);
             lastStakedCollateralBalanceMap[oracleId][msg.sender] = stakedCollateralBalance;
-            _burn(address(this), stakedCollateralTokenId, _owingStaked);
         }
         // Last to prevent reentrancy attack:
         collateralContractAddress.safeTransferFrom(address(this), msg.sender, collateralTokenId, _owingDonated + _owingStaked, data);
