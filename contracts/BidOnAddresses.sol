@@ -122,11 +122,8 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     mapping(uint256 => uint256) private collateralTotalsMap;
     /// The user lost the right to transfer conditional tokens: (user => (conditionalToken => bool)).
     mapping(address => mapping(uint256 => bool)) private userUsedRedeemMap;
-    /// Mapping (token => amount) used to calculate withdrawal of collateral amounts
-    // TODO: Join the next two maps into one, as tokens have distinct IDs:
-    mapping(uint256 => mapping(address => uint256)) private lastDonatedCollateralBalanceMap; // TODO: getter?
-    /// Mapping (token => (oracle => (user => amount))) used to calculate withdrawal of collateral amounts
-    mapping(uint256 => mapping(address => uint256)) private lastStakedCollateralBalanceMap; // TODO: getter?
+    /// Mapping (token => (user => amount)) used to calculate withdrawal of collateral amounts.
+    mapping(uint256 => mapping(address => uint256)) private lastCollateralBalanceMap; // TODO: getter?
 
     constructor() public {
         _registerInterface(
@@ -288,7 +285,7 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         // Rounded to below for no out-of-funds:
         int128 marketIdShare = ABDKMath64x64.divu(conditonalBalance, totalConditonalBalance);
         int128 rewardShare = ABDKMath64x64.divu(numerator, denominator);
-        uint256 _newDividends = donatedCollateralTotalBalance - lastDonatedCollateralBalanceMap[donatedCollateralTokenId][user];
+        uint256 _newDividends = donatedCollateralTotalBalance - lastCollateralBalanceMap[donatedCollateralTokenId][user];
         return marketIdShare.mul(rewardShare).mulu(_newDividends);
     }
  
@@ -303,7 +300,7 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         // Rounded to below for no out-of-funds:
         int128 marketIdShare = ABDKMath64x64.divu(conditonalBalance, totalConditonalBalance);
         int128 rewardShare = ABDKMath64x64.divu(numerator, denominator);
-        uint256 _newDividends = stakedCollateralTotalBalance - lastStakedCollateralBalanceMap[stakedCollateralTokenId][user];
+        uint256 _newDividends = stakedCollateralTotalBalance - lastCollateralBalanceMap[stakedCollateralTokenId][user];
         return marketIdShare.mul(rewardShare).mulu(_newDividends);
     }
 
@@ -331,11 +328,11 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         // TODO: Token IDs calculated twice (or more).
         if(_owingDonated != 0) {
             uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-            lastDonatedCollateralBalanceMap[donatedCollateralTokenId][msg.sender] = totalBalanceOf(donatedCollateralTokenId);
+            lastCollateralBalanceMap[donatedCollateralTokenId][msg.sender] = totalBalanceOf(donatedCollateralTokenId);
         }
         if(_owingStaked != 0) {
             uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-            lastStakedCollateralBalanceMap[stakedCollateralTokenId][msg.sender] = totalBalanceOf(stakedCollateralTokenId);
+            lastCollateralBalanceMap[stakedCollateralTokenId][msg.sender] = totalBalanceOf(stakedCollateralTokenId);
         }
         // Last to prevent reentrancy attack:
         collateralContractAddress.safeTransferFrom(address(this), msg.sender, collateralTokenId, _owingDonated + _owingStaked, data);
