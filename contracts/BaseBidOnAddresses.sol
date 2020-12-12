@@ -26,7 +26,7 @@ import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 /// In functions of this contact `condition` is always a customer's original address.
 abstract contract BaseBidOnAddresses is ERC1155WithMappedAddresses, IERC1155TokenReceiver {
     // TODO: IERC1155Views
-    // TODO: Allocate also kX tokens to the DAO.
+    // TODO: Allocate also kX (or a fixed amount?) tokens to the DAO.
     // TODO: Does it make sense to be able to change the amount of salary per second?
 
     using ABDKMath64x64 for int128;
