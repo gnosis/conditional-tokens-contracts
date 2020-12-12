@@ -120,8 +120,6 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     mapping(uint256 => bool) private conditionalTokensMap;
     /// Total collaterals (separately donated and staked) per marketId and oracleId: collateral => (marketId => (oracleId => total)).
     mapping(uint256 => uint256) private collateralTotalsMap;
-    /// If a given conditional was already redeemed. // FIXME: getter
-    mapping(address => mapping(uint64 => mapping(uint256 => bool))) private collateralAtLastRedeemMap; // TODO: hash instead?
     /// The user lost the right to transfer conditional tokens: (user => (conditionalToken => bool)).
     mapping(address => mapping(uint256 => bool)) private userUsedRedeemMap;
     /// Mapping (token => amount) used to calculate withdrawal of collateral amounts
