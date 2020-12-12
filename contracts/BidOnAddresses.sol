@@ -279,14 +279,14 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     }
 
     function collateralOwingBase(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, address condition, address user)
-        public view returns (uint256 donated, uint256 staked)
+        private view returns (uint donatedCollateralTokenId, uint stakedCollateralTokenId, uint256 donated, uint256 staked)
     {
         uint256 conditonalToken = _conditionalTokenId(marketId, condition);
         uint256 conditonalBalance = balanceOf(user, conditonalToken);
         uint256 totalConditonalBalance = totalBalanceOf(conditonalToken);
-        uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
+        donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         uint256 donatedCollateralTotalBalance = totalBalanceOf(donatedCollateralTokenId);
-        uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
+        stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         uint256 stakedCollateralTotalBalance = totalBalanceOf(stakedCollateralTokenId);
         // Rounded to below for no out-of-funds:
         int128 marketIdShare = ABDKMath64x64.divu(conditonalBalance, totalConditonalBalance);
@@ -294,11 +294,12 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         uint256 _newDividendsDonated = donatedCollateralTotalBalance - lastCollateralBalanceMap[donatedCollateralTokenId][user];
         uint256 _newDividendsStaked = stakedCollateralTotalBalance - lastCollateralBalanceMap[stakedCollateralTokenId][user];
         int128 multiplier = marketIdShare.mul(rewardShare);
-        return (multiplier.mulu(_newDividendsDonated), multiplier.mulu(_newDividendsStaked));
+        donated = multiplier.mulu(_newDividendsDonated);
+        staked = multiplier.mulu(_newDividendsStaked);
     }
  
     function collateralOwing(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, address condition, address user) external view returns(uint256) {
-        (uint256 donated, uint256 staked) = collateralOwingBase(collateralContractAddress, collateralTokenId, marketId, oracleId, condition, user);
+        (,, uint256 donated, uint256 staked) = collateralOwingBase(collateralContractAddress, collateralTokenId, marketId, oracleId, condition, user);
         return donated + staked;
     }
 
@@ -311,19 +312,16 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         uint256 conditionalTokenId = _conditionalTokenId(marketId, condition);
         userUsedRedeemMap[msg.sender][conditionalTokenId] = true;
         // _burn(msg.sender, conditionalTokenId, conditionalBalance); // Burning it would break using the same token for multiple markets.
-        (uint256 _owingDonated, uint256 _owingStaked) =
+        (uint donatedCollateralTokenId, uint stakedCollateralTokenId, uint256 _owingDonated, uint256 _owingStaked) =
             collateralOwingBase(collateralContractAddress, collateralTokenId, marketId, oracleId, condition, msg.sender);
 
         // Against rounding errors. Not necessary because of rounding down.
         // if(_owing > balanceOf(address(this), collateralTokenId)) _owing = balanceOf(address(this), collateralTokenId);
 
-        // TODO: Token IDs calculated twice.
         if(_owingDonated != 0) {
-            uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
             lastCollateralBalanceMap[donatedCollateralTokenId][msg.sender] = totalBalanceOf(donatedCollateralTokenId);
         }
         if(_owingStaked != 0) {
-            uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
             lastCollateralBalanceMap[stakedCollateralTokenId][msg.sender] = totalBalanceOf(stakedCollateralTokenId);
         }
         // Last to prevent reentrancy attack:
