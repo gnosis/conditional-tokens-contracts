@@ -2,7 +2,7 @@ pragma solidity ^0.5.1;
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import { IERC1155 } from "./ERC1155/IERC1155.sol";
 import { IERC1155TokenReceiver } from "./ERC1155/IERC1155TokenReceiver.sol";
-import { ERC1155 } from "./ERC1155/ERC1155.sol";
+import { ERC1155WithTotals } from "./ERC1155/ERC1155WithTotals.sol";
 
 /// @title Bidding on Ethereum addresses
 /// @author Victor Porton
@@ -17,7 +17,7 @@ import { ERC1155 } from "./ERC1155/ERC1155.sol";
 ///
 /// FIXME (implemented but tests do not pass): Proper processing of donations after the oracle finished. (Need to remember the last collateral amount for a user.)
 /// Necessary for the multi-level system in `salary` branch.
-contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
+contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     using ABDKMath64x64 for int128;
 
     enum TokenKind { TOKEN_CONDITIONAL, TOKEN_DONATED, TOKEN_STAKED }
@@ -283,7 +283,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         uint256 denominator = payoutDenominatorMap[oracleId];
         uint256 conditonalBalance = balanceOf(user, _conditionalTokenId(marketId, condition));
         uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-        uint256 donatedCollateralTotalBalance = balanceOf(address(this), donatedCollateralTokenId);
+        uint256 donatedCollateralTotalBalance = totalBalanceOf(donatedCollateralTokenId);
         // Rounded to below for no out-of-funds:
         int128 marketIdShare = ABDKMath64x64.divu(conditonalBalance, INITIAL_CUSTOMER_BALANCE);
         int128 rewardShare = ABDKMath64x64.divu(numerator, denominator);
@@ -296,7 +296,7 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         uint256 denominator = payoutDenominatorMap[oracleId];
         uint256 conditonalBalance = balanceOf(user, _conditionalTokenId(marketId, condition));
         uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-        uint256 stakedCollateralTotalBalance = balanceOf(address(this), stakedCollateralTokenId);
+        uint256 stakedCollateralTotalBalance = totalBalanceOf(stakedCollateralTokenId);
         // Rounded to below for no out-of-funds:
         int128 marketIdShare = ABDKMath64x64.divu(conditonalBalance, INITIAL_CUSTOMER_BALANCE);
         int128 rewardShare = ABDKMath64x64.divu(numerator, denominator);
@@ -328,13 +328,13 @@ contract BidOnAddresses is ERC1155, IERC1155TokenReceiver {
         // TODO: Token IDs calculated twice (or more).
         if(_owingDonated != 0) {
             uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-            uint256 donatedCollateralBalance = balanceOf(address(this), donatedCollateralTokenId);
-            lastDonatedCollateralBalanceMap[oracleId][msg.sender] = donatedCollateralBalance;
+            lastDonatedCollateralBalanceMap[oracleId][msg.sender] = totalBalanceOf(donatedCollateralTokenId);
+            // _burn(address(this), donatedCollateralTokenId, _owingDonated);
         }
         if(_owingStaked != 0) {
             uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-            uint256 stakedCollateralBalance = balanceOf(address(this), stakedCollateralTokenId);
-            lastStakedCollateralBalanceMap[oracleId][msg.sender] = stakedCollateralBalance;
+            lastStakedCollateralBalanceMap[oracleId][msg.sender] = totalBalanceOf(stakedCollateralTokenId);
+            // _burn(address(this), stakedCollateralTokenId, _owingStaked);
         }
         // Last to prevent reentrancy attack:
         collateralContractAddress.safeTransferFrom(address(this), msg.sender, collateralTokenId, _owingDonated + _owingStaked, data);
