@@ -4,8 +4,7 @@ import { IERC1155 } from "./ERC1155/IERC1155.sol";
 import { IERC1155TokenReceiver } from "./ERC1155/IERC1155TokenReceiver.sol";
 import { ERC1155WithTotals } from "./ERC1155/ERC1155WithTotals.sol";
 
-// TODO: Be able to stake an interest-paying ERC-20 token and receive interest in ERC-20.
-// TODO: Also need anyone be able to get this interest into a system after the swap.
+// TODO: Ability to withdraw the entire balance of the bequestor/staker, when the time comes.
 
 /// @title Bidding on Ethereum addresses
 /// @author Victor Porton
@@ -17,6 +16,8 @@ import { ERC1155WithTotals } from "./ERC1155/ERC1155WithTotals.sol";
 /// - a combination of market ID, collateral address, and customer address (conditional tokens)
 /// - a combination of TOKEN_STAKED and collateral address (staked collateral tokens)
 /// - a combination of TOKEN_SUMMARY and collateral address (staked + staked collateral tokens)
+///
+/// We receive funds in ERC-1155, see also https://github.com/vporton/wrap-tokens
 contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     using ABDKMath64x64 for int128;
 
