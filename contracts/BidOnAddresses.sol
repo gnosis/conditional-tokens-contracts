@@ -358,6 +358,7 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         _baseSafeBatchTransferFrom(from, to, ids, values, data);
     }
 
+    /// Don't send funds to us directy (they will be lost!), use smart contract API.
     function onERC1155Received(address, address, uint256, uint256, bytes calldata) external returns(bytes4) {
         return this.onERC1155Received.selector; // to accept transfers
     }
