@@ -5,6 +5,7 @@ import { IERC1155TokenReceiver } from "./ERC1155/IERC1155TokenReceiver.sol";
 import { ERC1155WithTotals } from "./ERC1155/ERC1155WithTotals.sol";
 
 // TODO: Ability to withdraw the entire balance of the bequestor/staker, when the time comes.
+// TODO: Allow to override the date of allowed withdrawal of bequested funds.
 
 /// @title Bidding on Ethereum addresses
 /// @author Victor Porton
