@@ -6,7 +6,7 @@ import { ERC1155WithTotals } from "./ERC1155/ERC1155WithTotals.sol";
 
 // TODO: Extract bequesting capabilities into a separate contract.
 // TODO: Allow to override the date of allowed withdrawal of bequested funds (multiple dates per single bequestr?)
-// TODO: Also the ability to transfer bequestd (and donated?) funds to other market/oracle (in conjunction with changing the date)?
+// TODO: Also the ability to transfer bequested (and donated?) funds to other market/oracle (in conjunction with changing the date)?
 
 /// @title Bidding on Ethereum addresses
 /// @author Victor Porton
@@ -16,8 +16,8 @@ import { ERC1155WithTotals } from "./ERC1155/ERC1155WithTotals.sol";
 ///
 /// We have three kinds of ERC-1155 token ID
 /// - a combination of market ID, collateral address, and customer address (conditional tokens)
-/// - a combination of TOKEN_STAKED and collateral address (bequestd collateral tokens)
-/// - a combination of TOKEN_SUMMARY and collateral address (bequestd + bequestd collateral tokens)
+/// - a combination of TOKEN_STAKED and collateral address (bequested collateral tokens)
+/// - a combination of TOKEN_SUMMARY and collateral address (bequested + bequested collateral tokens)
 ///
 /// We receive funds in ERC-1155, see also https://github.com/vporton/wrap-tokens
 contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
@@ -65,7 +65,7 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         address to
     );
 
-    event ConvertBequestdToDonated(
+    event ConvertBequestedToDonated(
         IERC1155 collateralContractAddress,
         uint256 collateralTokenId,
         address sender,
@@ -121,7 +121,7 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     mapping(uint64 => uint) private payoutDenominatorMap;
     /// All conditional tokens,
     mapping(uint256 => bool) private conditionalTokensMap;
-    /// Total collaterals (separately donated and bequestd) per marketId and oracleId: collateral => (marketId => (oracleId => total)).
+    /// Total collaterals (separately donated and bequested) per marketId and oracleId: collateral => (marketId => (oracleId => total)).
     mapping(uint256 => uint256) private collateralTotalsMap;
     /// The user lost the right to transfer conditional tokens: (user => (conditionalToken => bool)).
     mapping(address => mapping(uint256 => bool)) private userUsedRedeemMap;
@@ -201,9 +201,9 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         address to,
         bytes calldata data) external _isApproved(from, oracleId)
     {
-        _mint(to, _collateralBequestdTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId), amount, data);
-        uint bequestdCollateralTokenId = _collateralBequestdTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-        collateralTotalsMap[bequestdCollateralTokenId] = collateralTotalsMap[bequestdCollateralTokenId].add(amount);
+        _mint(to, _collateralBequestedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId), amount, data);
+        uint bequestedCollateralTokenId = _collateralBequestedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
+        collateralTotalsMap[bequestedCollateralTokenId] = collateralTotalsMap[bequestedCollateralTokenId].add(amount);
         emit BequestCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount, to, data);
         collateralContractAddress.safeTransferFrom(from, address(this), collateralTokenId, amount, data); // last against reentrancy attack
     }
@@ -219,14 +219,14 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         bytes calldata data) external
     {
         require(!isOracleFinished(oracleId), "too late");
-        uint bequestdCollateralTokenId = _collateralBequestdTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-        collateralTotalsMap[bequestdCollateralTokenId] = collateralTotalsMap[bequestdCollateralTokenId].sub(amount);
-        collateralContractAddress.safeTransferFrom(address(this), to, bequestdCollateralTokenId, amount, data);
+        uint bequestedCollateralTokenId = _collateralBequestedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
+        collateralTotalsMap[bequestedCollateralTokenId] = collateralTotalsMap[bequestedCollateralTokenId].sub(amount);
+        collateralContractAddress.safeTransferFrom(address(this), to, bequestedCollateralTokenId, amount, data);
         emit TakeBackCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount, to);
     }
 
     /// Donate funds from your bequest.
-    function convertBequestdToDonated(
+    function convertBequestedToDonated(
         IERC1155 collateralContractAddress,
         uint256 collateralTokenId,
         uint64 marketId,
@@ -236,15 +236,15 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         address to,
         bytes calldata data) external _isApproved(from, oracleId)
     {
-        // Subtract from bequestd:
-        uint bequestdCollateralTokenId = _collateralBequestdTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-        _burn(from, bequestdCollateralTokenId, amount);
-        collateralTotalsMap[bequestdCollateralTokenId] = collateralTotalsMap[bequestdCollateralTokenId].sub(amount);
+        // Subtract from bequested:
+        uint bequestedCollateralTokenId = _collateralBequestedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
+        _burn(from, bequestedCollateralTokenId, amount);
+        collateralTotalsMap[bequestedCollateralTokenId] = collateralTotalsMap[bequestedCollateralTokenId].sub(amount);
         // Add to donated:
         uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         _mint(to, donatedCollateralTokenId, amount, data);
         collateralTotalsMap[donatedCollateralTokenId] = collateralTotalsMap[donatedCollateralTokenId].add(amount);
-        emit ConvertBequestdToDonated(collateralContractAddress, collateralTokenId, from, amount, to, data);
+        emit ConvertBequestedToDonated(collateralContractAddress, collateralTokenId, from, amount, to, data);
     }
 
     /// Anyone can register himself.
@@ -291,28 +291,28 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     }
 
     function collateralOwingBase(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, address condition, address user)
-        private view returns (uint donatedCollateralTokenId, uint bequestdCollateralTokenId, uint256 donated, uint256 bequestd)
+        private view returns (uint donatedCollateralTokenId, uint bequestedCollateralTokenId, uint256 donated, uint256 bequested)
     {
         uint256 conditonalToken = _conditionalTokenId(marketId, condition);
         uint256 conditonalBalance = balanceOf(user, conditonalToken);
         uint256 totalConditonalBalance = totalBalanceOf(conditonalToken);
         donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         uint256 donatedCollateralTotalBalance = totalBalanceOf(donatedCollateralTokenId);
-        bequestdCollateralTokenId = _collateralBequestdTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-        uint256 bequestdCollateralTotalBalance = totalBalanceOf(bequestdCollateralTokenId);
+        bequestedCollateralTokenId = _collateralBequestedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
+        uint256 bequestedCollateralTotalBalance = totalBalanceOf(bequestedCollateralTokenId);
         // Rounded to below for no out-of-funds:
         int128 marketIdShare = ABDKMath64x64.divu(conditonalBalance, totalConditonalBalance);
         int128 rewardShare = _calcRewardShare(oracleId, condition);
         uint256 _newDividendsDonated = donatedCollateralTotalBalance - lastCollateralBalanceMap[donatedCollateralTokenId][user];
-        uint256 _newDividendsBequestd = bequestdCollateralTotalBalance - lastCollateralBalanceMap[bequestdCollateralTokenId][user];
+        uint256 _newDividendsBequested = bequestedCollateralTotalBalance - lastCollateralBalanceMap[bequestedCollateralTokenId][user];
         int128 multiplier = marketIdShare.mul(rewardShare);
         donated = multiplier.mulu(_newDividendsDonated);
-        bequestd = multiplier.mulu(_newDividendsBequestd);
+        bequested = multiplier.mulu(_newDividendsBequested);
     }
  
     function collateralOwing(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, address condition, address user) external view returns(uint256) {
-        (,, uint256 donated, uint256 bequestd) = collateralOwingBase(collateralContractAddress, collateralTokenId, marketId, oracleId, condition, user);
-        return donated + bequestd;
+        (,, uint256 donated, uint256 bequested) = collateralOwingBase(collateralContractAddress, collateralTokenId, marketId, oracleId, condition, user);
+        return donated + bequested;
     }
 
     /// Transfer to `msg.sender` the collateral ERC-20 token (we can't transfer to somebody other, because anybody can transfer).
@@ -324,7 +324,7 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         uint256 conditionalTokenId = _conditionalTokenId(marketId, condition);
         userUsedRedeemMap[msg.sender][conditionalTokenId] = true;
         // _burn(msg.sender, conditionalTokenId, conditionalBalance); // Burning it would break using the same token for multiple markets.
-        (uint donatedCollateralTokenId, uint bequestdCollateralTokenId, uint256 _owingDonated, uint256 _owingBequestd) =
+        (uint donatedCollateralTokenId, uint bequestedCollateralTokenId, uint256 _owingDonated, uint256 _owingBequested) =
             collateralOwingBase(collateralContractAddress, collateralTokenId, marketId, oracleId, condition, msg.sender);
 
         // Against rounding errors. Not necessary because of rounding down.
@@ -333,11 +333,11 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         if(_owingDonated != 0) {
             lastCollateralBalanceMap[donatedCollateralTokenId][msg.sender] = totalBalanceOf(donatedCollateralTokenId);
         }
-        if(_owingBequestd != 0) {
-            lastCollateralBalanceMap[bequestdCollateralTokenId][msg.sender] = totalBalanceOf(bequestdCollateralTokenId);
+        if(_owingBequested != 0) {
+            lastCollateralBalanceMap[bequestedCollateralTokenId][msg.sender] = totalBalanceOf(bequestedCollateralTokenId);
         }
         // Last to prevent reentrancy attack:
-        collateralContractAddress.safeTransferFrom(address(this), msg.sender, collateralTokenId, _owingDonated + _owingBequestd, data);
+        collateralContractAddress.safeTransferFrom(address(this), msg.sender, collateralTokenId, _owingDonated + _owingBequested, data);
     }
 
     /// Disallow transfers of conditional tokens after redeem to prevent "gathering" them before redeeming each oracle.
@@ -381,12 +381,12 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
 
     // Getters //
 
-    function summaryCollateral(address user, uint256 donatedCollateralTokenId, uint256 bequestdCollateralTokenId) public view returns (uint256) {
-        return balanceOf(user, donatedCollateralTokenId) + balanceOf(user, bequestdCollateralTokenId);
+    function summaryCollateral(address user, uint256 donatedCollateralTokenId, uint256 bequestedCollateralTokenId) public view returns (uint256) {
+        return balanceOf(user, donatedCollateralTokenId) + balanceOf(user, bequestedCollateralTokenId);
     }
 
-    function summaryCollateralTotal(uint256 donatedCollateralTokenId, uint256 bequestdCollateralTokenId) public view returns (uint256) {
-        return collateralTotalsMap[donatedCollateralTokenId] + collateralTotalsMap[bequestdCollateralTokenId];
+    function summaryCollateralTotal(uint256 donatedCollateralTokenId, uint256 bequestedCollateralTokenId) public view returns (uint256) {
+        return collateralTotalsMap[donatedCollateralTokenId] + collateralTotalsMap[bequestedCollateralTokenId];
     }
 
     function oracleOwner(uint64 oracleId) public view returns (address) {
@@ -409,7 +409,7 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         return conditionalTokensMap[tokenId];
     }
 
-    /// @param hash should be a result of `_collateralBequestdTokenId()`.
+    /// @param hash should be a result of `_collateralBequestedTokenId()`.
     function collateralTotal(uint256 hash) public view returns (uint256) {
         return collateralTotalsMap[hash];
     }
@@ -432,7 +432,7 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         return uint256(keccak256(abi.encodePacked(uint8(TokenKind.TOKEN_DONATED), collateralContractAddress, collateralTokenId, marketId, oracleId)));
     }
 
-    function _collateralBequestdTokenId(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId) internal pure returns (uint256) {
+    function _collateralBequestedTokenId(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId) internal pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(uint8(TokenKind.TOKEN_STAKED), collateralContractAddress, collateralTokenId, marketId, oracleId)));
     }
 
