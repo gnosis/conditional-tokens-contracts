@@ -205,7 +205,7 @@ contract("ConditionalTokens", function(accounts) {
                 "PositionSplit",
                 Object.assign(
                   {
-                    stakeholder: trader.address,
+                    bequesteholder: trader.address,
                     parentCollectionId: NULL_BYTES32,
                     conditionId,
                     // partition,
@@ -272,7 +272,7 @@ contract("ConditionalTokens", function(accounts) {
                   "PositionsMerge",
                   Object.assign(
                     {
-                      stakeholder: trader.address,
+                      bequesteholder: trader.address,
                       parentCollectionId: NULL_BYTES32,
                       conditionId,
                       // partition,
@@ -627,7 +627,7 @@ contract("ConditionalTokens", function(accounts) {
                       "PositionSplit",
                       Object.assign(
                         {
-                          stakeholder: trader.address,
+                          bequesteholder: trader.address,
                           parentCollectionId,
                           conditionId: conditionId2,
                           // partition: partition2,

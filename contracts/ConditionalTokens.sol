@@ -27,7 +27,7 @@ contract ConditionalTokens is ERC1155 {
 
     /// @dev Emitted when a position is successfully split.
     event PositionSplit(
-        address indexed stakeholder,
+        address indexed bequestholder,
         IERC20 collateralToken,
         bytes32 indexed parentCollectionId,
         bytes32 indexed conditionId,
@@ -36,7 +36,7 @@ contract ConditionalTokens is ERC1155 {
     );
     /// @dev Emitted when positions are successfully merged.
     event PositionsMerge(
-        address indexed stakeholder,
+        address indexed bequestholder,
         IERC20 collateralToken,
         bytes32 indexed parentCollectionId,
         bytes32 indexed conditionId,
@@ -96,12 +96,12 @@ contract ConditionalTokens is ERC1155 {
         emit ConditionResolution(conditionId, msg.sender, questionId, outcomeSlotCount, payoutNumerators[conditionId]);
     }
 
-    /// @dev This function splits a position. If splitting from the collateral, this contract will attempt to transfer `amount` collateral from the message sender to itself. Otherwise, this contract will burn `amount` stake held by the message sender in the position being split worth of EIP 1155 tokens. Regardless, if successful, `amount` stake will be minted in the split target positions. If any of the transfers, mints, or burns fail, the transaction will revert. The transaction will also revert if the given partition is trivial, invalid, or refers to more slots than the condition is prepared with.
+    /// @dev This function splits a position. If splitting from the collateral, this contract will attempt to transfer `amount` collateral from the message sender to itself. Otherwise, this contract will burn `amount` bequest held by the message sender in the position being split worth of EIP 1155 tokens. Regardless, if successful, `amount` bequest will be minted in the split target positions. If any of the transfers, mints, or burns fail, the transaction will revert. The transaction will also revert if the given partition is trivial, invalid, or refers to more slots than the condition is prepared with.
     /// @param collateralToken The address of the positions' backing collateral token.
     /// @param parentCollectionId The ID of the outcome collections common to the position being split and the split target positions. May be null, in which only the collateral is shared.
     /// @param conditionId The ID of the condition to split on.
     /// @param partition An array of disjoint index sets representing a nontrivial partition of the outcome slots of the given condition. E.g. A|B and C but not A|B and B|C (is not disjoint). Each element's a number which, together with the condition, represents the outcome collection. E.g. 0b110 is A|B, 0b010 is B, etc.
-    /// @param amount The amount of collateral or stake to split.
+    /// @param amount The amount of collateral or bequest to split.
     function splitPosition(
         IERC20 collateralToken,
         bytes32 parentCollectionId,
@@ -237,10 +237,10 @@ contract ConditionalTokens is ERC1155 {
                 }
             }
 
-            uint payoutStake = balanceOf(msg.sender, positionId);
-            if (payoutStake > 0) {
-                totalPayout = totalPayout.add(payoutStake.mul(payoutNumerator).div(den));
-                _burn(msg.sender, positionId, payoutStake);
+            uint payoutBequest = balanceOf(msg.sender, positionId);
+            if (payoutBequest > 0) {
+                totalPayout = totalPayout.add(payoutBequest.mul(payoutNumerator).div(den));
+                _burn(msg.sender, positionId, payoutBequest);
             }
         }
 
