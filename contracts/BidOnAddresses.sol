@@ -177,8 +177,8 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         address to,
         bytes calldata data) external
     {
-        _mint(to, _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId), amount, data);
         uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
+        _mint(to, donatedCollateralTokenId, amount, data);
         collateralTotalsMap[donatedCollateralTokenId] = collateralTotalsMap[donatedCollateralTokenId].add(amount);
         emit DonateCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount, to, data);
         collateralContractAddress.safeTransferFrom(msg.sender, address(this), collateralTokenId, amount, data); // last against reentrancy attack
@@ -198,8 +198,8 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         address to,
         bytes calldata data) external _isApproved(from, oracleId)
     {
-        _mint(to, _collateralBequestedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId), amount, data);
         uint bequestedCollateralTokenId = _collateralBequestedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
+        _mint(to, bequestedCollateralTokenId, amount, data);
         collateralTotalsMap[bequestedCollateralTokenId] = collateralTotalsMap[bequestedCollateralTokenId].add(amount);
         emit BequestCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount, to, data);
         collateralContractAddress.safeTransferFrom(from, address(this), collateralTokenId, amount, data); // last against reentrancy attack
