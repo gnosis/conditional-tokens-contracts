@@ -4,7 +4,7 @@ import { IERC1155 } from "./ERC1155/IERC1155.sol";
 import { IERC1155TokenReceiver } from "./ERC1155/IERC1155TokenReceiver.sol";
 import { ERC1155WithTotals } from "./ERC1155/ERC1155WithTotals.sol";
 
-// TODO: Allow to override the date of allowed withdrawal of bequested funds (multiple dates per single bequestr?)
+// TODO: Allow to override the date of allowed withdrawal of bequested funds (multiple dates per single bequestor?)
 // TODO: Also the ability to transfer bequested (and donated?) funds to other market/oracle (in conjunction with changing the date)?
 
 /// @title Bidding on Ethereum addresses
@@ -158,7 +158,7 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     }
 
     function updateMinFinishTime(uint64 oracleId, uint time) public _isOracle(oracleId) {
-        require(time >= minFinishTimes[oracleId], "Can't break trust of bequestrs.");
+        require(time >= minFinishTimes[oracleId], "Can't break trust of bequestors.");
         minFinishTimes[oracleId] = time;
     }
 
@@ -187,7 +187,7 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
 
     /// Bequest funds in a ERC1155 token.
     /// First need to approve the contract to spend the token.
-    /// The bequest is lost if either: the prediction period ends or the bequestr loses his private key (e.g. dies).
+    /// The bequest is lost if either: the prediction period ends or the bequestor loses his private key (e.g. dies).
     /// Not recommended to bequest after the oracle has finished, because funds may be (partially) lost (you could not unbequest).
     /// TODO: Rename to `bequestCollateral`.
     function bequestCollateral(
