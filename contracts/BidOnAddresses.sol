@@ -8,7 +8,7 @@ import { ERC1155WithTotals } from "./ERC1155/ERC1155WithTotals.sol";
 /// @author Victor Porton
 /// @notice Not audited, not enough tested.
 /// This allows anyone claim 1000 conditional tokens in order for him to transfer money from the future.
-/// See `docs/future-money.rst`.
+/// See `docs/future-money.rst` and anyone to donate or bequest.
 ///
 /// We have three kinds of ERC-1155 token ID
 /// - a combination of market ID, collateral address, and customer address (conditional tokens)
