@@ -185,6 +185,7 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     /// First need to approve the contract to spend the token.
     /// The bequest is lost if either: the prediction period ends or the bequestor loses his private key (e.g. dies).
     /// Not recommended to bequest after the oracle has finished, because funds may be (partially) lost (you could not unbequest).
+    /// FIXME: Hacker can bequest other's funds to himself!
     function bequestCollateral(
         IERC1155 collateralContractAddress,
         uint256 collateralTokenId,
