@@ -119,8 +119,6 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     mapping(uint64 => uint) private payoutDenominatorMap;
     /// All conditional tokens,
     mapping(uint256 => bool) private conditionalTokensMap;
-    /// Total collaterals (separately donated and bequested) per marketId and oracleId: collateral => (marketId => (oracleId => total)).
-    mapping(uint256 => uint256) private collateralTotalsMap;
     /// The user lost the right to transfer conditional tokens: (user => (conditionalToken => bool)).
     mapping(address => mapping(uint256 => bool)) private userUsedRedeemMap;
     /// Mapping (token => (user => amount)) used to calculate withdrawal of collateral amounts.
@@ -179,7 +177,6 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     {
         uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         _mint(to, donatedCollateralTokenId, amount, data);
-        collateralTotalsMap[donatedCollateralTokenId] = collateralTotalsMap[donatedCollateralTokenId].add(amount);
         emit DonateCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount, to, data);
         collateralContractAddress.safeTransferFrom(msg.sender, address(this), collateralTokenId, amount, data); // last against reentrancy attack
     }
@@ -200,7 +197,6 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     {
         uint bequestedCollateralTokenId = _collateralBequestedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         _mint(to, bequestedCollateralTokenId, amount, data);
-        collateralTotalsMap[bequestedCollateralTokenId] = collateralTotalsMap[bequestedCollateralTokenId].add(amount);
         emit BequestCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount, to, data);
         collateralContractAddress.safeTransferFrom(from, address(this), collateralTokenId, amount, data); // last against reentrancy attack
     }
@@ -217,7 +213,6 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     {
         require(!isOracleFinished(oracleId), "too late");
         uint bequestedCollateralTokenId = _collateralBequestedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-        collateralTotalsMap[bequestedCollateralTokenId] = collateralTotalsMap[bequestedCollateralTokenId].sub(amount);
         collateralContractAddress.safeTransferFrom(address(this), to, bequestedCollateralTokenId, amount, data);
         emit TakeBackCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount, to);
     }
@@ -236,11 +231,9 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         // Subtract from bequested:
         uint bequestedCollateralTokenId = _collateralBequestedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         _burn(from, bequestedCollateralTokenId, amount);
-        collateralTotalsMap[bequestedCollateralTokenId] = collateralTotalsMap[bequestedCollateralTokenId].sub(amount);
         // Add to donated:
         uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         _mint(to, donatedCollateralTokenId, amount, data);
-        collateralTotalsMap[donatedCollateralTokenId] = collateralTotalsMap[donatedCollateralTokenId].add(amount);
         emit ConvertBequestedToDonated(collateralContractAddress, collateralTokenId, from, amount, to, data);
     }
 
@@ -383,7 +376,7 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     }
 
     function summaryCollateralTotal(uint256 donatedCollateralTokenId, uint256 bequestedCollateralTokenId) public view returns (uint256) {
-        return collateralTotalsMap[donatedCollateralTokenId] + collateralTotalsMap[bequestedCollateralTokenId];
+        return totalBalanceOf(donatedCollateralTokenId) + totalBalanceOf(bequestedCollateralTokenId);
     }
 
     function oracleOwner(uint64 oracleId) public view returns (address) {
@@ -404,11 +397,6 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
 
     function isConditionalToken(uint256 tokenId) public view returns (bool) {
         return conditionalTokensMap[tokenId];
-    }
-
-    /// @param hash should be a result of `_collateralBequestedTokenId()`.
-    function collateralTotal(uint256 hash) public view returns (uint256) {
-        return collateralTotalsMap[hash];
     }
 
     function isConditonalLocked(address holder, uint256 conditionalTokenId) public view returns (bool) {
