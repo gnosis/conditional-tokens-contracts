@@ -4,7 +4,7 @@ import { IERC1155 } from "./ERC1155/IERC1155.sol";
 import { IERC1155TokenReceiver } from "./ERC1155/IERC1155TokenReceiver.sol";
 import { ERC1155WithTotals } from "./ERC1155/ERC1155WithTotals.sol";
 
-// TODO: Ability to withdraw the entire balance of the bequestor/staker, when the time comes.
+// TODO: Extract bequesting capabilities into a separate contract.
 // TODO: Allow to override the date of allowed withdrawal of bequested funds (multiple dates per single staker?)
 // TODO: Also the ability to transfer staked (and donated?) funds to other market/oracle (in conjunction with changing the date)?
 
@@ -127,6 +127,8 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     mapping(address => mapping(uint256 => bool)) private userUsedRedeemMap;
     /// Mapping (token => (user => amount)) used to calculate withdrawal of collateral amounts.
     mapping(uint256 => mapping(address => uint256)) private lastCollateralBalanceMap; // TODO: Would getter be useful?
+    /// Accounts from which anyone can donate after the time come.
+    mapping(address => bool) public bequestedAccounts;
 
     constructor() public {
         _registerInterface(
@@ -161,6 +163,10 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         minFinishTimes[oracleId] = time;
     }
 
+    function approveUnlimitedBequest(bool _approved) public {
+        bequestedAccounts[msg.sender] = _approved;
+    }
+
     /// Donate funds in a ERC1155 token.
     /// First need to approve the contract to spend the token.
     /// Not recommended to donate after any oracle has finished, because funds may be (partially) lost.
@@ -184,20 +190,22 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     /// First need to approve the contract to spend the token.
     /// The stake is lost if either: the prediction period ends or the staker loses his private key (e.g. dies).
     /// Not recommended to stake after the oracle has finished, because funds may be (partially) lost (you could not unstake).
+    /// TODO: Rename to `bequestCollateral`.
     function stakeCollateral(
         IERC1155 collateralContractAddress,
         uint256 collateralTokenId,
         uint64 marketId,
         uint64 oracleId,
         uint256 amount,
+        address from,
         address to,
-        bytes calldata data) external
+        bytes calldata data) external isApproved(from, oracleId)
     {
         _mint(to, _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId), amount, data);
         uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         collateralTotalsMap[stakedCollateralTokenId] = collateralTotalsMap[stakedCollateralTokenId].add(amount);
         emit StakeCollateral(collateralContractAddress, collateralTokenId, msg.sender, amount, to, data);
-        collateralContractAddress.safeTransferFrom(msg.sender, address(this), collateralTokenId, amount, data); // last against reentrancy attack
+        collateralContractAddress.safeTransferFrom(from, address(this), collateralTokenId, amount, data); // last against reentrancy attack
     }
 
     /// If the oracle has not yet finished you can take funds back.
@@ -224,18 +232,19 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         uint64 marketId,
         uint64 oracleId,
         uint256 amount,
+        address from,
         address to,
-        bytes calldata data) external
+        bytes calldata data) external isApproved(from, oracleId)
     {
         // Subtract from staked:
         uint stakedCollateralTokenId = _collateralStakedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-        _burn(msg.sender, stakedCollateralTokenId, amount);
+        _burn(from, stakedCollateralTokenId, amount);
         collateralTotalsMap[stakedCollateralTokenId] = collateralTotalsMap[stakedCollateralTokenId].sub(amount);
         // Add to donated:
         uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         _mint(to, donatedCollateralTokenId, amount, data);
         collateralTotalsMap[donatedCollateralTokenId] = collateralTotalsMap[donatedCollateralTokenId].add(amount);
-        emit ConvertStakedToDonated(collateralContractAddress, collateralTokenId, msg.sender, amount, to, data);
+        emit ConvertStakedToDonated(collateralContractAddress, collateralTokenId, from, amount, to, data);
     }
 
     /// Anyone can register himself.
@@ -490,6 +499,12 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
 
     modifier _isOracle(uint64 oracleId) {
         require(oracleOwnersMap[oracleId] == msg.sender, "Not the oracle owner.");
+        _;
+    }
+
+    modifier isApproved(address from, uint64 oracleId) {
+        require(from == msg.sender || (bequestedAccounts[from] && isOracleFinished(oracleId)),
+                "Putting funds not approved.");
         _;
     }
 }
