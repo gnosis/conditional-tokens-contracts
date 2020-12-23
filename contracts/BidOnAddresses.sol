@@ -5,7 +5,6 @@ import { IERC1155TokenReceiver } from "./ERC1155/IERC1155TokenReceiver.sol";
 import { ERC1155WithTotals } from "./ERC1155/ERC1155WithTotals.sol";
 
 // TODO: Allow to override the date of allowed withdrawal of bequested funds (multiple dates per single bequestor?)
-// TODO: Also the ability to transfer bequested (and donated?) funds to other market/oracle (in conjunction with changing the date)?
 
 /// @title Bidding on Ethereum addresses
 /// @author Victor Porton
