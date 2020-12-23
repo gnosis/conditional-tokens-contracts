@@ -14,8 +14,8 @@ import { ERC1155WithTotals } from "./ERC1155/ERC1155WithTotals.sol";
 ///
 /// We have three kinds of ERC-1155 token ID
 /// - a combination of market ID, collateral address, and customer address (conditional tokens)
-/// - a combination of TOKEN_STAKED and collateral address (bequested collateral tokens)
-/// - a combination of TOKEN_SUMMARY and collateral address (bequested + bequested collateral tokens)
+/// - a combination of TOKEN_DONATED and collateral address (donated collateral tokens)
+/// - a combination of TOKEN_STAKED and collateral address (bequested collateral tokens) // TODO: Rename.
 ///
 /// We receive funds in ERC-1155, see also https://github.com/vporton/wrap-tokens
 contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
