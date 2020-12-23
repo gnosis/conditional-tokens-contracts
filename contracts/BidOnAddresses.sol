@@ -4,7 +4,6 @@ import { IERC1155 } from "./ERC1155/IERC1155.sol";
 import { IERC1155TokenReceiver } from "./ERC1155/IERC1155TokenReceiver.sol";
 import { ERC1155WithTotals } from "./ERC1155/ERC1155WithTotals.sol";
 
-// TODO: Extract bequesting capabilities into a separate contract.
 // TODO: Allow to override the date of allowed withdrawal of bequested funds (multiple dates per single bequestr?)
 // TODO: Also the ability to transfer bequested (and donated?) funds to other market/oracle (in conjunction with changing the date)?
 
