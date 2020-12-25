@@ -164,8 +164,6 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         bequestTimes[msg.sender] = _time;
     }
 
-    // FIXME: Don't allow others to donate/bequest/convert for somebody.
-
     /// Donate funds in a ERC1155 token.
     /// First need to approve the contract to spend the token.
     /// Not recommended to donate after any oracle has finished, because funds may be (partially) lost.
@@ -212,7 +210,7 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         uint64 oracleId,
         uint256 amount,
         address to,
-        bytes calldata data) external _canTakeBequest(from)
+        bytes calldata data) external _canTakeBequest(msg.sender)
     {
         uint bequestedCollateralTokenId = _collateralBequestedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         collateralContractAddress.safeTransferFrom(address(this), to, bequestedCollateralTokenId, amount, data);
@@ -226,17 +224,16 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
         uint64 marketId,
         uint64 oracleId,
         uint256 amount,
-        address from,
         address to,
         bytes calldata data) external
     {
         // Subtract from bequested:
         uint bequestedCollateralTokenId = _collateralBequestedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
-        _burn(from, bequestedCollateralTokenId, amount);
+        _burn(msg.sender, bequestedCollateralTokenId, amount);
         // Add to donated:
         uint donatedCollateralTokenId = _collateralDonatedTokenId(collateralContractAddress, collateralTokenId, marketId, oracleId);
         _mint(to, donatedCollateralTokenId, amount, data);
-        emit ConvertBequestedToDonated(collateralContractAddress, collateralTokenId, from, amount, to, data);
+        emit ConvertBequestedToDonated(collateralContractAddress, collateralTokenId, msg.sender, amount, to, data);
     }
 
     /// Anyone can register himself.
