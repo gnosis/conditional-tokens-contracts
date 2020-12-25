@@ -282,6 +282,7 @@ contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     function collateralOwingBase(IERC1155 collateralContractAddress, uint256 collateralTokenId, uint64 marketId, uint64 oracleId, address condition, address user)
         private view returns (uint donatedCollateralTokenId, uint bequestedCollateralTokenId, uint256 donated, uint256 bequested)
     {
+        // FIXME: Typos in IDs.
         uint256 conditonalToken = _conditionalTokenId(marketId, condition);
         uint256 conditonalBalance = balanceOf(user, conditonalToken);
         uint256 totalConditonalBalance = totalBalanceOf(conditonalToken);
