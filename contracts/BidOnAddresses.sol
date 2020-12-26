@@ -19,7 +19,8 @@ import { ERC1155WithTotals } from "./ERC1155/ERC1155WithTotals.sol";
 ///
 /// FIXME: I messed total supply of conditionals with their circulating supply.
 /// So a big part of donations would be lost. Proposed fixes:
-/// - Bequest all conditional tokens to "ourselves" (this contract).
+/// - After some "grace period" after an oracle finished distribute all remaining collateral to
+/// them who bought it in the grace period.
 contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     using ABDKMath64x64 for int128;
 
