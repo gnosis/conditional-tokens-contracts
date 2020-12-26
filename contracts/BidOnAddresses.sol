@@ -16,6 +16,10 @@ import { ERC1155WithTotals } from "./ERC1155/ERC1155WithTotals.sol";
 /// - a combination of TOKEN_BEQUESTED and collateral address (bequested collateral tokens)
 ///
 /// We receive funds in ERC-1155, see also https://github.com/vporton/wrap-tokens
+///
+/// FIXME: I messed total supply of conditionals with their circulating supply.
+/// So a big part of donations would be lost. Proposed fixes:
+/// - Bequest all conditional tokens to "ourselves" (this contract).
 contract BidOnAddresses is ERC1155WithTotals, IERC1155TokenReceiver {
     using ABDKMath64x64 for int128;
 
