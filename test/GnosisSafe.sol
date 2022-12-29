@@ -1,3 +1,6 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: GPL-3.0-only
 
-import { GnosisSafe } from "@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol";
+pragma solidity >=0.7.0 <0.9.0;
+
+import { GnosisSafe as _GnosisSafe } from "@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol";
+abstract contract GnosisSafe is _GnosisSafe{}

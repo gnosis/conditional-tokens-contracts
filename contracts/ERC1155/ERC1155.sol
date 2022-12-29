@@ -1,10 +1,13 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: GPL-3.0-only
+
+pragma solidity >=0.7.0 <0.9.0;
 
 import "./IERC1155.sol";
 import "./IERC1155TokenReceiver.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/utils/Address.sol";
-import "openzeppelin-solidity/contracts/introspection/ERC165.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 
 /**
  * @title Standard ERC1155 token
@@ -13,7 +16,7 @@ import "openzeppelin-solidity/contracts/introspection/ERC165.sol";
  * See https://eips.ethereum.org/EIPS/eip-1155
  * Originally based on code by Enjin: https://github.com/enjin/erc-1155
  */
-contract ERC1155 is ERC165, IERC1155
+contract ERC1155 is ERC165Storage, IERC1155
 {
     using SafeMath for uint256;
     using Address for address;
@@ -24,16 +27,14 @@ contract ERC1155 is ERC165, IERC1155
     // Mapping from owner to operator approvals
     mapping (address => mapping(address => bool)) private _operatorApprovals;
 
-    constructor()
-        public
-    {
+    constructor() {
         _registerInterface(
-            ERC1155(0).safeTransferFrom.selector ^
-            ERC1155(0).safeBatchTransferFrom.selector ^
-            ERC1155(0).balanceOf.selector ^
-            ERC1155(0).balanceOfBatch.selector ^
-            ERC1155(0).setApprovalForAll.selector ^
-            ERC1155(0).isApprovedForAll.selector
+            ERC1155(address(0)).safeTransferFrom.selector ^
+            ERC1155(address(0)).safeBatchTransferFrom.selector ^
+            ERC1155(address(0)).balanceOf.selector ^
+            ERC1155(address(0)).balanceOfBatch.selector ^
+            ERC1155(address(0)).setApprovalForAll.selector ^
+            ERC1155(address(0)).isApprovedForAll.selector
         );
     }
 
@@ -43,7 +44,7 @@ contract ERC1155 is ERC165, IERC1155
         @param id ID of the token
         @return The owner's balance of the token type requested
      */
-    function balanceOf(address owner, uint256 id) public view returns (uint256) {
+    function balanceOf(address owner, uint256 id) public view override returns (uint256) {
         require(owner != address(0), "ERC1155: balance query for the zero address");
         return _balances[id][owner];
     }
@@ -58,7 +59,8 @@ contract ERC1155 is ERC165, IERC1155
         address[] memory owners,
         uint256[] memory ids
     )
-        public
+       external
+    override
         view
         returns (uint256[] memory)
     {
@@ -80,7 +82,7 @@ contract ERC1155 is ERC165, IERC1155
      * @param operator address to set the approval
      * @param approved representing the status of the approval to be set
      */
-    function setApprovalForAll(address operator, bool approved) external {
+    function setApprovalForAll(address operator, bool approved) external override {
         _operatorApprovals[msg.sender][operator] = approved;
         emit ApprovalForAll(msg.sender, operator, approved);
     }
@@ -91,7 +93,7 @@ contract ERC1155 is ERC165, IERC1155
         @param operator  Address of authorized operator
         @return           True if the operator is approved, false if not
     */
-    function isApprovedForAll(address owner, address operator) external view returns (bool) {
+    function isApprovedForAll(address owner, address operator) external override view returns (bool) {
         return _operatorApprovals[owner][operator];
     }
 
@@ -112,7 +114,7 @@ contract ERC1155 is ERC165, IERC1155
         uint256 value,
         bytes calldata data
     )
-        external
+        external override
     {
         require(to != address(0), "ERC1155: target address must be non-zero");
         require(
@@ -146,7 +148,7 @@ contract ERC1155 is ERC165, IERC1155
         uint256[] calldata values,
         bytes calldata data
     )
-        external
+        external override
     {
         require(ids.length == values.length, "ERC1155: IDs and values must have same lengths");
         require(to != address(0), "ERC1155: target address must be non-zero");

@@ -1,4 +1,6 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: GPL-3.0-only
+
+pragma solidity >=0.7.0 <0.9.0;
 
 import { ERC1155TokenReceiver } from "../contracts/ERC1155/ERC1155TokenReceiver.sol";
 
@@ -8,27 +10,27 @@ contract Forwarder is ERC1155TokenReceiver {
         require(success, string(retData));
     }
 
-    function onERC1155Received(
+     function onERC1155Received(
         address /* operator */,
         address /* from */,
         uint256 /* id */,
         uint256 /* value */,
         bytes calldata /* data */
     )
-        external
+        external override pure
         returns(bytes4)
     {
         return this.onERC1155Received.selector;
     }
 
-    function onERC1155BatchReceived(
+     function onERC1155BatchReceived(
         address /* operator */,
         address /* from */,
         uint256[] calldata /* ids */,
         uint256[] calldata /* values */,
         bytes calldata /* data */
     )
-        external
+        external override pure
         returns(bytes4)
     {
         return this.onERC1155BatchReceived.selector;
