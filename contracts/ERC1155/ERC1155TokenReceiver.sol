@@ -1,13 +1,15 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: GPL-3.0-only
+
+pragma solidity >=0.7.0 <0.9.0;
 
 import "./IERC1155TokenReceiver.sol";
-import "openzeppelin-solidity/contracts/introspection/ERC165.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165Storage.sol";
 
-contract ERC1155TokenReceiver is ERC165, IERC1155TokenReceiver {
-    constructor() public {
+abstract contract ERC1155TokenReceiver is ERC165Storage, IERC1155TokenReceiver {
+    constructor()  {
         _registerInterface(
-            ERC1155TokenReceiver(0).onERC1155Received.selector ^
-            ERC1155TokenReceiver(0).onERC1155BatchReceived.selector
+            ERC1155TokenReceiver(address(0)).onERC1155Received.selector ^
+            ERC1155TokenReceiver(address(0)).onERC1155BatchReceived.selector
         );
     }
 }

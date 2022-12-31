@@ -1,7 +1,11 @@
-pragma solidity ^0.5.1;
-import { IERC20 } from "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+// SPDX-License-Identifier: GPL-3.0-only
+
+pragma solidity >=0.7.0 <0.9.0;
+
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC1155 } from "./ERC1155/ERC1155.sol";
 import { CTHelpers } from "./CTHelpers.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract ConditionalTokens is ERC1155 {
 
@@ -84,6 +88,8 @@ contract ConditionalTokens is ERC1155 {
         require(payoutDenominator[conditionId] == 0, "payout denominator already set");
 
         uint den = 0;
+        // TODO overflow checking!
+        // BUG i think this is a problem actually
         for (uint i = 0; i < outcomeSlotCount; i++) {
             uint num = payouts[i];
             den = den.add(num);

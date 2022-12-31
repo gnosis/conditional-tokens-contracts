@@ -25,7 +25,7 @@
   "author": "Gnosis (https://gnosis.io)",
   "license": "LGPL-3.0",
   "dependencies": {
-    "openzeppelin-solidity": "2.3.0"
+    "@openzeppelin/contracts": "4.6.0"
   },
   "devDependencies": {
     "@codechecks/client": "^0.1.9",
@@ -44,7 +44,7 @@
     "lodash": "^4.17.15",
     "npm-prepublish": "^1.2.3",
     "openzeppelin-test-helpers": "^0.5.0",
-    "prettier": "1.19.1",
+    "prettier": "^2.8.1",
     "run-with-testrpc": "^0.3.1",
     "truffle": "^5.0.36",
     "truffle-flattener": "^1.4.4",

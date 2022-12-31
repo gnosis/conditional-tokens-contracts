@@ -3,33 +3,33 @@ const config = {
     mainnet: {
       host: "localhost",
       port: 8545,
-      network_id: "1"
+      network_id: "1",
     },
     ropsten: {
       host: "localhost",
       port: 8545,
-      network_id: "3"
+      network_id: "3",
     },
     kovan: {
       host: "localhost",
       port: 8545,
-      network_id: "42"
+      network_id: "42",
     },
     rinkeby: {
       host: "localhost",
       port: 8545,
-      network_id: "4"
+      network_id: "4",
     },
     xdai: {
       host: "localhost",
       port: 8545,
-      network_id: "100"
+      network_id: "100",
     },
     local: {
       host: "localhost",
       port: 8545,
-      network_id: "*"
-    }
+      network_id: "*",
+    },
   },
   mocha: {
     enableTimeouts: false,
@@ -37,19 +37,19 @@ const config = {
     reporter: "eth-gas-reporter",
     reporterOptions: {
       currency: "USD",
-      excludeContracts: ["Migrations"]
-    }
+      excludeContracts: ["Migrations"],
+    },
   },
   compilers: {
     solc: {
-      version: "0.5.10",
+      version: "0.8.3",
       settings: {
         optimizer: {
-          enabled: true
-        }
-      }
-    }
-  }
+          enabled: true,
+        },
+      },
+    },
+  },
 };
 
 try {

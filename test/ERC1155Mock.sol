@@ -1,4 +1,6 @@
-pragma solidity ^0.5.0;
+// SPDX-License-Identifier: GPL-3.0-only
+
+pragma solidity >=0.7.0 <0.9.0;
 
 import { ERC1155 } from "../contracts/ERC1155/ERC1155.sol";
 
